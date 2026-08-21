@@ -115,7 +115,7 @@ export function registerAssistantRoutes(
         ) {
           throw new AssistantRouteError(
             "assistant.conversation.idempotency_conflict",
-            "同一个 requestId 已用于不同的助手会话请求",
+            "The same requestId was already used for a different assistant conversation request",
             409,
           );
         }
@@ -234,7 +234,7 @@ export function registerAssistantRoutes(
       if (conversation.status !== "active") {
         throw new AssistantRouteError(
           "assistant.conversation.archived",
-          "该协作对话已经归档",
+          "This conversation has been archived",
           409,
         );
       }
@@ -304,7 +304,7 @@ export function registerAssistantRoutes(
           ) {
             throw new AssistantRouteError(
               "assistant.message.idempotency_conflict",
-              "同一个 requestId 已用于不同的助手消息",
+              "The same requestId was already used for a different assistant message",
               409,
             );
           }
@@ -322,7 +322,7 @@ export function registerAssistantRoutes(
         if (activeResponse) {
           throw new AssistantRouteError(
             "assistant.message.response_in_progress",
-            "上一条协作消息仍在处理中，请等待回答完成后再发送",
+            "The previous message is still being processed; wait for the answer before sending a new one",
             409,
           );
         }
@@ -486,7 +486,7 @@ export function registerAssistantRoutes(
       if (conversation.status !== "active") {
         throw new AssistantRouteError(
           "assistant.conversation.archived",
-          "该协作对话已经归档",
+          "This conversation has been archived",
           409,
         );
       }
@@ -513,7 +513,7 @@ export function registerAssistantRoutes(
         ) {
           throw new AssistantRouteError(
             "assistant.long_goal.idempotency_conflict",
-            "同一个 requestId 已用于不同的复合创作任务",
+            "The same requestId was already used for a different composite creation task",
             409,
           );
         }
@@ -653,7 +653,7 @@ function invalidActivityState(
 ): AssistantRouteError {
   return new AssistantRouteError(
     "assistant.activity.invalid_state",
-    `活动处于 ${activity.status}，不能执行 ${action}`,
+    `The activity is in state "${activity.status}" and cannot be ${action}`,
     409,
   );
 }
@@ -661,7 +661,11 @@ function invalidActivityState(
 function requireProject(projects: SqliteProjectRepository, projectId: string) {
   const project = projects.get(projectId);
   if (!project) {
-    throw new AssistantRouteError("project.not_found", "作品不存在", 404);
+    throw new AssistantRouteError(
+      "project.not_found",
+      "Project not found",
+      404,
+    );
   }
   return project;
 }
@@ -708,7 +712,7 @@ function errorCode(error: unknown): string {
 }
 
 function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : "工具执行失败";
+  return error instanceof Error ? error.message : "Tool execution failed";
 }
 
 /**

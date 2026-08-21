@@ -11,6 +11,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router";
 
 import { ErrorNote } from "../../components/error-note";
+import { getLocale, translate, useI18n, type MessageKey } from "../../i18n";
 import {
   decideCanonCandidateItem,
   getCanonCandidates,
@@ -41,6 +42,7 @@ function CanonCandidatePanelView({
   spread,
 }: CanonCandidatePanelProps) {
   const queryClient = useQueryClient();
+  const { t } = useI18n();
   const [instruction, setInstruction] = useState("");
   const [startedRunId, setStartedRunId] = useState<string | null>(null);
   const createRequestRef = useRef<{
@@ -132,19 +134,17 @@ function CanonCandidatePanelView({
   const liveRun = runQuery.data?.run;
 
   return (
-    <section className="bible-ai" aria-label="AI 候选修改">
+    <section className="bible-ai" aria-label={t("bible.candidates.ariaLabel")}>
       <header className="bible-ai__head">
         <span className="bible-ai__seal" aria-hidden="true">
           <Sparkles size={15} strokeWidth={1.45} />
         </span>
         <div>
           <p className="bible-ai__eyebrow mono">AI · CANDIDATE DESK</p>
-          <h3>候选修改</h3>
+          <h3>{t("bible.candidates.title")}</h3>
         </div>
       </header>
-      <p className="bible-ai__intro">
-        说明你想补充或调整什么。AI 只会提出逐项候选，采纳前不会改变故事圣经。
-      </p>
+      <p className="bible-ai__intro">{t("bible.candidates.intro")}</p>
 
       {activeRun || (liveRun && !TERMINAL.has(liveRun.status)) ? (
         <RunNotice projectId={projectId} run={liveRun ?? activeRun!} />
@@ -154,7 +154,7 @@ function CanonCandidatePanelView({
             value={instruction}
             onChange={(event) => setInstruction(event.target.value)}
             placeholder={spreadPrompt(spread)}
-            aria-label="Canon 修改指示"
+            aria-label={t("bible.candidates.instructionLabel")}
           />
           <button
             type="button"
@@ -167,23 +167,31 @@ function CanonCandidatePanelView({
             ) : (
               <Sparkles size={13} />
             )}
-            {createMutation.isPending ? "正在交付…" : "生成候选修改"}
+            {createMutation.isPending
+              ? t("bible.candidates.generating")
+              : t("bible.candidates.generate")}
           </button>
         </div>
       )}
 
       {createMutation.isError ? (
-        <ErrorNote error={createMutation.error} title="候选任务未能开始" />
+        <ErrorNote
+          error={createMutation.error}
+          title={t("bible.candidates.startError")}
+        />
       ) : null}
       {runQuery.data &&
       ["failed", "cancelled"].includes(runQuery.data.run.status) ? (
         <ErrorNote
-          error={new Error("AI 候选任务未完成；可进入运行中心查看原因后重新发起。")}
-          title="候选没有生成"
+          error={new Error(t("bible.candidates.runFailedBody"))}
+          title={t("bible.candidates.runFailedTitle")}
         />
       ) : null}
       {candidatesQuery.isError ? (
-        <ErrorNote error={candidatesQuery.error} title="候选内容暂时无法加载" />
+        <ErrorNote
+          error={candidatesQuery.error}
+          title={t("bible.candidates.loadError")}
+        />
       ) : null}
 
       <div className="bible-ai__sets">
@@ -202,16 +210,17 @@ function RunNotice({
   projectId: string;
   run: NarrativeRun;
 }) {
+  const { t } = useI18n();
   return (
     <div className="bible-ai__running" role="status">
       <LoaderCircle className="bible-ai__spin" size={16} aria-hidden="true" />
       <div>
-        <strong>AI 正在整理这一页的候选</strong>
+        <strong>{t("bible.candidates.running")}</strong>
         <span>{runStage(run)}</span>
       </div>
       <Link
         to={`${projectWorkspacePath(projectId, "runs")}?run=${encodeURIComponent(run.id)}`}
-        aria-label="查看候选任务进度"
+        aria-label={t("bible.candidates.viewProgress")}
       >
         <ArrowUpRight size={14} />
       </Link>
@@ -226,16 +235,21 @@ function CandidateSet({
   projectId: string;
   value: CanonCandidateSetDto;
 }) {
+  const { t } = useI18n();
   return (
     <article className="bible-ai__set" data-status={value.status}>
       <header>
         <div>
-          <span className="mono">候选 · {candidateStatus(value.status)}</span>
+          <span className="mono">
+            {t("bible.candidates.setLabel", {
+              status: candidateStatus(value.status),
+            })}
+          </span>
           <h4>{value.summary}</h4>
         </div>
         <Link
           to={`${projectWorkspacePath(projectId, "runs")}?run=${encodeURIComponent(value.runId)}`}
-          aria-label="查看候选生成记录"
+          aria-label={t("bible.candidates.viewRecord")}
         >
           <ArrowUpRight size={14} />
         </Link>
@@ -243,7 +257,7 @@ function CandidateSet({
       {value.stale && value.items.some((item) => !item.decision) ? (
         <p className="bible-ai__stale">
           <CircleAlert size={13} aria-hidden="true" />
-          这一页之后有过修改；采纳时会逐项核对，不会覆盖新内容。
+          {t("bible.candidates.stale")}
         </p>
       ) : null}
       <p className="bible-ai__instruction">“{value.instruction}”</p>
@@ -271,6 +285,7 @@ function CandidateItem({
   item: CanonCandidateSetDto["items"][number];
 }) {
   const queryClient = useQueryClient();
+  const { t } = useI18n();
   const [confirmLocked, setConfirmLocked] = useState(false);
   const decisionMutation = useMutation({
     mutationFn: (input: { action: "apply" | "reject"; confirmLocked?: boolean }) =>
@@ -327,7 +342,9 @@ function CandidateItem({
           ) : (
             <X size={13} aria-hidden="true" />
           )}
-          {item.decision.action === "apply" ? "已采纳" : "已拒绝"}
+          {item.decision.action === "apply"
+            ? t("bible.candidates.applied")
+            : t("bible.candidates.rejected")}
         </p>
       ) : (
         <div className="bible-ai__actions">
@@ -337,7 +354,8 @@ function CandidateItem({
             disabled={decisionMutation.isPending}
             onClick={() => decisionMutation.mutate({ action: "reject" })}
           >
-            <X size={12} />拒绝
+            <X size={12} />
+            {t("bible.candidates.reject")}
           </button>
           <button
             type="button"
@@ -346,17 +364,22 @@ function CandidateItem({
             onClick={apply}
           >
             <Check size={12} />
-            {confirmLocked ? "确认修改锁定内容" : "采纳此项"}
+            {confirmLocked
+              ? t("bible.candidates.confirmLocked")
+              : t("bible.candidates.apply")}
           </button>
         </div>
       )}
       {confirmLocked && !item.decision ? (
         <p className="bible-ai__locked-note">
-          这项会改变锁定内容。再次点击确认，或选择拒绝。
+          {t("bible.candidates.lockedNote")}
         </p>
       ) : null}
       {decisionMutation.isError ? (
-        <ErrorNote error={decisionMutation.error} title="这项候选没有被写入" />
+        <ErrorNote
+          error={decisionMutation.error}
+          title={t("bible.candidates.decisionError")}
+        />
       ) : null}
     </section>
   );
@@ -367,66 +390,76 @@ function latestRun(runs: NarrativeRun[]): NarrativeRun | null {
 }
 
 function runStage(run: NarrativeRun): string {
-  if (run.status === "pending") return "等待开始；可以离开此页。";
-  if (run.status === "paused") return "任务已暂停，候选记录仍会保留。";
+  if (run.status === "pending")
+    return translate(getLocale(), "bible.candidates.stage.pending");
+  if (run.status === "paused")
+    return translate(getLocale(), "bible.candidates.stage.paused");
   if (run.status === "failed_recoverable")
-    return "本次响应超时，系统正在等待自动重试；可以离开此页。";
-  return "正在读取当前内容并比较相关故事事实；可以离开此页。";
+    return translate(getLocale(), "bible.candidates.stage.failedRecoverable");
+  return translate(getLocale(), "bible.candidates.stage.default");
 }
 
 function spreadPrompt(spread: CanonSpread): string {
-  const prompts: Record<CanonSpread, string> = {
-    intent: "例如：让创作承诺更具体，但不要改变已锁定的结局方向。",
-    outline: "例如：补强下一章的目标与冲突，不要提前回收长期伏笔。",
-    entities: "例如：补充主人公的公开身份与隐藏代价。",
-    facts: "例如：补齐第一章已经确认、但尚未登记的规则事实。",
-    relations: "例如：更新两名角色在第一章结束后的信任状态。",
-    timeline: "例如：整理第一章事件的先后顺序和因果。",
-    foreshadows: "例如：登记可跨章发展的伏笔，不要安排立即回收。",
+  const prompts: Record<CanonSpread, MessageKey> = {
+    intent: "bible.candidates.prompt.intent",
+    outline: "bible.candidates.prompt.outline",
+    entities: "bible.candidates.prompt.entities",
+    facts: "bible.candidates.prompt.facts",
+    relations: "bible.candidates.prompt.relations",
+    timeline: "bible.candidates.prompt.timeline",
+    foreshadows: "bible.candidates.prompt.foreshadows",
   };
-  return prompts[spread];
+  return translate(getLocale(), prompts[spread]);
 }
 
 function candidateStatus(status: CanonCandidateSetDto["status"]): string {
-  return {
-    candidate: "待裁定",
-    partially_applied: "部分已采纳",
-    applied: "已处理",
-    rejected: "已拒绝",
-  }[status];
+  const keys: Record<CanonCandidateSetDto["status"], MessageKey> = {
+    candidate: "bible.candidates.status.candidate",
+    partially_applied: "bible.candidates.status.partiallyApplied",
+    applied: "bible.candidates.status.applied",
+    rejected: "bible.candidates.status.rejected",
+  };
+  return translate(getLocale(), keys[status]);
 }
 
 function operationLabel(operation: "create" | "update" | "withdraw") {
-  return { create: "新增", update: "修改", withdraw: "撤回" }[operation];
+  const keys: Record<"create" | "update" | "withdraw", MessageKey> = {
+    create: "bible.candidates.operation.create",
+    update: "bible.candidates.operation.update",
+    withdraw: "bible.candidates.operation.withdraw",
+  };
+  return translate(getLocale(), keys[operation]);
 }
 
 function fieldLabel(field: string): string {
-  const labels: Record<string, string> = {
-    promise: "创作承诺",
-    themes: "主题",
-    audience: "读者",
-    tone: "语气",
-    boundaries: "边界",
-    endingDirection: "结局方向",
-    currentFocus: "当前焦点",
-    description: "描述",
-    title: "标题",
-    summary: "摘要",
-    goal: "目标",
-    conflict: "冲突",
-    outcome: "结果",
-    "$item": "整项",
+  const keys: Record<string, MessageKey> = {
+    promise: "bible.fields.promise",
+    themes: "bible.fields.themes",
+    audience: "bible.fields.audience",
+    tone: "bible.fields.tone",
+    boundaries: "bible.fields.boundaries",
+    endingDirection: "bible.fields.endingDirection",
+    currentFocus: "bible.fields.currentFocus",
+    description: "bible.fields.description",
+    title: "bible.fields.title",
+    summary: "bible.fields.summary",
+    goal: "bible.fields.goal",
+    conflict: "bible.fields.conflict",
+    outcome: "bible.fields.outcome",
+    "$item": "bible.fields.wholeItem",
   };
-  return labels[field] ?? field;
+  const key = keys[field];
+  return key ? translate(getLocale(), key) : field;
 }
 
 function printValue(value: unknown): string {
-  if (value === null || value === undefined || value === "") return "未填写";
+  if (value === null || value === undefined || value === "")
+    return translate(getLocale(), "bible.candidates.unfilled");
   if (typeof value === "string") return value;
   if (typeof value === "number" || typeof value === "boolean") return String(value);
   try {
     return JSON.stringify(value);
   } catch {
-    return "复杂内容";
+    return translate(getLocale(), "bible.candidates.complexValue");
   }
 }

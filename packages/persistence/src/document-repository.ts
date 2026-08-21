@@ -325,7 +325,7 @@ export class DocumentVersionConflictError extends Error {
     readonly actual: string | null,
   ) {
     super(
-      `文档 ${documentId} 已被更新：期望版本 ${String(expected)}，实际版本 ${String(actual)}`,
+      `Document ${documentId} was updated: expected version ${String(expected)}, actual version ${String(actual)}`,
     );
     this.name = "DocumentVersionConflictError";
   }

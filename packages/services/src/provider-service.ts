@@ -29,7 +29,7 @@ export function requireProviderDisablable(
   ) {
     throw new ProviderServiceError(
       "provider.assignment_in_use",
-      "Provider 下仍有已分配模型，不能停用",
+      "The provider still has assigned models and cannot be disabled",
       409,
     );
   }
@@ -46,7 +46,7 @@ export function requireProviderDeletable(
   if (providerId.startsWith(environmentManagedPrefix)) {
     throw new ProviderServiceError(
       "provider.environment_managed",
-      "环境 Provider 不能删除，可以将其停用",
+      "Environment-managed providers cannot be deleted; you can disable them instead",
       409,
     );
   }
@@ -54,7 +54,7 @@ export function requireProviderDeletable(
   if (!provider) {
     throw new ProviderServiceError(
       "provider.not_found",
-      "Provider 不存在",
+      "Provider not found",
       404,
     );
   }
@@ -65,14 +65,14 @@ export function requireProviderDeletable(
   if (providerModels.some((model) => assignedModelIds.has(model.id))) {
     throw new ProviderServiceError(
       "provider.assignment_in_use",
-      "Provider 下的模型仍被模型分配引用，请先调整分配",
+      "Models under this provider are still referenced by model assignments; adjust the assignments first",
       409,
     );
   }
   if (providerModels.length > 0) {
     throw new ProviderServiceError(
       "provider.models_in_use",
-      "Provider 下仍有模型，请先删除或移动这些模型",
+      "The provider still has models; delete or move them first",
       409,
     );
   }

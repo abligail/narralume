@@ -339,7 +339,7 @@ describe("product lifecycle API", () => {
           throw new Error("injected install failure");
         renameSync(source, target);
       }),
-    ).toThrow("原数据库已还原");
+    ).toThrow("original database was rolled back");
     expect(readFileSync(databasePath, "utf8")).toBe("previous");
     expect(readFileSync(replacementPath, "utf8")).toBe("replacement");
   });

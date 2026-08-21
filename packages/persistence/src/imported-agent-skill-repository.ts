@@ -136,7 +136,7 @@ export class SqliteImportedAgentSkillRepository {
 
 export class ImportedAgentSkillVersionConflictError extends Error {
   constructor(id: string) {
-    super(`imported_agent_skill ${id} 已被其他操作更新`);
+    super(`imported_agent_skill ${id} was updated by another operation`);
     this.name = "ImportedAgentSkillVersionConflictError";
   }
 }

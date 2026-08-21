@@ -59,7 +59,10 @@ export interface CreateCanonEntityInput {
 export function createCanonEntity(input: CreateCanonEntityInput): CanonEntity {
   const name = input.name.trim();
   if (!name)
-    throw new DomainError("canon.entity.name.empty", "正典实体名称不能为空");
+    throw new DomainError(
+      "canon.entity.name.empty",
+      "Canon entity name must not be empty",
+    );
   const aliases = [
     ...new Set(
       (input.aliases ?? []).map((alias) => alias.trim()).filter(Boolean),
@@ -101,13 +104,16 @@ export interface CreateCanonFactInput {
 export function createCanonFact(input: CreateCanonFactInput): CanonFact {
   const predicate = input.predicate.trim();
   if (!predicate)
-    throw new DomainError("canon.fact.predicate.empty", "事实谓词不能为空");
+    throw new DomainError(
+      "canon.fact.predicate.empty",
+      "Fact predicate must not be empty",
+    );
   const hasEntityObject = Boolean(input.objectEntityId);
   const hasValue = input.value !== undefined;
   if (hasEntityObject === hasValue) {
     throw new DomainError(
       "canon.fact.object.invalid",
-      "事实必须且只能包含 objectEntityId 或 value 其中之一",
+      "A fact must contain exactly one of objectEntityId or value",
     );
   }
   const confidence =
@@ -115,14 +121,14 @@ export function createCanonFact(input: CreateCanonFactInput): CanonFact {
   if (!Number.isFinite(confidence) || confidence < 0 || confidence > 1) {
     throw new DomainError(
       "canon.fact.confidence.invalid",
-      "事实置信度必须在 0 到 1 之间",
+      "Fact confidence must be between 0 and 1",
     );
   }
   const scope = input.knowledgeScope ?? "omniscient";
   if (scope === "character" && !input.knowledgeSubjectId) {
     throw new DomainError(
       "canon.fact.character_scope.missing",
-      "角色认知事实必须指定角色",
+      "Character-scoped facts must specify the character",
     );
   }
 

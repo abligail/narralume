@@ -24,6 +24,8 @@ export default defineConfig({
   outputDir: ".tmp/playwright-results",
   use: {
     baseURL: webUrl,
+    // 界面双语后，e2e 断言以中文界面为基准；locale 决定 i18n 初始语言。
+    locale: "zh-CN",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },

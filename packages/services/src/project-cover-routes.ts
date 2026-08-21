@@ -29,12 +29,16 @@ export function registerProjectCoverRoutes(
   app.route("GET", "/api/projects/:projectId/cover", async (request) => {
     const { projectId } = ProjectCoverParamsSchema.parse(request.params);
     if (!projects.get(projectId))
-      throw new StoryServiceError("project.not_found", "作品不存在", 404);
+      throw new StoryServiceError(
+        "project.not_found",
+        "Project not found",
+        404,
+      );
     const cover = covers.get(projectId);
     if (!cover)
       throw new StoryServiceError(
         "project.cover.not_found",
-        "这本书还没有自定义封面",
+        "This project has no custom cover yet",
         404,
       );
     const etag = `W/"${cover.updatedAt}"`;

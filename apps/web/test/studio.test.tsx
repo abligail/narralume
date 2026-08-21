@@ -6,6 +6,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { setLocale } from "../src/i18n";
 import { StudioWorkspace } from "../src/workspaces/studio";
 
 /* 写作台：目录 + 稿编辑器 + 批注/版本印记。 */
@@ -140,6 +141,7 @@ function renderStudio(entry = "/projects/p-1/studio") {
 }
 
 beforeEach(() => {
+  setLocale("zh-CN");
   Object.defineProperty(window, "matchMedia", {
     configurable: true,
     writable: true,

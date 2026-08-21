@@ -49,7 +49,7 @@ export async function* parseSseStream(
     if (idleTimeoutMs === undefined || idleTimeoutMs <= 0) return;
     if (idleTimer !== undefined) clearTimeout(idleTimer);
     idleTimer = setTimeout(() => {
-      const error = new ModelError("SSE 流空闲超时", {
+      const error = new ModelError("SSE stream idle timeout", {
         category: "timeout",
         code: "stream_idle_timeout",
         retryable: true,
@@ -79,7 +79,7 @@ export async function* parseSseStream(
         frameBytes > MAX_SSE_FRAME_BYTES
       ) {
         await reader.cancel();
-        throw new ModelError("SSE 响应超过大小限制", {
+        throw new ModelError("SSE response exceeded the size limit", {
           category: "protocol",
           code: "model.response_too_large",
           retryable: false,
@@ -127,8 +127,9 @@ export async function* parseSseStream(
     }
   } catch (error) {
     if (error instanceof ModelError) throw error;
-    throw new ModelError("SSE 流在完成前中断", {
+    throw new ModelError("SSE stream ended before completion", {
       category: "stream_interrupted",
+      code: "model.stream_interrupted",
       retryable: true,
       ...(options.timing === undefined
         ? {}
@@ -154,15 +155,16 @@ export async function* parseSseJson(
     try {
       const value = JSON.parse(frame.data) as unknown;
       if (!value || typeof value !== "object" || Array.isArray(value)) {
-        throw new TypeError("SSE data 不是对象");
+        throw new TypeError("SSE data is not an object");
       }
       yield {
         ...(frame.event === undefined ? {} : { event: frame.event }),
         value: value as Record<string, unknown>,
       };
     } catch (error) {
-      throw new ModelError("收到无法解析的 SSE JSON 事件", {
+      throw new ModelError("Received an unparseable SSE JSON event", {
         category: "protocol",
+        code: "model.sse_invalid_json",
         retryable: false,
         ...(options.timing === undefined
           ? {}

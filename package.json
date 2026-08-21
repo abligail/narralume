@@ -1,6 +1,6 @@
 {
   "name": "narralume",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "NarraLume (叙灯) is a local-first, recoverable AI long-form fiction studio.",
   "license": "Apache-2.0",

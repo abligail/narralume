@@ -22,7 +22,7 @@ describe("Bridge upstream configuration", () => {
   it("rejects embedded credentials and public HTTP", () => {
     expect(() =>
       readBridgeConfig(environment("https://user:pass@example.com/v1")),
-    ).toThrow("内嵌凭据");
+    ).toThrow("embedded credentials");
     expect(() =>
       readBridgeConfig(environment("http://example.com/v1")),
     ).toThrow("HTTPS");

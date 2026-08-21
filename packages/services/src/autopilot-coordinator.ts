@@ -142,7 +142,7 @@ export class AutopilotCoordinator {
       if (!template) {
         this.automation.setSessionStatus(current.id, "failed", now, {
           code: "recipe.template.missing",
-          message: "章节生产配方模板不存在",
+          message: "The chapter production recipe template does not exist",
         });
         return this.changed(current.id, "session.failed");
       }
@@ -197,7 +197,7 @@ export class AutopilotCoordinator {
     if (!root) {
       this.automation.setSessionStatus(current.id, "failed", now, {
         code: "outline.root.missing",
-        message: "作品缺少全书根节点",
+        message: "The project is missing the book root node",
       });
       return this.changed(current.id, "session.failed");
     }

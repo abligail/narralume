@@ -76,7 +76,7 @@ export class SqliteTemplateRepository {
       if (current.version !== expectedVersion) {
         throw new TemplatePersistenceError(
           "harness_template.version.conflict",
-          "模板已在其他页面更新，请刷新后重试",
+          "The template was updated elsewhere; refresh and try again",
         );
       }
       const result = this.database.raw
@@ -88,7 +88,7 @@ export class SqliteTemplateRepository {
       if (result.changes !== 1) {
         throw new TemplatePersistenceError(
           "harness_template.version.conflict",
-          "模板已在其他页面更新，请刷新后重试",
+          "The template was updated elsewhere; refresh and try again",
         );
       }
       return this.getByKey(key)!;
@@ -106,7 +106,7 @@ export class SqliteTemplateRepository {
       if (current.version !== expectedVersion) {
         throw new TemplatePersistenceError(
           "harness_template.version.conflict",
-          "模板已在其他页面更新，请刷新后重试",
+          "The template was updated elsewhere; refresh and try again",
         );
       }
       const result = this.database.raw
@@ -118,7 +118,7 @@ export class SqliteTemplateRepository {
       if (result.changes !== 1) {
         throw new TemplatePersistenceError(
           "harness_template.version.conflict",
-          "模板已在其他页面更新，请刷新后重试",
+          "The template was updated elsewhere; refresh and try again",
         );
       }
       return this.getByKey(key)!;
@@ -156,7 +156,7 @@ export class SqliteTemplateRepository {
       if (inserted.changes !== 1) {
         throw new TemplatePersistenceError(
           "harness_template.key.conflict",
-          "模板键已存在，请使用其他键名",
+          "The template key already exists; please choose another key",
         );
       }
       return this.getByKey(input.key)!;

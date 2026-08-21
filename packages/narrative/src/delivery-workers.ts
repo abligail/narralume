@@ -71,19 +71,25 @@ export class DeliveryWorkerSuite {
     const batch = this.delivery.requireImportBatch(batchId);
     requireAnalysisOwnership(batch, snapshot.run.id);
     if (batch.targetProjectId !== snapshot.run.projectId) {
-      throw permanent("import.project.mismatch", "导入批次不属于当前作品");
+      throw permanent(
+        "import.project.mismatch",
+        "The import batch does not belong to the current project",
+      );
     }
     if (batch.format === "narrative-bundle") {
       throw permanent(
         "import.bundle.analysis_not_needed",
-        "完整作品包已经包含结构化数据，无需再次拆解",
+        "A full project bundle already contains structured data and does not need analysis again",
       );
     }
     const project = this.projects.get(snapshot.run.projectId);
-    if (!project) throw permanent("project.not_found", "作品不存在");
+    if (!project) throw permanent("project.not_found", "Project not found");
     const documents = this.importedText(batchId);
     if (!documents.trim()) {
-      throw permanent("import.content.empty", "没有可供 AI 拆解的正文候选");
+      throw permanent(
+        "import.content.empty",
+        "There is no manuscript content for AI analysis",
+      );
     }
     const chunkCharacters = Math.max(
       10_000,
@@ -643,14 +649,15 @@ function requiredArtifact(
     .find(
       (step) => step.kind === kind && step.status === "succeeded",
     )?.outputArtifact;
-  if (!artifact) throw permanent("artifact.missing", `缺少步骤 ${kind} 的工件`);
+  if (!artifact)
+    throw permanent("artifact.missing", `Missing artifact for step ${kind}`);
   return { ...artifact };
 }
 
 function policyString(policy: Readonly<Record<string, unknown>>, key: string) {
   const value = policy[key];
   if (typeof value !== "string" || !value.trim()) {
-    throw permanent("policy.value.invalid", `运行策略缺少 ${key}`);
+    throw permanent("policy.value.invalid", `Run policy is missing ${key}`);
   }
   return value;
 }

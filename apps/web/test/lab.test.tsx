@@ -6,6 +6,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { setLocale } from "../src/i18n";
 import { LabWorkspace } from "../src/workspaces/lab";
 
 /* 长篇推演：语义检索、剧情预测、故事记忆与影响预演。 */
@@ -97,6 +98,7 @@ function renderLab(entry = "/projects/p-1/lab") {
 }
 
 beforeEach(() => {
+  setLocale("zh-CN");
   Object.defineProperty(window, "matchMedia", {
     configurable: true,
     writable: true,

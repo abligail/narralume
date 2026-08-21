@@ -78,7 +78,7 @@ describe("ContextCompiler", () => {
       expect.objectContaining({
         sourceId: "task",
         status: "included",
-        reason: "必需来源",
+        reason: "Required source",
       }),
       expect.objectContaining({ sourceId: "history", status: "compressed" }),
       expect.objectContaining({ sourceId: "style", status: "excluded" }),

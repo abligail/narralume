@@ -46,23 +46,23 @@ export function softDeleteProject(
   const automation = new SqliteAutomationRepository(database);
   const project = projects.get(input.projectId);
   if (!project)
-    throw new StoryServiceError("project.not_found", "作品不存在", 404);
+    throw new StoryServiceError("project.not_found", "Project not found", 404);
   if (!project.archivedAt)
     throw new StoryServiceError(
       "project.delete.archive_required",
-      "移入回收站前必须先归档作品",
+      "Archive the project before moving it to the recycle bin",
       409,
     );
   if (project.updatedAt !== input.expectedUpdatedAt)
     throw new StoryServiceError(
       "project.version.conflict",
-      "作品已被更新，请刷新后重试",
+      "The project was updated; refresh and try again",
       409,
     );
   if (project.title !== input.confirmationTitle)
     throw new StoryServiceError(
       "project.delete.confirmation_mismatch",
-      "确认标题与作品标题不一致",
+      "The confirmation title does not match the project title",
       422,
     );
   const activeRuns = runs.listActiveRuns(input.projectId);
@@ -127,13 +127,13 @@ export function reviseCanonFact(
     input.projectId,
     input.factId,
     "canon.fact.superseded",
-    "事实已被新修订或撤回替代，请刷新后再编辑",
+    "The fact was superseded by a newer revision or withdrawal; refresh before editing",
   );
   const current = canon.requireFact(input.projectId, input.factId);
   if (current.authority === "locked" && !input.confirmLockedRevision) {
     throw new StoryServiceError(
       "canon.fact.locked",
-      "锁定事实需要显式确认后才能修订",
+      "Revising a locked fact requires explicit confirmation",
       409,
     );
   }
@@ -177,12 +177,12 @@ export function withdrawCanonFact(
     input.projectId,
     input.factId,
     "canon.fact.not_effective",
-    "只有当前生效的事实可以撤回",
+    "Only the currently effective fact can be withdrawn",
   );
   if (current.authority === "locked" && !input.confirmLockedWithdrawal) {
     throw new StoryServiceError(
       "canon.fact.locked",
-      "锁定事实需要显式确认后才能撤回",
+      "Withdrawing a locked fact requires explicit confirmation",
       409,
     );
   }
@@ -210,7 +210,7 @@ export function promoteCanonFact(
     input.projectId,
     input.factId,
     "canon.fact.superseded",
-    "事实已被修订或撤回，请刷新后再提升权威",
+    "The fact was revised or withdrawn; refresh before promoting its authority",
   );
   return canon.promoteFact(
     input.projectId,
@@ -243,7 +243,11 @@ export function commitDocumentVersion(
   const story = new SqliteStoryRepository(database);
   const document = documents.get(input.projectId, input.documentId);
   if (!document)
-    throw new StoryServiceError("document.not_found", "正文文档不存在", 404);
+    throw new StoryServiceError(
+      "document.not_found",
+      "Manuscript document not found",
+      404,
+    );
   const now = new Date().toISOString();
   const version = documents.appendVersion(input.projectId, input.documentId, {
     id: randomUuid(),
@@ -317,7 +321,7 @@ export function applyCoverMutation(
     if (!covers.get(projectId))
       throw new StoryServiceError(
         "project.cover.not_found",
-        "这本书还没有自定义封面",
+        "This book does not have a custom cover yet",
         404,
       );
     const current = covers.get(projectId)!;
@@ -336,13 +340,13 @@ export function applyCoverMutation(
   if (data.byteLength > MAX_COVER_BYTES)
     throw new StoryServiceError(
       "project.cover.too_large",
-      "封面处理后不能超过 8 MB",
+      "The cover must not exceed 8 MB after processing",
       413,
     );
   if (!matchesCoverMediaType(data, mutation.mediaType))
     throw new StoryServiceError(
       "project.cover.media_mismatch",
-      "封面内容与图片类型不一致",
+      "The cover content does not match the declared image type",
       422,
     );
   covers.upsert({
@@ -383,7 +387,7 @@ function decodeCover(source: string): Uint8Array {
   if (source.length % 4 !== 0 || !/^[A-Za-z0-9+/]+={0,2}$/u.test(source))
     throw new StoryServiceError(
       "project.cover.invalid_base64",
-      "封面图片编码无效",
+      "The cover image encoding is invalid",
       400,
     );
   let data: Uint8Array;
@@ -392,12 +396,16 @@ function decodeCover(source: string): Uint8Array {
   } catch {
     throw new StoryServiceError(
       "project.cover.invalid_base64",
-      "封面图片编码无效",
+      "The cover image encoding is invalid",
       400,
     );
   }
   if (data.byteLength === 0)
-    throw new StoryServiceError("project.cover.empty", "封面图片不能为空", 400);
+    throw new StoryServiceError(
+      "project.cover.empty",
+      "The cover image must not be empty",
+      400,
+    );
   return data;
 }
 

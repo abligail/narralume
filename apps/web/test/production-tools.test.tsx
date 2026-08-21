@@ -4,8 +4,9 @@ import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { setLocale } from "../src/i18n";
 import { ImportManager } from "../src/workspaces/delivery/production-tools";
 
 function json(value: unknown, status = 200) {
@@ -29,6 +30,10 @@ function renderImportManager() {
     </QueryClientProvider>,
   );
 }
+
+beforeEach(() => {
+  setLocale("zh-CN");
+});
 
 afterEach(() => {
   cleanup();

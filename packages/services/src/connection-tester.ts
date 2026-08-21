@@ -52,7 +52,7 @@ export async function testModelConnection(
         stage: "text",
         status: "failed",
         latencyMs: 0,
-        detail: `未配置环境变量 ${profile.apiKeyEnv}`,
+        detail: `Environment variable ${profile.apiKeyEnv} is not configured`,
       },
     ];
   }
@@ -90,8 +90,9 @@ export async function testModelConnection(
   stages.push(
     await runStage("text", async () => {
       const response = await gateway.generate(base, { stream: false });
-      if (!response.text.trim()) throw new Error("响应不含文本");
-      return `收到 ${response.text.trim().length} 个字符；结束原因为 ${response.finishReason}`;
+      if (!response.text.trim())
+        throw new Error("The response contains no text");
+      return `Received ${response.text.trim().length} characters; finish reason: ${response.finishReason}`;
     }),
   );
 
@@ -107,8 +108,8 @@ export async function testModelConnection(
               characters += event.text.length;
             }
           }
-          if (deltas === 0) throw new Error("未收到文本增量");
-          return `收到 ${deltas} 个文本增量，共 ${characters} 个字符`;
+          if (deltas === 0) throw new Error("No text deltas received");
+          return `Received ${deltas} text deltas, ${characters} characters in total`;
         })
       : skipped("stream"),
   );
@@ -156,8 +157,11 @@ export async function testModelConnection(
           const call = response.toolCalls.find(
             (candidate) => candidate.name === "echo_probe",
           );
-          if (!call) throw new Error("模型未返回 echo_probe 工具调用");
-          return `工具调用与 JSON 参数解析通过（${forcedChoice ? "forced" : "auto fallback"}；call id ${call.callId.length} 字符）`;
+          if (!call)
+            throw new Error(
+              "The model did not return the echo_probe tool call",
+            );
+          return `Tool call and JSON arguments parsed (${forcedChoice ? "forced" : "auto fallback"}; call id ${call.callId.length} chars)`;
         })
       : skipped("tool"),
   );
@@ -222,12 +226,12 @@ async function runStructuredOutputStage(
         return finish(
           "passed",
           mode === "native"
-            ? "原生 JSON Schema 输出通过"
-            : "JSON 模式（json_object）输出通过",
+            ? "Native JSON Schema output passed"
+            : "JSON mode (json_object) output passed",
           mode,
         );
       }
-      tierErrors.push(`${mode} 输出未通过本地严格验证`);
+      tierErrors.push(`${mode} output failed strict local validation`);
     } catch (error) {
       tierErrors.push(error instanceof Error ? error.message : String(error));
     }
@@ -241,7 +245,7 @@ async function runStructuredOutputStage(
     });
     return finish(
       "passed",
-      "Schema 提示 + 本地严格验证 fallback 通过",
+      "Schema-in-prompt with strict local validation fallback passed",
       "prompt",
     );
   } catch (error) {
@@ -250,7 +254,7 @@ async function runStructuredOutputStage(
 
   return finish(
     "failed",
-    tierErrors.join("；") || "结构化输出探测失败",
+    tierErrors.join("; ") || "Structured output probe failed",
     "none",
   );
 }
@@ -285,7 +289,12 @@ async function runStage(
 }
 
 function skipped(stage: ConnectionTestStage["stage"]): ConnectionTestStage {
-  return { stage, status: "skipped", latencyMs: 0, detail: "本次未请求该探测" };
+  return {
+    stage,
+    status: "skipped",
+    latencyMs: 0,
+    detail: "Probe not requested",
+  };
 }
 
 function isToolChoiceCompatibilityError(error: unknown): boolean {
@@ -308,6 +317,6 @@ function validateProbe(value: unknown) {
   }
   return {
     success: false as const,
-    issues: ["结构化结果不符合严格的 {ok:true}"],
+    issues: ["Structured result does not match strict {ok:true}"],
   };
 }

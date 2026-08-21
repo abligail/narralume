@@ -97,7 +97,7 @@ export function registerRunRoutes(
     async (request) => {
       const { projectId } = ProjectParamsSchema.parse(request.params);
       if (!projects.get(projectId)) {
-        throw new RunRouteError("project.not_found", "作品不存在", 404);
+        throw new RunRouteError("project.not_found", "Project not found", 404);
       }
       const input = CreateChapterRunRequestSchema.parse(request.body);
       const requestHash = hashRequest(input);
@@ -111,7 +111,7 @@ export function registerRunRoutes(
         if (replay.run.policy.creationRequestHash !== requestHash) {
           throw new RunRouteError(
             "chapter.run.idempotency_conflict",
-            "同一个 requestId 已用于不同的章节任务请求",
+            "The same requestId was already used for a different chapter run request",
             409,
           );
         }
@@ -136,7 +136,7 @@ export function registerRunRoutes(
       if (target.kind !== "chapter") {
         throw new RunRouteError(
           "run.target.not_chapter",
-          "章节生产只能选择 chapter 类型的大纲节点",
+          "Chapter production requires an outline node of type chapter",
           422,
         );
       }
@@ -146,7 +146,7 @@ export function registerRunRoutes(
       if (activeSession) {
         throw new RunRouteError(
           "project.writing_task.active",
-          `作品已有进行中的快速创作任务：${activeSession.id}`,
+          `The project already has an active autopilot session: ${activeSession.id}`,
           409,
         );
       }
@@ -156,7 +156,7 @@ export function registerRunRoutes(
       if (activeRun) {
         throw new RunRouteError(
           "project.writing_task.active",
-          `作品已有进行中的章节任务：${activeRun.id}`,
+          `The project already has an active chapter run: ${activeRun.id}`,
           409,
         );
       }
@@ -165,7 +165,7 @@ export function registerRunRoutes(
       if (!template)
         throw new RunRouteError(
           "recipe.template.missing",
-          "章节生产配方模板不存在",
+          "Chapter production recipe template not found",
           500,
         );
       const recipe = compileChapterRecipeTemplate(
@@ -220,7 +220,7 @@ export function registerRunRoutes(
         request.params,
       );
       if (!projects.get(projectId)) {
-        throw new RunRouteError("project.not_found", "作品不存在", 404);
+        throw new RunRouteError("project.not_found", "Project not found", 404);
       }
       const input = CreateDocumentReviewRequestSchema.parse(request.body);
       const requestHash = hashRequest(input);
@@ -234,7 +234,7 @@ export function registerRunRoutes(
         if (replay.run.policy.creationRequestHash !== requestHash) {
           throw new RunRouteError(
             "document.review.idempotency_conflict",
-            "同一个 requestId 已用于不同的审稿请求",
+            "The same requestId was already used for a different review request",
             409,
           );
         }
@@ -257,19 +257,23 @@ export function registerRunRoutes(
         documentId,
       );
       if (!document) {
-        throw new RunRouteError("document.not_found", "稿件不存在", 404);
+        throw new RunRouteError(
+          "document.not_found",
+          "Manuscript not found",
+          404,
+        );
       }
       if (document.kind !== "chapter" || !document.outlineNodeId) {
         throw new RunRouteError(
           "document.review.not_chapter",
-          "只有绑定章节大纲的正文可以审稿",
+          "Only a manuscript bound to a chapter outline node can be reviewed",
           422,
         );
       }
       if (document.currentVersionId !== input.documentVersionId) {
         throw new RunRouteError(
           "document.version.conflict",
-          "正文已有更新，请刷新后审阅最新版本",
+          "The manuscript has been updated; refresh and review the latest version",
           409,
         );
       }
@@ -281,7 +285,7 @@ export function registerRunRoutes(
       if (!version) {
         throw new RunRouteError(
           "document.version.not_found",
-          "正文版本不存在",
+          "Manuscript version not found",
           404,
         );
       }
@@ -329,7 +333,7 @@ export function registerRunRoutes(
   app.route("GET", "/api/projects/:projectId/runs", async (request) => {
     const { projectId } = ProjectParamsSchema.parse(request.params);
     if (!projects.get(projectId)) {
-      throw new RunRouteError("project.not_found", "作品不存在", 404);
+      throw new RunRouteError("project.not_found", "Project not found", 404);
     }
     return runs.listRuns(projectId).map((run) => NarrativeRunSchema.parse(run));
   });
@@ -389,7 +393,7 @@ export function registerRunRoutes(
       if (owner) {
         throw new RunRouteError(
           "run.retry.owned_by_autopilot",
-          `本章由快速创作任务 ${owner.sessionId} 管理，请在该任务中重试或调整流程`,
+          `This chapter is managed by autopilot session ${owner.sessionId}; retry or adjust the flow within that session`,
           409,
         );
       }
@@ -405,7 +409,7 @@ export function registerRunRoutes(
       ) {
         throw new RunRouteError(
           "run.retry.not_failed_chapter",
-          "只有失败的章节任务可以重试本章",
+          "Only a failed chapter run can be retried",
           409,
         );
       }
@@ -413,7 +417,7 @@ export function registerRunRoutes(
       if (!targetId) {
         throw new RunRouteError(
           "run.retry.no_target",
-          "失败任务缺少章节目标，无法重试",
+          "The failed run has no chapter target and cannot be retried",
           409,
         );
       }
@@ -421,7 +425,7 @@ export function registerRunRoutes(
       if (target.kind !== "chapter") {
         throw new RunRouteError(
           "run.target.not_chapter",
-          "章节生产只能选择 chapter 类型的大纲节点",
+          "Chapter production requires an outline node of type chapter",
           422,
         );
       }
@@ -436,7 +440,7 @@ export function registerRunRoutes(
       if (existing && existing.projectId !== input.projectId) {
         throw new RunRouteError(
           "run.retry.collision",
-          "重试任务 ID 与其它作品冲突",
+          "The retry run ID collides with another project",
           409,
         );
       }
@@ -461,7 +465,7 @@ export function registerRunRoutes(
       if (activeSession) {
         throw new RunRouteError(
           "project.writing_task.active",
-          `作品已有进行中的快速创作任务：${activeSession.id}`,
+          `The project already has an active autopilot session: ${activeSession.id}`,
           409,
         );
       }
@@ -471,7 +475,7 @@ export function registerRunRoutes(
       if (activeRun) {
         throw new RunRouteError(
           "project.writing_task.active",
-          `作品已有进行中的章节任务：${activeRun.id}`,
+          `The project already has an active chapter run: ${activeRun.id}`,
           409,
         );
       }
@@ -480,7 +484,7 @@ export function registerRunRoutes(
       if (!template)
         throw new RunRouteError(
           "recipe.template.missing",
-          "章节生产配方模板不存在",
+          "Chapter production recipe template not found",
           500,
         );
       const recipe = compileChapterRecipeTemplate(
@@ -538,7 +542,7 @@ export function registerRunRoutes(
     if (["completed", "failed", "cancelled"].includes(current.status)) {
       throw new RunRouteError(
         "run.terminal",
-        `运行已处于终态 ${current.status}`,
+        `The run is already in terminal state "${current.status}"`,
         409,
       );
     }
@@ -642,7 +646,7 @@ export function registerRunRoutes(
     if (!stream) {
       throw new RunRouteError(
         "run.stream.not_found",
-        "对应的 partial 流不存在",
+        "No matching partial stream exists",
         404,
       );
     }
@@ -702,7 +706,7 @@ export function registerRunRoutes(
     if (!run.targetOutlineNodeId) {
       throw new RunRouteError(
         "run.target.missing",
-        "章节运行没有目标大纲节点",
+        "The chapter run has no target outline node",
         422,
       );
     }
@@ -713,7 +717,7 @@ export function registerRunRoutes(
     if (target.kind !== "chapter") {
       throw new RunRouteError(
         "run.target.not_chapter",
-        "partial 只能采纳到 chapter 类型的大纲节点",
+        "A partial can only be adopted into an outline node of type chapter",
         422,
       );
     }
@@ -738,7 +742,7 @@ export function registerRunRoutes(
     if (!stream) {
       throw new RunRouteError(
         "run.stream.not_found",
-        "对应的 partial 流不存在",
+        "No matching partial stream exists",
         404,
       );
     }
@@ -816,7 +820,7 @@ export function registerRunRoutes(
     if (["completed", "failed", "cancelled"].includes(run.status)) {
       throw new RunRouteError(
         "run.terminal",
-        `运行已处于终态 ${run.status}，请创建新运行重新生成`,
+        `The run is already in terminal state "${run.status}"; create a new run to regenerate`,
         409,
       );
     }

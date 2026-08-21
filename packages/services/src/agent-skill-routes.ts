@@ -80,6 +80,6 @@ function requireProject(
   projectId: string,
 ): void {
   if (!projects.get(projectId)) {
-    throw new StoryServiceError("project.not_found", "作品不存在", 404);
+    throw new StoryServiceError("project.not_found", "Project not found", 404);
   }
 }

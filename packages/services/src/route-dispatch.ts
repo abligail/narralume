@@ -51,7 +51,7 @@ export class RouteTable implements RouteApp {
       ).then((result) => normalizeRouteResult(result));
     }
     return Promise.reject(
-      Object.assign(new Error("接口不存在"), {
+      Object.assign(new Error("Route not found"), {
         code: "route.not_found",
         statusCode: 404,
       }),

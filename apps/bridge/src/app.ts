@@ -40,20 +40,26 @@ export function buildBridge(options: BuildBridgeOptions): FastifyInstance {
       !sameSecret(bridgeToken, options.config.sharedSecret)
     ) {
       return reply.code(401).send({
-        error: { code: "bridge.auth_required", message: "Bridge 鉴权失败" },
+        error: {
+          code: "bridge.auth_required",
+          message: "Bridge authentication failed",
+        },
       });
     }
     if (!isJsonObject(request.body)) {
       return reply.code(400).send({
         error: {
           code: "bridge.invalid_body",
-          message: "请求体必须是 JSON 对象",
+          message: "The request body must be a JSON object",
         },
       });
     }
     if (activeRequests >= options.config.maxConcurrency) {
       return reply.code(429).send({
-        error: { code: "bridge.busy", message: "模型服务当前繁忙，请稍后重试" },
+        error: {
+          code: "bridge.busy",
+          message: "The model service is busy; please try again later",
+        },
       });
     }
 
@@ -118,7 +124,7 @@ export function buildBridge(options: BuildBridgeOptions): FastifyInstance {
         return reply.code(504).send({
           error: {
             code: "bridge.upstream_timeout",
-            message: "模型服务响应超时",
+            message: "The model service timed out",
           },
         });
       }
@@ -127,7 +133,10 @@ export function buildBridge(options: BuildBridgeOptions): FastifyInstance {
         "bridge upstream request failed",
       );
       return reply.code(502).send({
-        error: { code: "bridge.upstream_failed", message: "模型服务连接失败" },
+        error: {
+          code: "bridge.upstream_failed",
+          message: "Failed to connect to the model service",
+        },
       });
     }
   });

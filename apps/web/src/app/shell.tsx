@@ -3,6 +3,7 @@ import "./shell.css";
 import { useQuery } from "@tanstack/react-query";
 import {
   Command,
+  Languages,
   Moon,
   PanelLeftClose,
   PanelLeftOpen,
@@ -20,6 +21,7 @@ import {
 
 import { IconButton } from "../components/icon-button";
 import { Seal } from "../components/seal";
+import { getLocale, translate, useI18n, type MessageKey } from "../i18n";
 import { getHealth } from "../lib/api";
 import { CommandPalette } from "./command-palette";
 import {
@@ -127,6 +129,7 @@ export function AppShell() {
 }
 
 function StatusPill() {
+  const { t } = useI18n();
   const health = useQuery({
     queryKey: ["health"],
     queryFn: ({ signal }) => getHealth(signal),
@@ -138,10 +141,10 @@ function StatusPill() {
       ? "false"
       : "true";
   const label = health.isPending
-    ? "正在连接本地内核"
+    ? t("shell.status.connecting")
     : health.isError
-      ? "内核离线"
-      : "内核在线";
+      ? t("shell.status.offline")
+      : t("shell.status.online");
   return (
     <p
       className="status-pill"
@@ -156,21 +159,36 @@ function StatusPill() {
 }
 
 export function RepositoryLink() {
+  const { t } = useI18n();
   return (
     <a
       className="icon-button"
       href={REPOSITORY_URL}
       target="_blank"
       rel="noreferrer"
-      aria-label="在 GitHub 查看源代码"
-      title="在 GitHub 查看源代码"
+      aria-label={t("shell.repository.viewSource")}
+      title={t("shell.repository.viewSource")}
     >
       <GitHubMark />
     </a>
   );
 }
 
+function LanguageToggle() {
+  const { locale, setLocale, t } = useI18n();
+  const next = locale === "zh-CN" ? "en" : "zh-CN";
+  return (
+    <IconButton
+      icon={Languages}
+      label={t("shell.language.switch")}
+      onClick={() => setLocale(next)}
+    />
+  );
+}
+
 export function NaviLink(item: WorkspaceDef, projectId: string | null, current: WorkspaceDef, currentPath: string) {
+  const locale = getLocale();
+  const itemLabel = translate(locale, item.label);
   const Icon = item.icon;
   const href = item.id === "supply" && projectId
     ? current.id === "supply" ? currentPath : settingsPath(projectId, currentPath)
@@ -180,20 +198,21 @@ export function NaviLink(item: WorkspaceDef, projectId: string | null, current: 
       key={item.id}
       to={href}
       className="rail__item"
-      data-tooltip={item.label}
-      aria-label={`前往${item.label}`}
+      data-tooltip={itemLabel}
+      aria-label={translate(locale, "shell.nav.goTo", { label: itemLabel })}
       {...(current.id === item.id ? { "aria-current": "page" } : {})}
     >
       <span className="rail__item-icon">
         <Icon size={16} strokeWidth={1.5} aria-hidden="true" />
       </span>
-      <span className="rail__item-label">{item.label}</span>
+      <span className="rail__item-label">{itemLabel}</span>
       <span className="rail__item-index mono">{item.index}</span>
     </Link>
   );
 }
 
 function ShellFrame() {
+  const { t } = useI18n();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [railCollapsed, toggleRail] = useRailCollapsed();
   const { preference: themePreference, theme, toggleTheme } = useTheme();
@@ -298,37 +317,38 @@ function ShellFrame() {
           <Seal
             char={current.seal}
             variant="rail"
-            label={`当前工作区印记「${current.seal}」`}
+            label={t("shell.seal.current", { seal: current.seal })}
           />
           <div className="rail__brand-text mono" aria-hidden="true">
             <span>叙灯</span>
             <span className="rail__brand-en">NarraLume</span>
           </div>
         </div>
-        <nav className="rail__nav" aria-label="主导航">
+        <nav className="rail__nav" aria-label={t("shell.nav.aria")}>
           {WORKSPACES.map((item) => NaviLink(item, projectId, current, currentPath))}
         </nav>
-        <div className="rail__quick-nav" aria-label="AI 创作">
-          <p className="rail__group-label">AI 创作</p>
+        <div className="rail__quick-nav" aria-label={t("shell.groups.quick")}>
+          <p className="rail__group-label">{t("shell.groups.quick")}</p>
           {QUICK_WORKSPACES.map((item) => NaviLink(item, projectId, current, currentPath))}
         </div>
-        <div className="rail__tools-nav" aria-label="高级工具">
-          <p className="rail__group-label">高级工具</p>
+        <div className="rail__tools-nav" aria-label={t("shell.groups.advanced")}>
+          <p className="rail__group-label">{t("shell.groups.advanced")}</p>
           {ADVANCED_WORKSPACES.map((item) => NaviLink(item, projectId, current, currentPath))}
         </div>
         <div className="rail__tools">
           <StatusPill />
           <div className="rail__tools-row">
             <RepositoryLink />
+            <LanguageToggle />
             <IconButton
               icon={theme === "light" ? Moon : Sun}
-              label={themeButtonLabel(theme, themePreference)}
+              label={t(themeButtonLabel(theme, themePreference))}
               pressed={themePreference !== "system"}
               onClick={toggleTheme}
             />
             <IconButton
               icon={Command}
-              label="命令面板（⌘K）"
+              label={t("shell.palette.button")}
               onClick={() => setPaletteOpen(true)}
             />
           </div>
@@ -336,7 +356,7 @@ function ShellFrame() {
         <div className="rail__collapse">
           <IconButton
             icon={railCollapsed ? PanelLeftOpen : PanelLeftClose}
-            label={railCollapsed ? "展开导航" : "收起导航"}
+            label={railCollapsed ? t("shell.rail.expand") : t("shell.rail.collapse")}
             onClick={toggleRail}
           />
         </div>
@@ -344,20 +364,21 @@ function ShellFrame() {
       <div className="shell__topbar">
         <StatusPill />
         <RepositoryLink />
+        <LanguageToggle />
         <IconButton
           icon={theme === "light" ? Moon : Sun}
-          label={themeButtonLabel(theme, themePreference)}
+          label={t(themeButtonLabel(theme, themePreference))}
           pressed={themePreference !== "system"}
           onClick={toggleTheme}
         />
         <IconButton
           icon={Command}
-          label="命令面板（⌘K）"
+          label={t("shell.palette.button")}
           onClick={() => setPaletteOpen(true)}
         />
       </div>
       <main className="shell__main">
-        <Suspense fallback={<div className="shell__loading" role="status">正在展开工作页…</div>}>
+        <Suspense fallback={<div className="shell__loading" role="status">{t("shell.loading.workspace")}</div>}>
           <Routes>
             <Route path="/" element={<Navigate to="/shelf" replace />} />
             <Route path="/shelf" element={<ShelfWorkspace />} />
@@ -403,9 +424,9 @@ function ShellFrame() {
 function themeButtonLabel(
   theme: "light" | "dark",
   preference: "system" | "light" | "dark",
-): string {
-  if (preference !== "system") return "恢复跟随系统主题";
-  return theme === "light" ? "切换夜灯" : "切换日色";
+): MessageKey {
+  if (preference !== "system") return "shell.theme.followSystem";
+  return theme === "light" ? "shell.theme.toDark" : "shell.theme.toLight";
 }
 
 function routeAssistantContext(

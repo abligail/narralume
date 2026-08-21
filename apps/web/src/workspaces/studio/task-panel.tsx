@@ -11,6 +11,7 @@ import {
   getRunDetail,
   type RunActionRequest,
 } from "../../lib/api";
+import { getLocale, translate, useI18n, type MessageKey } from "../../i18n";
 import { runStatusShortLabel, taskActionLabel } from "../../lib/labels";
 import { projectWorkspacePath } from "../../lib/project-route";
 import { rememberTask } from "../../lib/task-ledger";
@@ -27,6 +28,7 @@ interface WritingTaskPanelProps {
 }
 
 export function WritingTaskPanel({ projectId, runId, onRunChange, onDismiss, onAccepted, onRefreshDocument }: WritingTaskPanelProps) {
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const [revisionOpen, setRevisionOpen] = useState(false);
   const [revisionInstruction, setRevisionInstruction] = useState("");
@@ -71,7 +73,7 @@ export function WritingTaskPanel({ projectId, runId, onRunChange, onDismiss, onA
         projectId,
         kind: "chapter",
         taskId: nextRunId,
-        label: "重试本章写作",
+        label: t("studio.task.retryLabel"),
         createdAt: new Date().toISOString(),
         origin: { surface: "writing" },
       });
@@ -82,8 +84,8 @@ export function WritingTaskPanel({ projectId, runId, onRunChange, onDismiss, onA
     },
   });
 
-  if (query.isPending) return <section className="studio__task" aria-label="AI 写作任务"><Skeleton lines={5} /></section>;
-  if (query.isError) return <section className="studio__task" aria-label="AI 写作任务"><ErrorNote error={query.error} title="写作任务暂时无法加载" /><Link className="studio__task-evidence" to={`${projectWorkspacePath(projectId, "runs")}?run=${encodeURIComponent(runId)}`}>查看任务详情 <ExternalLink size={12} /></Link></section>;
+  if (query.isPending) return <section className="studio__task" aria-label={t("studio.task.aria")}><Skeleton lines={5} /></section>;
+  if (query.isError) return <section className="studio__task" aria-label={t("studio.task.aria")}><ErrorNote error={query.error} title={t("studio.errors.taskLoad")} /><Link className="studio__task-evidence" to={`${projectWorkspacePath(projectId, "runs")}?run=${encodeURIComponent(runId)}`}>{t("studio.task.detailLink")} <ExternalLink size={12} /></Link></section>;
   if (!query.data) return null;
 
   const detail = query.data;
@@ -110,64 +112,64 @@ export function WritingTaskPanel({ projectId, runId, onRunChange, onDismiss, onA
   const submitRevision = () => mutation.mutate({
     action: "request_revision",
     requestId: revisionRequestIdRef.current ??= crypto.randomUUID(),
-    instruction: revisionInstruction.trim() || "请在保持既有优点的前提下，重新修订并提升这一版正文。",
+    instruction: revisionInstruction.trim() || t("studio.task.revisionDefault"),
   });
 
-  return <section className="studio__task" aria-label="AI 写作任务" id="writing-task">
+  return <section className="studio__task" aria-label={t("studio.task.aria")} id="writing-task">
     <header className="studio__task-head">
-      <div><p className="mono">AI 候选稿</p><h2>{runStatusShortLabel(detail.run.status)}</h2></div>
-      <button type="button" className="studio__task-close" aria-label="收起 AI 任务" onClick={onDismiss}><X size={15} /></button>
+      <div><p className="mono">{t("studio.task.candidateTag")}</p><h2>{runStatusShortLabel(detail.run.status)}</h2></div>
+      <button type="button" className="studio__task-close" aria-label={t("studio.task.collapseAria")} onClick={onDismiss}><X size={15} /></button>
     </header>
 
-    {waitingForRetry ? <div className="studio__task-progress"><Sparkles size={16} /><div><strong>等待自动重试</strong><p>本次调用暂时失败，后台会按原任务继续；不需要重复提交。</p></div></div> : null}
-    {showProgress ? <div className="studio__task-progress"><Sparkles size={16} /><div><strong>AI 正在完成本章</strong><p>可以离开此页；返回后会继续显示同一任务和正式产物。</p></div></div> : null}
+    {waitingForRetry ? <div className="studio__task-progress"><Sparkles size={16} /><div><strong>{t("studio.task.waitingRetryTitle")}</strong><p>{t("studio.task.waitingRetryBody")}</p></div></div> : null}
+    {showProgress ? <div className="studio__task-progress"><Sparkles size={16} /><div><strong>{t("studio.task.progressTitle")}</strong><p>{t("studio.task.progressBody")}</p></div></div> : null}
     {failed ? (
       <div className="studio__task-progress" data-tone="failed">
         <CircleAlert size={16} />
         <div>
-          <strong>本章生成失败</strong>
-          <p>{failedMessage ?? "模型调用在多次自动重试后仍失败。"}</p>
+          <strong>{t("studio.task.failedTitle")}</strong>
+          <p>{failedMessage ?? t("studio.task.failedFallback")}</p>
           <div className="studio__task-retry">
-            {canRetry ? <button type="button" className="btn btn--primary" disabled={retryMutation.isPending} onClick={() => retryMutation.mutate()}><RefreshCcw size={13} />{retryMutation.isPending ? "正在重试…" : "重试本章"}</button> : detail.parentTask?.kind === "autopilot" ? <Link className="btn btn--primary" to={`${projectWorkspacePath(projectId, "autopilot")}?session=${encodeURIComponent(detail.parentTask.id)}`}>返回快速创作任务</Link> : null}
+            {canRetry ? <button type="button" className="btn btn--primary" disabled={retryMutation.isPending} onClick={() => retryMutation.mutate()}><RefreshCcw size={13} />{retryMutation.isPending ? t("studio.task.retrying") : t("studio.task.retry")}</button> : detail.parentTask?.kind === "autopilot" ? <Link className="btn btn--primary" to={`${projectWorkspacePath(projectId, "autopilot")}?session=${encodeURIComponent(detail.parentTask.id)}`}>{t("studio.task.backToAutopilot")}</Link> : null}
           </div>
-          {retryMutation.isError ? <ErrorNote error={retryMutation.error} title="重试没有开始" /> : null}
+          {retryMutation.isError ? <ErrorNote error={retryMutation.error} title={t("studio.errors.retryFailed")} /> : null}
         </div>
       </div>
     ) : null}
 
-    {planGoal ? <article className="studio__task-note"><span className="mono">本章计划</span><p>{planGoal}</p></article> : null}
+    {planGoal ? <article className="studio__task-note"><span className="mono">{t("studio.task.planLabel")}</span><p>{planGoal}</p></article> : null}
 
-    {manuscript ? <article className="studio__candidate" aria-label="待采纳正文">
-      <header><span className="mono">待采纳正文</span><strong>{[...manuscript].length} 字</strong></header>
+    {manuscript ? <article className="studio__candidate" aria-label={t("studio.task.candidateAria")}>
+      <header><span className="mono">{t("studio.task.candidateLabel")}</span><strong>{t("common.state.characters", { count: [...manuscript].length })}</strong></header>
       <div className="studio__candidate-body">{manuscript}</div>
     </article> : null}
 
-    {reviewSummary ? <article className="studio__task-review" aria-label="审稿结果">
-      <header><span className="mono">本次审稿</span>{reviewVerdict ? <strong>{reviewVerdictLabel(reviewVerdict)}</strong> : null}</header>
+    {reviewSummary ? <article className="studio__task-review" aria-label={t("studio.task.reviewAria")}>
+      <header><span className="mono">{t("studio.task.reviewLabel")}</span>{reviewVerdict ? <strong>{reviewVerdictLabel(reviewVerdict)}</strong> : null}</header>
       <p>{reviewSummary}</p>
-      {issues.length > 0 ? <ul>{issues.map((issue, index) => <li key={stringValue(issue, "id") ?? index}><strong>{stringValue(issue, "message") ?? "需要复核"}</strong>{stringValue(issue, "suggestedDirection") ? <span>{stringValue(issue, "suggestedDirection")}</span> : null}</li>)}</ul> : null}
+      {issues.length > 0 ? <ul>{issues.map((issue, index) => <li key={stringValue(issue, "id") ?? index}><strong>{stringValue(issue, "message") ?? t("studio.task.issueFallback")}</strong>{stringValue(issue, "suggestedDirection") ? <span>{stringValue(issue, "suggestedDirection")}</span> : null}</li>)}</ul> : null}
     </article> : null}
 
-    {detail.result.settlementCandidate ? <p className="studio__task-settlement">这版正文带来新的故事变化；采纳正文后，再在写作台确认无冲突的设定结算。</p> : null}
+    {detail.result.settlementCandidate ? <p className="studio__task-settlement">{t("studio.task.settlementNote")}</p> : null}
 
     <div className="studio__task-actions">
       {actions.has("accept_plan") ? <button type="button" className="btn btn--primary" disabled={mutation.isPending} onClick={() => mutation.mutate({ action: "accept_plan" })}><Check size={13} />{taskActionLabel("accept_plan")}</button> : null}
-      {actions.has("accept_manuscript") ? <button type="button" className="btn btn--primary" disabled={mutation.isPending} onClick={() => mutation.mutate({ action: "accept_manuscript" })}><Check size={13} />采纳为正文版本</button> : null}
-      {actions.has("request_revision") ? <button type="button" className="btn" disabled={mutation.isPending} onClick={() => setRevisionOpen((value) => !value)}><RefreshCcw size={13} />要求再改</button> : null}
+      {actions.has("accept_manuscript") ? <button type="button" className="btn btn--primary" disabled={mutation.isPending} onClick={() => mutation.mutate({ action: "accept_manuscript" })}><Check size={13} />{t("studio.task.accept")}</button> : null}
+      {actions.has("request_revision") ? <button type="button" className="btn" disabled={mutation.isPending} onClick={() => setRevisionOpen((value) => !value)}><RefreshCcw size={13} />{t("studio.task.requestRevision")}</button> : null}
       {actions.has("switch_to_manual") ? <button type="button" className="btn" disabled={mutation.isPending} onClick={() => mutation.mutate({ action: "switch_to_manual" })}>{taskActionLabel("switch_to_manual")}</button> : null}
-      {actions.has("pause") ? <button type="button" className="btn" disabled={mutation.isPending} onClick={() => mutation.mutate({ action: "pause" })}><Pause size={13} />暂停</button> : null}
-      {actions.has("resume") ? <button type="button" className="btn" disabled={mutation.isPending} onClick={() => mutation.mutate({ action: "resume" })}><Play size={13} />继续</button> : null}
-      {actions.has("discard_manuscript") ? <button type="button" className="btn" disabled={mutation.isPending} onClick={() => setConfirmAction("discard_manuscript")}>丢弃候选</button> : null}
-      {actions.has("cancel") ? <button type="button" className="btn" disabled={mutation.isPending} onClick={() => setConfirmAction("cancel")}><Square size={13} />取消任务</button> : null}
+      {actions.has("pause") ? <button type="button" className="btn" disabled={mutation.isPending} onClick={() => mutation.mutate({ action: "pause" })}><Pause size={13} />{t("studio.task.pause")}</button> : null}
+      {actions.has("resume") ? <button type="button" className="btn" disabled={mutation.isPending} onClick={() => mutation.mutate({ action: "resume" })}><Play size={13} />{t("studio.task.resume")}</button> : null}
+      {actions.has("discard_manuscript") ? <button type="button" className="btn" disabled={mutation.isPending} onClick={() => setConfirmAction("discard_manuscript")}>{t("studio.task.discard")}</button> : null}
+      {actions.has("cancel") ? <button type="button" className="btn" disabled={mutation.isPending} onClick={() => setConfirmAction("cancel")}><Square size={13} />{t("studio.task.cancel")}</button> : null}
     </div>
 
-    {revisionOpen ? <div className="studio__task-revision"><label>告诉 AI 这次要怎么改<textarea rows={3} value={revisionInstruction} onChange={(event) => setRevisionInstruction(event.target.value)} placeholder="例如：保留开头的克制感，把中段冲突提前，并删去解释性对白。" /></label><button type="button" className="btn btn--primary" disabled={mutation.isPending} onClick={submitRevision}>提交修订要求</button></div> : null}
-    {detail.result.partialRecovery ? <p className="studio__task-settlement">生成被中断，已有 {detail.result.partialRecovery.characters} 字可恢复。请打开任务详情，选择取用残稿或重新生成。</p> : null}
-    {mutation.isError ? <ErrorNote error={mutation.error} title="任务操作没有完成" /> : null}
+    {revisionOpen ? <div className="studio__task-revision"><label>{t("studio.task.revisionLabel")}<textarea rows={3} value={revisionInstruction} onChange={(event) => setRevisionInstruction(event.target.value)} placeholder={t("studio.task.revisionPlaceholder")} /></label><button type="button" className="btn btn--primary" disabled={mutation.isPending} onClick={submitRevision}>{t("studio.task.revisionSubmit")}</button></div> : null}
+    {detail.result.partialRecovery ? <p className="studio__task-settlement">{t("studio.task.partialRecovery", { count: detail.result.partialRecovery.characters })}</p> : null}
+    {mutation.isError ? <ErrorNote error={mutation.error} title={t("studio.errors.taskActionFailed")} /> : null}
     {notice ? <p className="studio__saved-note" role="status">{notice}</p> : null}
-    <Link className="studio__task-evidence" to={`${projectWorkspacePath(projectId, "runs")}?run=${encodeURIComponent(runId)}`}>查看任务详情 <ExternalLink size={12} /></Link>
+    <Link className="studio__task-evidence" to={`${projectWorkspacePath(projectId, "runs")}?run=${encodeURIComponent(runId)}`}>{t("studio.task.detailLink")} <ExternalLink size={12} /></Link>
 
-    {confirmAction ? <ConfirmDialog title={confirmAction === "cancel" ? "取消这次 AI 任务" : "丢弃这版候选正文"} confirmLabel={confirmAction === "cancel" ? "确认取消" : "确认丢弃"} danger pending={mutation.isPending} onCancel={() => setConfirmAction(null)} onConfirm={() => mutation.mutate({ action: confirmAction })}><p>{confirmAction === "cancel" ? "已经形成的草稿和版本不会被删除，但尚未完成的步骤会停止。" : "这只丢弃 AI 候选，不会删除你当前正在编辑的正文。"}</p></ConfirmDialog> : null}
+    {confirmAction ? <ConfirmDialog title={confirmAction === "cancel" ? t("studio.task.confirmCancelTitle") : t("studio.task.confirmDiscardTitle")} confirmLabel={confirmAction === "cancel" ? t("studio.task.confirmCancelLabel") : t("studio.task.confirmDiscardLabel")} danger pending={mutation.isPending} onCancel={() => setConfirmAction(null)} onConfirm={() => mutation.mutate({ action: confirmAction })}><p>{confirmAction === "cancel" ? t("studio.task.confirmCancelBody") : t("studio.task.confirmDiscardBody")}</p></ConfirmDialog> : null}
   </section>;
 }
 
@@ -190,18 +192,25 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function reviewVerdictLabel(verdict: string): string {
-  return ({ pass: "通过", revise: "建议修订", block: "需要裁定" } as Record<string, string>)[verdict] ?? verdict;
+  const keys: Record<string, MessageKey> = {
+    pass: "studio.task.verdict.pass",
+    revise: "studio.task.verdict.revise",
+    block: "studio.task.verdict.block",
+  };
+  const key = keys[verdict];
+  return key ? translate(getLocale(), key) : verdict;
 }
 
 function actionNotice(action: RunActionRequest["action"]): string {
-  return ({
-    accept_plan: "本章计划已确认，AI 会继续完成正文。",
-    accept_manuscript: "候选正文已采纳，正在刷新正式版本。",
-    request_revision: "修订要求已提交，新的候选稿会回到这里。",
-    discard_manuscript: "这版候选正文已丢弃。",
-    switch_to_manual: "已转为手动创作。",
-    pause: "任务会停在下一个安全边界。",
-    resume: "任务已继续。",
-    cancel: "任务已取消。",
-  } as Record<string, string>)[action] ?? "操作已提交。";
+  const keys: Record<string, MessageKey> = {
+    accept_plan: "studio.task.notice.acceptPlan",
+    accept_manuscript: "studio.task.notice.acceptManuscript",
+    request_revision: "studio.task.notice.requestRevision",
+    discard_manuscript: "studio.task.notice.discardManuscript",
+    switch_to_manual: "studio.task.notice.switchToManual",
+    pause: "studio.task.notice.pause",
+    resume: "studio.task.notice.resume",
+    cancel: "studio.task.notice.cancel",
+  };
+  return translate(getLocale(), keys[action] ?? "studio.task.notice.fallback");
 }

@@ -309,7 +309,7 @@ export const ConfigureAssistantConversationRequestSchema = z
   .refine(
     (value) =>
       value.modelId !== undefined || value.reasoningEffort !== undefined,
-    { message: "至少修改模型或思考档之一" },
+    { message: "Provide a new model or reasoning effort" },
   );
 export type ConfigureAssistantConversationRequest = z.infer<
   typeof ConfigureAssistantConversationRequestSchema

@@ -87,7 +87,7 @@ export class CanonCandidateWorkerSuite {
     snapshot: RunSnapshot,
   ): Promise<StepExecutionResult> {
     const project = this.projects.get(snapshot.run.projectId);
-    if (!project) throw permanent("project.not_found", "作品不存在");
+    if (!project) throw permanent("project.not_found", "Project not found");
     const spread = CanonSpreadSchema.parse(
       policyString(snapshot.run.policy, "canonSpread"),
     );
@@ -282,7 +282,8 @@ function requiredArtifact(
       (candidate) =>
         candidate.kind === kind && candidate.status === "succeeded",
     )?.outputArtifact;
-  if (!artifact) throw permanent("artifact.missing", `缺少步骤 ${kind} 的工件`);
+  if (!artifact)
+    throw permanent("artifact.missing", `Missing artifact for step ${kind}`);
   return artifact;
 }
 
@@ -292,7 +293,7 @@ function policyString(
 ): string {
   const value = policy[key];
   if (typeof value !== "string" || !value.trim())
-    throw permanent("policy.value.invalid", `运行策略缺少 ${key}`);
+    throw permanent("policy.value.invalid", `Run policy is missing ${key}`);
   return value;
 }
 
@@ -311,7 +312,7 @@ function stringField(
 ): string {
   const entry = value[key];
   if (typeof entry !== "string" || !entry.trim())
-    throw permanent("artifact.value.invalid", `工件缺少 ${key}`);
+    throw permanent("artifact.value.invalid", `Artifact is missing ${key}`);
   return entry;
 }
 

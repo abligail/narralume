@@ -125,11 +125,15 @@ export async function collectModelEvents(
   }
 
   if (!completed) {
-    throw new ModelError("模型事件流缺少完成事件", {
-      category: "stream_interrupted",
-      retryable: true,
-      ...(text ? { partialText: text } : {}),
-    });
+    throw new ModelError(
+      "Model event stream ended without a completion event",
+      {
+        category: "stream_interrupted",
+        code: "model.stream_incomplete",
+        retryable: true,
+        ...(text ? { partialText: text } : {}),
+      },
+    );
   }
 
   return {

@@ -10,8 +10,9 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { setLocale } from "../src/i18n";
 import { CanonCandidatePanel } from "../src/workspaces/bible/candidate-panel";
 
 /* Canon 候选桌：指示文本与 startedRunId 绑定 Spread 身份，切页重挂载。 */
@@ -37,6 +38,10 @@ function renderPanel(spread: "intent" | "outline") {
     </QueryClientProvider>,
   );
 }
+
+beforeEach(() => {
+  setLocale("zh-CN");
+});
 
 afterEach(() => {
   cleanup();

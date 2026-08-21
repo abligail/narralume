@@ -47,7 +47,7 @@ export function decideRelay(
       action: "reject",
       status: 405,
       code: "method_not_allowed",
-      message: "中继只接受 POST。",
+      message: "The relay only accepts POST requests.",
     };
   }
   if (normalizePath(context.url) !== CHAT_COMPLETIONS_PATH) {
@@ -55,7 +55,7 @@ export function decideRelay(
       action: "reject",
       status: 404,
       code: "path_not_allowed",
-      message: "路径不在中继白名单内。",
+      message: "The path is not in the relay allowlist.",
     };
   }
   if (!isJsonObject(context.body)) {
@@ -63,7 +63,7 @@ export function decideRelay(
       action: "reject",
       status: 400,
       code: "invalid_body",
-      message: "请求体必须是 JSON 对象。",
+      message: "The request body must be a JSON object.",
     };
   }
 

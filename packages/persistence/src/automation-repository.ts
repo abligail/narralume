@@ -329,7 +329,7 @@ export class SqliteAutomationRepository {
     if (session.status !== "paused" && session.status !== "awaiting_user") {
       throw new AutomationPersistenceError(
         "autopilot.not_resumable",
-        `自动驾驶当前状态 ${session.status} 不能恢复`,
+        `Autopilot session in status ${session.status} cannot be resumed`,
       );
     }
     this.database.raw
@@ -357,7 +357,7 @@ export class SqliteAutomationRepository {
       if (session.currentRunId) {
         throw new AutomationPersistenceError(
           "autopilot.child.active",
-          "自动驾驶已有正在处理的子运行",
+          "Autopilot session already has an active child run",
         );
       }
       const sequence = (
@@ -571,10 +571,10 @@ export class SqliteAutomationRepository {
       for (const steer of terminal) {
         const message =
           steer.status === "cancelled"
-            ? "影响范围判断已取消，这条创作指示未应用"
+            ? "Impact assessment was cancelled, so this steering instruction was not applied"
             : steer.status === "failed"
-              ? "影响范围判断失败，这条创作指示未应用"
-              : "影响范围判断未产生有效结果，这条创作指示未应用";
+              ? "Impact assessment failed, so this steering instruction was not applied"
+              : "Impact assessment produced no valid result, so this steering instruction was not applied";
         changed += Number(update.run(message, now, steer.id).changes);
       }
       return changed;

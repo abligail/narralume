@@ -154,7 +154,7 @@ export function registerStudioRoutes(
       ) {
         throw new StudioRouteError(
           "cocreate.participants.required",
-          "手动发言策略需要至少一名参与者",
+          "The manual speaker policy requires at least one participant",
           422,
         );
       }
@@ -250,7 +250,7 @@ export function registerStudioRoutes(
         if (replayTurn.metadata.creationRequestHash !== requestHash) {
           throw new StudioRouteError(
             "cocreate.turn.idempotency_conflict",
-            "同一个 requestId 已用于不同的共创回合",
+            "The same requestId was already used for a different co-creation turn",
             409,
           );
         }
@@ -279,7 +279,7 @@ export function registerStudioRoutes(
       if (session.status !== "active" || !session.activeBranchId) {
         throw new StudioRouteError(
           "cocreate.session.inactive",
-          "会话未激活或没有活动分支",
+          "The session is not active or has no active branch",
           409,
         );
       }
@@ -290,7 +290,7 @@ export function registerStudioRoutes(
       ) {
         throw new StudioRouteError(
           "cocreate.speaker.required",
-          "手动 speaker policy 必须指定已启用 Persona",
+          "The manual speaker policy must specify an enabled Persona",
           422,
         );
       }
@@ -383,7 +383,7 @@ export function registerStudioRoutes(
       if (replay.run.policy.creationRequestHash !== requestHash) {
         throw new StudioRouteError(
           "cocreate.swipe.idempotency_conflict",
-          "同一个 requestId 已用于不同的 Swipe 请求",
+          "The same requestId was already used for a different Swipe request",
           409,
         );
       }
@@ -400,7 +400,7 @@ export function registerStudioRoutes(
       if (turn.role !== "assistant") {
         throw new StudioRouteError(
           "swipe.turn.not_assistant",
-          "只能为 AI 回合生成 Swipe",
+          "Swipes can only be generated for AI turns",
           409,
         );
       }
@@ -540,7 +540,7 @@ export function registerStudioRoutes(
         if (replay.run.policy.creationRequestHash !== requestHash) {
           throw new StudioRouteError(
             "adoption.idempotency_conflict",
-            "同一个 requestId 已用于不同的场景采纳请求",
+            "The same requestId was already used for a different scene adoption request",
             409,
           );
         }
@@ -566,7 +566,7 @@ export function registerStudioRoutes(
         ) {
           throw new StudioRouteError(
             "adoption.scope.mismatch",
-            "采纳范围的分支或回合不属于当前会话",
+            "The branch or turn in the adoption range does not belong to the current session",
             422,
           );
         }
@@ -634,11 +634,15 @@ export function registerStudioRoutes(
       const input = SetDocumentArchivedRequestSchema.parse(request.body);
       const current = documents.get(projectId, documentId);
       if (!current)
-        throw new StudioRouteError("document.not_found", "文档不存在", 404);
+        throw new StudioRouteError(
+          "document.not_found",
+          "Document not found",
+          404,
+        );
       if (current.updatedAt !== input.expectedUpdatedAt)
         throw new StudioRouteError(
           "document.version.conflict",
-          "稿件已变化，请刷新后再移动",
+          "The document has changed; refresh before moving it",
           409,
         );
       return documents.setArchived(
@@ -660,7 +664,11 @@ export function registerStudioRoutes(
       );
       const document = documents.get(projectId, documentId);
       if (!document)
-        throw new StudioRouteError("document.not_found", "文档不存在", 404);
+        throw new StudioRouteError(
+          "document.not_found",
+          "Document not found",
+          404,
+        );
       return StudioDocumentDetailSchema.parse({
         document,
         currentVersion: document.currentVersionId
@@ -688,11 +696,15 @@ export function registerStudioRoutes(
       const input = SaveDocumentDraftRequestSchema.parse(request.body);
       const document = documents.get(projectId, documentId);
       if (!document)
-        throw new StudioRouteError("document.not_found", "文档不存在", 404);
+        throw new StudioRouteError(
+          "document.not_found",
+          "Document not found",
+          404,
+        );
       if (input.baseVersionId !== document.currentVersionId) {
         throw new StudioRouteError(
           "draft.base_version.conflict",
-          "正文版本已变化，请刷新后再保存草稿",
+          "The manuscript version has changed; refresh before saving the draft",
           409,
         );
       }
@@ -700,7 +712,7 @@ export function registerStudioRoutes(
       if ((existingDraft?.updatedAt ?? null) !== input.expectedDraftUpdatedAt) {
         throw new StudioRouteError(
           "draft.updated_at.conflict",
-          "草稿已在其他页面更新，请刷新后再保存",
+          "The draft was updated in another page; refresh before saving",
           409,
         );
       }
@@ -739,7 +751,7 @@ export function registerStudioRoutes(
       if (!version)
         throw new StudioRouteError(
           "document.version.not_found",
-          "评论对应版本不存在",
+          "The version referenced by the comment does not exist",
           404,
         );
       const now = new Date().toISOString();
@@ -825,7 +837,7 @@ export function registerStudioRoutes(
           if (replay.requestHash !== requestHash) {
             throw new StudioRouteError(
               "edit_proposal.idempotency_conflict",
-              "同一个 requestId 已用于不同的选区提案裁定",
+              "The same requestId was already used for a different selection proposal adjudication",
               409,
             );
           }
@@ -839,7 +851,7 @@ export function registerStudioRoutes(
           if (!sameDecision) {
             throw new StudioRouteError(
               "edit_proposal.already_decided",
-              `选区提案已处于 ${proposal.status}，不能执行 ${input.action}`,
+              `The selection proposal is already ${proposal.status}; cannot perform ${input.action}`,
               409,
             );
           }

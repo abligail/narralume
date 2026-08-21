@@ -1,0 +1,77 @@
+/* 应用骨架文案：左栏 rail 导航、命令面板、主题切换、内核状态与在线体验门。 */
+export const shell = {
+  nav: {
+    shelf: "书架",
+    shelfBlurb: "作品编目、检索与建书入口",
+    overview: "项目概览",
+    overviewBlurb: "当前进度、活动任务与下一步",
+    bible: "故事",
+    bibleBlurb: "意图、人物、大纲与故事事实",
+    studio: "写作",
+    studioBlurb: "正文、版本、候选稿与审稿",
+    delivery: "交付",
+    deliveryBlurb: "质量门、印务导出与备份",
+    autopilot: "AI 快速创作",
+    autopilotBlurb: "按默认链路连续完成多章，作者可随时介入",
+    runs: "运行中心",
+    runsBlurb: "全部运行的期号档案",
+    lab: "长篇推演",
+    labBlurb: "剧情预测、故事记忆与变更影响预演",
+    settings: "设置",
+    settingsBlurb: "默认生成模型与岗位继承（含 Provider/模型/派岗）",
+    goTo: "前往{label}",
+    aria: "主导航",
+  },
+  groups: {
+    quick: "AI 创作",
+    advanced: "高级工具",
+  },
+  status: {
+    connecting: "正在连接本地内核",
+    online: "内核在线",
+    offline: "内核离线",
+  },
+  repository: {
+    viewSource: "在 GitHub 查看源代码",
+  },
+  seal: {
+    current: "当前工作区印记「{seal}」",
+  },
+  rail: {
+    expand: "展开导航",
+    collapse: "收起导航",
+  },
+  loading: {
+    workspace: "正在展开工作页…",
+  },
+  theme: {
+    followSystem: "恢复跟随系统主题",
+    toDark: "切换夜灯",
+    toLight: "切换日色",
+  },
+  language: {
+    switch: "切换界面语言（English）",
+  },
+  palette: {
+    button: "命令面板（⌘K）",
+    title: "命令面板",
+    search: "搜索命令",
+    placeholder: "输入命令或工作区…",
+    close: "关闭命令面板",
+    noResults: "没有相符的命令",
+    footerSelect: "选择",
+    footerRun: "执行",
+    hintAdvanced: "高级",
+  },
+  trial: {
+    title: "进入在线体验",
+    configMissing: "体验站尚未完成验证配置。",
+    checking: "正在确认访问会话…",
+    challenge: "请完成人机验证。",
+    timeout: "验证服务连接超时，请重新加载验证",
+    rejected: "验证未通过，请重试",
+    unavailable: "验证组件暂时不可用，请重新加载验证",
+    loadFailed: "验证组件加载失败，请检查网络或内容拦截设置后重试",
+    reload: "重新加载验证",
+  },
+};

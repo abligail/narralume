@@ -32,6 +32,6 @@ export function assistantToolAccess(
   name: AssistantToolName,
 ): AssistantToolAccess {
   const policy = ASSISTANT_TOOL_POLICIES.find((entry) => entry.name === name);
-  if (!policy) throw new Error(`未登记的助手工具：${name}`);
+  if (!policy) throw new Error(`Unknown assistant tool: ${name}`);
   return policy.access;
 }

@@ -221,7 +221,7 @@ export class DeliveryService {
     if (input.targetProjectId && !this.projects.get(input.targetProjectId))
       throw new DeliveryServiceError(
         "import.target.not_found",
-        "目标作品不存在",
+        "Target project not found",
       );
     this.uploads.expire(input.now);
     return this.uploads.create({
@@ -246,25 +246,25 @@ export class DeliveryService {
     if (session.status !== "uploading")
       throw new DeliveryServiceError(
         "import.upload.not_open",
-        "上传会话已经结束",
+        "The upload session has ended",
       );
     if (session.expiresAt <= input.now) {
       this.uploads.expire(input.now);
       throw new DeliveryServiceError(
         "import.upload.expired",
-        "上传会话已经过期",
+        "The upload session has expired",
       );
     }
     const bytes = decodeBase64(input.contentBase64);
     if (bytes.length === 0 || bytes.length > session.chunkSize)
       throw new DeliveryServiceError(
         "import.upload.chunk_size",
-        "分块为空或超过会话声明的分块大小",
+        "The chunk is empty or larger than the chunk size declared by the session",
       );
     if (hash(bytes) !== input.chunkHash)
       throw new DeliveryServiceError(
         "import.upload.chunk_hash",
-        "分块 hash 校验失败",
+        "Chunk hash verification failed",
       );
     const expectedIndex = Math.floor(
       Math.max(0, session.totalBytes - 1) / session.chunkSize,
@@ -272,7 +272,7 @@ export class DeliveryService {
     if (input.chunkIndex > expectedIndex)
       throw new DeliveryServiceError(
         "import.upload.chunk_index",
-        "分块序号超出文件范围",
+        "The chunk index is outside the file range",
       );
     const expectedSize = Math.min(
       session.chunkSize,
@@ -281,7 +281,7 @@ export class DeliveryService {
     if (bytes.length !== expectedSize)
       throw new DeliveryServiceError(
         "import.upload.chunk_size",
-        "分块大小与声明的文件区间不一致",
+        "The chunk size does not match the declared file span",
       );
     const next = this.uploads.putChunk(
       session.id,
@@ -302,7 +302,7 @@ export class DeliveryService {
     if (session.status !== "uploading")
       throw new DeliveryServiceError(
         "import.upload.not_open",
-        "上传会话不可用",
+        "The upload session is not usable",
       );
     const chunks = this.uploads.chunks(sessionId);
     const expectedChunks = Math.ceil(session.totalBytes / session.chunkSize);
@@ -313,7 +313,7 @@ export class DeliveryService {
     )
       throw new DeliveryServiceError(
         "import.upload.incomplete",
-        "文件分块尚未完整上传",
+        "The file chunks have not all been uploaded yet",
       );
     const bytes = concatBytes(
       chunks.map((chunk) => decodeBase64(chunk.contentBase64)),
@@ -321,7 +321,7 @@ export class DeliveryService {
     if (session.expectedHash && hash(bytes) !== session.expectedHash)
       throw new DeliveryServiceError(
         "import.upload.file_hash",
-        "完整文件 hash 校验失败",
+        "Whole-file hash verification failed",
       );
     const prepared = await this.prepareImportPreview({
       targetProjectId: session.targetProjectId,
@@ -338,7 +338,7 @@ export class DeliveryService {
       if (current.status !== "uploading") {
         throw new DeliveryServiceError(
           "import.upload.not_open",
-          "上传会话不可用",
+          "The upload session is not usable",
         );
       }
       if (
@@ -347,7 +347,7 @@ export class DeliveryService {
       ) {
         throw new DeliveryServiceError(
           "import.target.not_found",
-          "目标作品不存在",
+          "Target project not found",
         );
       }
       this.persistImportPreview(prepared);
@@ -381,14 +381,14 @@ export class DeliveryService {
     if (input.targetProjectId && !this.projects.get(input.targetProjectId)) {
       throw new DeliveryServiceError(
         "import.target.not_found",
-        "目标作品不存在",
+        "Target project not found",
       );
     }
     const bytes = decodeBase64(input.contentBase64);
     if (bytes.length === 0 || bytes.length > 50 * 1024 * 1024) {
       throw new DeliveryServiceError(
         "import.size.invalid",
-        "导入文件必须在 1 byte 到 50 MB 之间",
+        "The imported file must be between 1 byte and 50 MB",
       );
     }
     const batchId = randomUuid();
@@ -406,14 +406,14 @@ export class DeliveryService {
       } catch {
         throw new DeliveryServiceError(
           "import.bundle.invalid_json",
-          "作品包不是有效的 JSON",
+          "The project bundle is not valid JSON",
         );
       }
       const checked = BundleSchema.safeParse(parsed);
       if (!checked.success) {
         throw new DeliveryServiceError(
           "import.bundle.invalid_schema",
-          "作品包结构或版本不受支持",
+          "The project bundle structure or version is not supported",
         );
       }
       bundle = checked.data;
@@ -464,14 +464,14 @@ export class DeliveryService {
     if (!session.batchId) {
       throw new DeliveryServiceError(
         "import.upload.batch_missing",
-        "已完成的上传会话没有关联导入批次",
+        "The completed upload session has no import batch linked",
       );
     }
     const detail = this.delivery.getImportBatchDetail(session.batchId);
     if (!detail) {
       throw new DeliveryServiceError(
         "import.upload.batch_missing",
-        "上传会话关联的导入批次不存在",
+        "The import batch linked to the upload session does not exist",
       );
     }
     return { session, detail };
@@ -493,7 +493,7 @@ export class DeliveryService {
     if (batch.status === "discarded") {
       throw new DeliveryServiceError(
         "import.discarded",
-        "已丢弃的导入不能再次应用",
+        "A discarded import cannot be applied again",
       );
     }
     const allCandidates = this.delivery.listImportCandidates(batch.id);
@@ -510,7 +510,7 @@ export class DeliveryService {
     if (selected.length === 0) {
       throw new DeliveryServiceError(
         "import.candidates.empty",
-        "至少选择一个拆书候选",
+        "Select at least one split candidate",
       );
     }
     const bundleCandidate = selected.find(
@@ -568,7 +568,7 @@ export class DeliveryService {
   ): NarrativeBundle {
     const project = this.projects.get(projectId);
     if (!project)
-      throw new DeliveryServiceError("project.not_found", "作品不存在");
+      throw new DeliveryServiceError("project.not_found", "Project not found");
     const intent = this.story.getAuthorIntent(projectId);
     const compass = this.automation.getCompass(projectId);
     const outline = this.story.listOutline(projectId);
@@ -905,7 +905,7 @@ export class DeliveryService {
   }> {
     const project = this.projects.get(projectId);
     if (!project)
-      throw new DeliveryServiceError("project.not_found", "作品不存在");
+      throw new DeliveryServiceError("project.not_found", "Project not found");
     const safeTitle = safeFilename(project.title);
     if (format === "narrative-bundle") {
       const bytes = textToBytes(
@@ -970,11 +970,11 @@ export class DeliveryService {
   restoreBackup(backupId: string, title: string | undefined, now: string) {
     const stored = this.delivery.getBackup(backupId);
     if (!stored)
-      throw new DeliveryServiceError("backup.not_found", "备份不存在");
+      throw new DeliveryServiceError("backup.not_found", "Backup not found");
     if (hash(stored.bundleJson) !== stored.backup.bundleHash) {
       throw new DeliveryServiceError(
         "backup.integrity.failed",
-        "备份哈希校验失败，未执行恢复",
+        "Backup hash verification failed; the restore was not performed",
       );
     }
     const bundle = BundleSchema.parse(JSON.parse(stored.bundleJson));
@@ -992,7 +992,7 @@ export class DeliveryService {
       if (mismatched.length) {
         throw new DeliveryServiceError(
           "backup.restore.count_mismatch",
-          `恢复计数校验失败：${mismatched.join("、")}`,
+          `Restore count verification failed: ${mismatched.join(", ")}`,
         );
       }
       return {
@@ -1018,7 +1018,7 @@ export class DeliveryService {
   qualityReport(projectId: string, now: string): ProjectQualityReport {
     const project = this.projects.get(projectId);
     if (!project)
-      throw new DeliveryServiceError("project.not_found", "作品不存在");
+      throw new DeliveryServiceError("project.not_found", "Project not found");
     const outline = this.story.listOutline(projectId);
     const documents = this.documents.list(projectId);
     const versions = documents.flatMap((document) =>
@@ -2039,7 +2039,7 @@ export class DeliveryService {
       ) {
         throw new DeliveryServiceError(
           "backup.cover.integrity",
-          "封面数据校验失败，未执行恢复",
+          "Cover data verification failed; the restore was not performed",
         );
       }
       new SqliteProjectCoverRepository(this.database).upsert({
@@ -2725,13 +2725,16 @@ async function extractEpub(bytes: Uint8Array) {
   try {
     zip = await JSZip.loadAsync(bytes);
   } catch {
-    throw new DeliveryServiceError("import.epub.invalid", "EPUB 容器无法读取");
+    throw new DeliveryServiceError(
+      "import.epub.invalid",
+      "The EPUB container could not be read",
+    );
   }
   const entries = Object.values(zip.files);
   if (entries.length > 2_000) {
     throw new DeliveryServiceError(
       "import.epub.entry_limit",
-      "EPUB 条目数超过安全上限（2000）",
+      "The EPUB entry count exceeds the safety limit (2000)",
     );
   }
   const declaredBytes = entries.reduce(
@@ -2741,33 +2744,33 @@ async function extractEpub(bytes: Uint8Array) {
   if (declaredBytes > 100 * 1024 * 1024) {
     throw new DeliveryServiceError(
       "import.epub.expansion_limit",
-      "EPUB 声明的解压体积超过安全上限（100 MB）",
+      "The EPUB declares an uncompressed size above the safety limit (100 MB)",
     );
   }
   const container = await zip.file("META-INF/container.xml")?.async("string");
   if (container && container.length > 1024 * 1024) {
     throw new DeliveryServiceError(
       "import.epub.container_too_large",
-      "EPUB 容器清单异常过大",
+      "The EPUB container manifest is unusually large",
     );
   }
   const opfPath = container?.match(/full-path=["']([^"']+)["']/iu)?.[1];
   if (!opfPath) {
     throw new DeliveryServiceError(
       "import.epub.container_missing",
-      "EPUB 缺少 META-INF/container.xml 或 OPF 路径",
+      "The EPUB is missing META-INF/container.xml or the OPF path",
     );
   }
   const opf = await zip.file(opfPath)?.async("string");
   if (!opf)
     throw new DeliveryServiceError(
       "import.epub.opf_missing",
-      "EPUB 缺少 OPF 清单",
+      "The EPUB is missing the OPF manifest",
     );
   if (opf.length > 5 * 1024 * 1024) {
     throw new DeliveryServiceError(
       "import.epub.opf_too_large",
-      "EPUB OPF 清单异常过大",
+      "The EPUB OPF manifest is unusually large",
     );
   }
   const base = opfPath.includes("/")
@@ -2802,14 +2805,14 @@ async function extractEpub(bytes: Uint8Array) {
     if (pageBytes > 10 * 1024 * 1024) {
       throw new DeliveryServiceError(
         "import.epub.page_too_large",
-        "EPUB 单个正文页面超过安全上限（10 MB）",
+        "A single EPUB content page exceeds the safety limit (10 MB)",
       );
     }
     extractedBytes += pageBytes;
     if (extractedBytes > 50 * 1024 * 1024) {
       throw new DeliveryServiceError(
         "import.epub.content_limit",
-        "EPUB 正文解压体积超过安全上限（50 MB）",
+        "The EPUB uncompressed content exceeds the safety limit (50 MB)",
       );
     }
     texts.push(htmlToText(html));
@@ -2818,7 +2821,7 @@ async function extractEpub(bytes: Uint8Array) {
   if (!result.trim()) {
     throw new DeliveryServiceError(
       "import.epub.empty",
-      "EPUB 中没有可读取的正文",
+      "The EPUB contains no readable manuscript text",
     );
   }
   return result;
@@ -2836,7 +2839,7 @@ function decodeEpubHref(href: string): string {
   } catch {
     throw new DeliveryServiceError(
       "import.epub.invalid_href",
-      "EPUB 清单包含无效的正文路径编码",
+      "The EPUB manifest contains an invalid content path encoding",
     );
   }
 }
@@ -2846,13 +2849,16 @@ async function extractDocx(bytes: Uint8Array) {
   try {
     zip = await JSZip.loadAsync(bytes);
   } catch {
-    throw new DeliveryServiceError("import.docx.invalid", "DOCX 容器无法读取");
+    throw new DeliveryServiceError(
+      "import.docx.invalid",
+      "The DOCX container could not be read",
+    );
   }
   const entries = Object.values(zip.files);
   if (entries.length > 2_000)
     throw new DeliveryServiceError(
       "import.docx.entry_limit",
-      "DOCX 条目数超过安全上限（2000）",
+      "The DOCX entry count exceeds the safety limit (2000)",
     );
   if (
     entries.reduce((sum, entry) => sum + declaredUncompressedSize(entry), 0) >
@@ -2860,18 +2866,18 @@ async function extractDocx(bytes: Uint8Array) {
   )
     throw new DeliveryServiceError(
       "import.docx.expansion_limit",
-      "DOCX 声明的解压体积超过安全上限（100 MB）",
+      "The DOCX declares an uncompressed size above the safety limit (100 MB)",
     );
   const documentXml = await zip.file("word/document.xml")?.async("string");
   if (!documentXml)
     throw new DeliveryServiceError(
       "import.docx.document_missing",
-      "DOCX 缺少 word/document.xml",
+      "The DOCX is missing word/document.xml",
     );
   if (documentXml.length > 100 * 1024 * 1024)
     throw new DeliveryServiceError(
       "import.docx.document_too_large",
-      "DOCX 正文展开后超过安全上限",
+      "The expanded DOCX content exceeds the safety limit",
     );
   return normalizeImportedText(
     decodeXml(
@@ -3176,7 +3182,7 @@ function decodeBase64(value: string) {
   if (!compact || compact.length % 4 === 1 || /[^A-Za-z0-9+/=]/u.test(compact))
     throw new DeliveryServiceError(
       "import.upload.base64",
-      "上传分块不是有效的 Base64",
+      "The uploaded chunk is not valid Base64",
     );
   return decodeBase64Bytes(compact);
 }
@@ -3364,7 +3370,7 @@ function required<T>(value: T | null | undefined, label: string): T {
   if (value === null || value === undefined) {
     throw new DeliveryServiceError(
       "bundle.field.missing",
-      `作品包缺少 ${label}`,
+      `The project bundle is missing ${label}`,
     );
   }
   return value;

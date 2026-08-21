@@ -1,6 +1,11 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { setLocale } from "../src/i18n";
 import { createRelayFetch } from "../src/kernel/relay-fetch";
+
+beforeEach(() => {
+  setLocale("zh-CN");
+});
 
 describe("在线体验 Relay fetch", () => {
   it("只为 Relay 携带 Cookie 并移除哑 Authorization", async () => {

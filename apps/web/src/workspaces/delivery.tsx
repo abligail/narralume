@@ -22,6 +22,12 @@ import { PageBand } from "../components/page-band";
 import { ProjectRequiredState } from "../components/project-required-state";
 import { Skeleton } from "../components/skeleton";
 import {
+  getLocale,
+  translate,
+  useI18n,
+  type MessageKey,
+} from "../i18n";
+import {
   createProjectBackup,
   getProjectBackups,
   getProjectExport,
@@ -46,49 +52,50 @@ const EXPORT_FORMATS: ExportFormat[] = [
   "narrative-bundle",
 ];
 
-const READINESS_LABEL: Record<ProjectQualityReport["readiness"], string> = {
-  ready: "可交付",
-  needs_attention: "建议检查",
-  blocked: "有风险，仍可导出",
+const READINESS_KEY: Record<ProjectQualityReport["readiness"], MessageKey> = {
+  ready: "delivery.readiness.ready",
+  needs_attention: "delivery.readiness.needsAttention",
+  blocked: "delivery.readiness.blocked",
 };
 
-const QUALITY_METRIC_LABEL: Record<string, string> = {
-  outlineNodes: "大纲节点",
-  chapters: "章节",
-  committedChapters: "已定稿章节",
-  documents: "文档",
-  versions: "正文版本",
-  manuscriptCharacters: "正文字符",
-  entities: "人物与事物",
-  facts: "故事事实",
-  candidateFacts: "待确认事实",
-  unresolvedForeshadows: "未收束伏笔",
-  openComments: "未解决批注",
-  activeStyleProfiles: "启用风格",
-  enabledSkills: "启用写作技能",
+const QUALITY_METRIC_KEY: Record<string, MessageKey> = {
+  outlineNodes: "delivery.metrics.outlineNodes",
+  chapters: "delivery.metrics.chapters",
+  committedChapters: "delivery.metrics.committedChapters",
+  documents: "delivery.metrics.documents",
+  versions: "delivery.metrics.versions",
+  manuscriptCharacters: "delivery.metrics.manuscriptCharacters",
+  entities: "delivery.metrics.entities",
+  facts: "delivery.metrics.facts",
+  candidateFacts: "delivery.metrics.candidateFacts",
+  unresolvedForeshadows: "delivery.metrics.unresolvedForeshadows",
+  openComments: "delivery.metrics.openComments",
+  activeStyleProfiles: "delivery.metrics.activeStyleProfiles",
+  enabledSkills: "delivery.metrics.enabledSkills",
 };
 
-const ISSUE_CATEGORY_LABEL: Record<
+const ISSUE_CATEGORY_KEY: Record<
   ProjectQualityReport["issues"][number]["category"],
-  string
+  MessageKey
 > = {
-  structure: "结构",
-  manuscript: "稿",
-  canon: "典",
-  continuity: "连戏",
-  workflow: "流程",
+  structure: "delivery.issueCategory.structure",
+  manuscript: "delivery.issueCategory.manuscript",
+  canon: "delivery.issueCategory.canon",
+  continuity: "delivery.issueCategory.continuity",
+  workflow: "delivery.issueCategory.workflow",
 };
 
-const ISSUE_SEVERITY_LABEL: Record<
+const ISSUE_SEVERITY_KEY: Record<
   ProjectQualityReport["issues"][number]["severity"],
-  string
+  MessageKey
 > = {
-  info: "注",
-  warning: "警",
-  error: "错",
+  info: "delivery.issueSeverity.info",
+  warning: "delivery.issueSeverity.warning",
+  error: "delivery.issueSeverity.error",
 };
 
 export function DeliveryWorkspace() {
+  const { t } = useI18n();
   const projectId = useProjectId();
   const queryClient = useQueryClient();
 
@@ -150,9 +157,9 @@ export function DeliveryWorkspace() {
     return (
       <div className="delivery">
         <ProjectRequiredState
-          seal="付"
-          title="交付"
-          description="选定作品后，在这里检查成书质量、导出稿件，并保存可恢复的内容快照。"
+          seal={t("delivery.requiredState.seal")}
+          title={t("delivery.requiredState.title")}
+          description={t("delivery.requiredState.description")}
         />
       </div>
     );
@@ -183,10 +190,10 @@ export function DeliveryWorkspace() {
     <div className="delivery">
       <PageBand
         index="PRESS · 05"
-        title="交付"
+        title={t("delivery.requiredState.title")}
         meta={
           <span className="mono">
-            装印规格 · 出厂 {EXPORT_FORMATS.length} 种
+            {t("delivery.pageBand.meta", { count: EXPORT_FORMATS.length })}
           </span>
         }
       />
@@ -198,23 +205,23 @@ export function DeliveryWorkspace() {
             <header className="delivery__section-head">
               <p className="delivery__section-title">
                 <CheckCircle2 size={13} strokeWidth={2} aria-hidden="true" />
-                装印规格（质量门）
+                {t("delivery.gates.title")}
               </p>
               {quality ? (
                 <span
                   className="delivery__readiness mono"
                   data-r={quality.readiness}
                 >
-                  {READINESS_LABEL[quality.readiness]} ·{" "}
+                  {t(READINESS_KEY[quality.readiness])} ·{" "}
                   {gatesPassed}/{quality.gates.length}
                 </span>
               ) : null}
             </header>
-            {quality ? <p className="delivery__quality-note">质量检查只提供提醒，不会影响下载。发现风险时，建议先查看下面未通过的项目。</p> : null}
+            {quality ? <p className="delivery__quality-note">{t("delivery.gates.note")}</p> : null}
             {qualityQuery.isPending ? (
               <Skeleton lines={5} />
             ) : qualityQuery.isError ? (
-              <ErrorNote error={qualityQuery.error} title="质量检查暂时无法加载" />
+              <ErrorNote error={qualityQuery.error} title={t("delivery.gates.loadError")} />
             ) : quality ? (
               <div className="delivery__gates">
                 {quality.gates.map((gate) => (
@@ -241,7 +248,7 @@ export function DeliveryWorkspace() {
             {quality && quality.issues.length > 0 ? (
               <div className="delivery__issues">
                 <p className="delivery__issues-head mono">
-                  校样注 · {quality.issues.length}
+                  {t("delivery.gates.issuesHead", { count: quality.issues.length })}
                 </p>
                 {quality.issues.map((issue) => (
                   <div
@@ -250,10 +257,10 @@ export function DeliveryWorkspace() {
                     data-s={issue.severity}
                   >
                     <span className="delivery__issue-cat mono">
-                      {ISSUE_CATEGORY_LABEL[issue.category]}
+                      {t(ISSUE_CATEGORY_KEY[issue.category])}
                     </span>
                     <span className="delivery__issue-severity mono">
-                      {ISSUE_SEVERITY_LABEL[issue.severity]}
+                      {t(ISSUE_SEVERITY_KEY[issue.severity])}
                     </span>
                     <p className="delivery__issue-message">{issue.message}</p>
                     {issue.suggestion ? (
@@ -269,10 +276,10 @@ export function DeliveryWorkspace() {
             <header className="delivery__section-head">
               <p className="delivery__section-title">
                 <Truck size={13} strokeWidth={2} aria-hidden="true" />
-                导出格式
+                {t("delivery.exports.title")}
               </p>
               <span className="delivery__section-meta mono">
-                选择格式后立即下载；质量检查不会禁止导出
+                {t("delivery.exports.meta")}
               </span>
             </header>
             <ol className="delivery__exports">
@@ -289,7 +296,7 @@ export function DeliveryWorkspace() {
                     className="delivery__export-btn"
                     onClick={() => void handleExport(format)}
                     disabled={exportingFormat !== null}
-                    aria-label={`以 ${exportFormatLabel(format)} 导出当前作品`}
+                    aria-label={t("delivery.exports.buttonAria", { format: exportFormatLabel(format) })}
                   >
                     {exportingFormat === format ? (
                       <Loader2
@@ -301,7 +308,7 @@ export function DeliveryWorkspace() {
                     ) : (
                       <Download size={12} strokeWidth={2} aria-hidden="true" />
                     )}
-                    下载
+                    {t("common.action.download")}
                   </button>
                 </li>
               ))}
@@ -309,54 +316,68 @@ export function DeliveryWorkspace() {
             {quality?.metrics ? (
               <p className="delivery__metrics mono">
                 {Object.entries(quality.metrics)
-                  .map(([key, value]) => `${QUALITY_METRIC_LABEL[key] ?? key} ${value.toLocaleString("zh-CN")}`)
+                  .map(([key, value]) => {
+                    const labelKey = QUALITY_METRIC_KEY[key];
+                    return `${labelKey ? t(labelKey) : key} ${value.toLocaleString(getLocale())}`;
+                  })
                   .join(" · ")}
               </p>
             ) : null}
-            {exportError ? <ErrorNote error={exportError} title="导出未完成" /> : null}
+            {exportError ? <ErrorNote error={exportError} title={t("delivery.exports.error")} /> : null}
           </div>
         </section>
 
         {/* 右：备份档 */}
         <section className="delivery__rights">
           <div className="delivery__section delivery__section--backups">
-            <header className="delivery__section-head"><p className="delivery__section-title"><Archive size={13} />创作内容快照</p></header>
-            <p className="delivery__empty">完整包含故事设定、正文与草稿、批注、封面、审稿记录、共创会话和助手协作历史；恢复时逐项校验计数。运行任务只作历史存档，不在副本中续跑。完整灾备请使用设置里的系统备份。</p>
+            <header className="delivery__section-head">
+              <p className="delivery__section-title">
+                <Archive size={13} />
+                {t("delivery.snapshots.title")}
+              </p>
+            </header>
+            <p className="delivery__empty">{t("delivery.snapshots.description")}</p>
             <form className="delivery__project-backup-form" onSubmit={(event) => { event.preventDefault(); if (projectBackupLabel.trim()) projectBackupCreateMutation.mutate(projectBackupLabel.trim()); }}>
-              <label>备份标签<input value={projectBackupLabel} onChange={(event) => setProjectBackupLabel(event.target.value)} placeholder="交付前版本" /></label>
-              <button type="submit" className="btn btn--primary" disabled={projectBackupCreateMutation.isPending || !projectBackupLabel.trim()}><Plus size={12} />{projectBackupCreateMutation.isPending ? "创建中…" : "创建内容快照"}</button>
+              <label>
+                {t("delivery.snapshots.labelField")}
+                <input value={projectBackupLabel} onChange={(event) => setProjectBackupLabel(event.target.value)} placeholder={t("delivery.snapshots.placeholder")} />
+              </label>
+              <button type="submit" className="btn btn--primary" disabled={projectBackupCreateMutation.isPending || !projectBackupLabel.trim()}><Plus size={12} />{projectBackupCreateMutation.isPending ? t("common.state.creating") : t("delivery.snapshots.submit")}</button>
             </form>
-            {projectBackupCreateMutation.isError ? <ErrorNote error={projectBackupCreateMutation.error} title="内容快照未创建" /> : null}
-            {projectBackupsQuery.isPending ? <Skeleton lines={3} /> : projectBackupsQuery.isError ? <ErrorNote error={projectBackupsQuery.error} title="内容快照暂时无法加载" /> : projectBackupsQuery.data?.length ? <ol className="delivery__backups">{projectBackupsQuery.data.map((backup) => <li key={backup.id} className="delivery__backup-row"><span className="delivery__backup-label">{backup.label}</span><span className="delivery__backup-meta mono">{formatBytes(backup.sizeBytes)} · {formatRelativeDate(backup.createdAt)}</span>{backup.counts ? <span className="delivery__backup-counts mono">{summarizeBackupCounts(backup.counts)}</span> : null}<span className="delivery__backup-hash mono">{shortHash(backup.bundleHash)}</span><button type="button" className="delivery__backup-preview-btn" onClick={() => setRestoreTarget(backup)}>恢复内容副本</button></li>)}</ol> : <p className="delivery__empty">尚无内容快照。</p>}
-            {restoredProjectId ? <p className="delivery__restore-result" role="status">已恢复为新项目。<Link to={projectWorkspacePath(restoredProjectId, "bible")}>打开恢复副本</Link></p> : null}
+            {projectBackupCreateMutation.isError ? <ErrorNote error={projectBackupCreateMutation.error} title={t("delivery.snapshots.createError")} /> : null}
+            {projectBackupsQuery.isPending ? <Skeleton lines={3} /> : projectBackupsQuery.isError ? <ErrorNote error={projectBackupsQuery.error} title={t("delivery.snapshots.loadError")} /> : projectBackupsQuery.data?.length ? <ol className="delivery__backups">{projectBackupsQuery.data.map((backup) => <li key={backup.id} className="delivery__backup-row"><span className="delivery__backup-label">{backup.label}</span><span className="delivery__backup-meta mono">{formatBytes(backup.sizeBytes)} · {formatRelativeDate(backup.createdAt)}</span>{backup.counts ? <span className="delivery__backup-counts mono">{summarizeBackupCounts(backup.counts)}</span> : null}<span className="delivery__backup-hash mono">{shortHash(backup.bundleHash)}</span><button type="button" className="delivery__backup-preview-btn" onClick={() => setRestoreTarget(backup)}>{t("delivery.snapshots.restoreButton")}</button></li>)}</ol> : <p className="delivery__empty">{t("delivery.snapshots.empty")}</p>}
+            {restoredProjectId ? <p className="delivery__restore-result" role="status">{t("delivery.snapshots.restored")}<Link to={projectWorkspacePath(restoredProjectId, "bible")}>{t("delivery.snapshots.openRestored")}</Link></p> : null}
           </div>
         </section>
       </div>
-      {restoreTarget ? <ConfirmDialog title="恢复创作内容快照" confirmLabel="恢复内容副本" pending={projectRestoreMutation.isPending} onCancel={() => setRestoreTarget(null)} onConfirm={() => projectRestoreMutation.mutate(restoreTarget)}><p>恢复不会覆盖当前作品；服务端会创建一个包含全部作者可见数据的新项目副本，并逐项校验导出/恢复计数。</p>{projectRestoreMutation.isError ? <ErrorNote error={projectRestoreMutation.error} title="内容未恢复" /> : null}</ConfirmDialog> : null}
+      {restoreTarget ? <ConfirmDialog title={t("delivery.restoreDialog.title")} confirmLabel={t("delivery.restoreDialog.confirm")} pending={projectRestoreMutation.isPending} onCancel={() => setRestoreTarget(null)} onConfirm={() => projectRestoreMutation.mutate(restoreTarget)}><p>{t("delivery.restoreDialog.body")}</p>{projectRestoreMutation.isError ? <ErrorNote error={projectRestoreMutation.error} title={t("delivery.restoreDialog.error")} /> : null}</ConfirmDialog> : null}
     </div>
   );
 }
 
 /** 备份计数清单的紧凑展示：只列出非零项，保持墨色 mono 风格。 */
 function summarizeBackupCounts(counts: BundleCounts) {
-  const labels: [keyof BundleCounts, string][] = [
-    ["outline", "大纲"],
-    ["entities", "实体"],
-    ["facts", "事实"],
-    ["documents", "稿件"],
-    ["versions", "版本"],
-    ["drafts", "草稿"],
-    ["annotations", "批注"],
-    ["cover", "封面"],
-    ["personas", "Persona"],
-    ["cocreateSessions", "共创"],
-    ["storyTurns", "回合"],
-    ["reviews", "审稿"],
-    ["assistantConversations", "协作"],
-    ["assistantMessages", "消息"],
+  const locale = getLocale();
+  const labels: [keyof BundleCounts, MessageKey][] = [
+    ["outline", "delivery.backupCounts.outline"],
+    ["entities", "delivery.backupCounts.entities"],
+    ["facts", "delivery.backupCounts.facts"],
+    ["documents", "delivery.backupCounts.documents"],
+    ["versions", "delivery.backupCounts.versions"],
+    ["drafts", "delivery.backupCounts.drafts"],
+    ["annotations", "delivery.backupCounts.annotations"],
+    ["cover", "delivery.backupCounts.cover"],
+    ["personas", "delivery.backupCounts.personas"],
+    ["cocreateSessions", "delivery.backupCounts.cocreateSessions"],
+    ["storyTurns", "delivery.backupCounts.storyTurns"],
+    ["reviews", "delivery.backupCounts.reviews"],
+    ["assistantConversations", "delivery.backupCounts.assistantConversations"],
+    ["assistantMessages", "delivery.backupCounts.assistantMessages"],
   ];
   const parts = labels
     .filter(([key]) => (counts[key] ?? 0) > 0)
-    .map(([key, label]) => `${label} ${counts[key]}`);
-  return parts.length ? parts.join(" · ") : "空项目";
+    .map(([key, labelKey]) => `${translate(locale, labelKey)} ${counts[key]}`);
+  return parts.length
+    ? parts.join(" · ")
+    : translate(locale, "delivery.backupCounts.empty");
 }

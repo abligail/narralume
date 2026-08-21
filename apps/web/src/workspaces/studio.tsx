@@ -61,6 +61,7 @@ import {
   type StudioDocumentDetail,
 } from "../lib/api";
 import { formatRelativeDate } from "../lib/fmt";
+import { getLocale, translate, useI18n, type MessageKey } from "../i18n";
 import {
   documentKindLabel,
   reviewCategoryLabel,
@@ -90,13 +91,13 @@ type StudioTool =
   | "versions"
   | "selection";
 
-const STUDIO_TOOLS: Array<{ id: StudioTool; label: string }> = [
-  { id: "review", label: "审稿" },
-  { id: "revisions", label: "修订" },
-  { id: "canon", label: "故事变化" },
-  { id: "comments", label: "批注" },
-  { id: "versions", label: "版本" },
-  { id: "selection", label: "选区" },
+const STUDIO_TOOLS: Array<{ id: StudioTool; labelKey: MessageKey }> = [
+  { id: "review", labelKey: "studio.tools.review" },
+  { id: "revisions", labelKey: "studio.tools.revisions" },
+  { id: "canon", labelKey: "studio.tools.canon" },
+  { id: "comments", labelKey: "studio.tools.comments" },
+  { id: "versions", labelKey: "studio.tools.versions" },
+  { id: "selection", labelKey: "studio.tools.selection" },
 ];
 
 function studioToolFromFocus(value: string | null): StudioTool {
@@ -109,6 +110,7 @@ function studioToolFromFocus(value: string | null): StudioTool {
 }
 
 export function StudioWorkspace() {
+  const { t } = useI18n();
   const projectId = useProjectId();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -264,7 +266,7 @@ export function StudioWorkspace() {
   const createMutation = useMutation({
     mutationFn: async (input: CreateDocumentInput) => {
       const ready = await flushDraftRef.current?.();
-      if (ready === false) throw new Error("当前稿件尚未同步，请先重试保存");
+      if (ready === false) throw new Error(translate(getLocale(), "studio.errors.draftNotSynced"));
       const identity = JSON.stringify(input);
       if (createRequestRef.current?.identity !== identity) {
         createRequestRef.current = {
@@ -291,9 +293,9 @@ export function StudioWorkspace() {
     return (
       <div className="studio">
         <ProjectRequiredState
-          seal="稿"
-          title="写作"
-          description="选定作品后，在这里写正文、审稿修订，并管理候选稿和历史版本。"
+          seal={t("studio.required.seal")}
+          title={t("studio.required.title")}
+          description={t("studio.required.description")}
         />
       </div>
     );
@@ -324,22 +326,22 @@ export function StudioWorkspace() {
   return <div className="studio">
     <PageBand
       index="DESK · 04"
-      title="写作台"
+      title={t("studio.header.title")}
       meta={
-        <div className="studio__mode-switch" role="group" aria-label="写作模式">
-          <button type="button" aria-pressed={mode === "manual"} onClick={() => void selectMode("manual")}>手动稿件</button>
-          <button type="button" aria-pressed={mode === "cocreate"} onClick={() => void selectMode("cocreate")}>共创沙盒</button>
+        <div className="studio__mode-switch" role="group" aria-label={t("studio.header.modeSwitchAria")}>
+          <button type="button" aria-pressed={mode === "manual"} onClick={() => void selectMode("manual")}>{t("studio.header.manual")}</button>
+          <button type="button" aria-pressed={mode === "cocreate"} onClick={() => void selectMode("cocreate")}>{t("studio.header.cocreate")}</button>
         </div>
       }
     />
-    {mode === "cocreate" ? <CoCreateWorkspace projectId={projectId} requestedSessionId={requestedSessionId} onSessionChange={(sessionId) => updateWorkspaceParams({ mode: "cocreate", session: sessionId })} /> : documentsQuery.isPending ? <StudioLoading /> : documentsQuery.isError ? <ErrorNote error={documentsQuery.error} title="稿目暂时无法加载" /> : <div className="studio__layout">
-      <aside className="studio__docs"><header className="studio__docs-head"><p className="studio__docs-title">{showRecycle ? "回收站" : "稿目"}</p><div><button type="button" className="studio__text-button" onClick={() => { setShowRecycle((value) => !value); setCreating(false); }}>{showRecycle ? "返回稿目" : "回收站"}</button>{!showRecycle ? <button type="button" className="studio__text-button" onClick={() => setCreating((value) => !value)}><Plus size={12} />新建</button> : null}</div></header>
+    {mode === "cocreate" ? <CoCreateWorkspace projectId={projectId} requestedSessionId={requestedSessionId} onSessionChange={(sessionId) => updateWorkspaceParams({ mode: "cocreate", session: sessionId })} /> : documentsQuery.isPending ? <StudioLoading /> : documentsQuery.isError ? <ErrorNote error={documentsQuery.error} title={t("studio.errors.documentsLoad")} /> : <div className="studio__layout">
+      <aside className="studio__docs"><header className="studio__docs-head"><p className="studio__docs-title">{showRecycle ? t("studio.docs.recycle") : t("studio.docs.list")}</p><div><button type="button" className="studio__text-button" onClick={() => { setShowRecycle((value) => !value); setCreating(false); }}>{showRecycle ? t("studio.docs.backToList") : t("studio.docs.recycle")}</button>{!showRecycle ? <button type="button" className="studio__text-button" onClick={() => setCreating((value) => !value)}><Plus size={12} />{t("studio.docs.new")}</button> : null}</div></header>
         {creating ? <CreateDocumentForm initialOutlineNodeId={requestedOutlineId} outlineNodes={availableOutlineNodes} outlinePending={storyQuery.isPending} pending={createMutation.isPending} error={createMutation.error ?? storyQuery.error} onCancel={() => setCreating(false)} onOpenRecycle={() => { setCreating(false); setShowRecycle(true); }} onSubmit={(input) => createMutation.mutate(input)} /> : null}
         <div className="studio__docs-list">{listedDocuments.map((document) => {
           const quality = documentQuality.get(document.id);
-          return <button key={document.id} type="button" className="studio__doc-link" data-active={document.id === activeDocumentId} onClick={() => void selectDocument(document.id)}><span className="studio__doc-link-title">{document.title}</span><span className="studio__doc-link-meta">{documentKindLabel(document.kind)} · {formatRelativeDate(document.updatedAt)}{quality ? <span className="studio__quality-mark" data-quality={quality}>{quality === "pass" ? "已审" : quality === "revise" ? "待复看" : "已阻断"}</span> : null}</span></button>;
+          return <button key={document.id} type="button" className="studio__doc-link" data-active={document.id === activeDocumentId} onClick={() => void selectDocument(document.id)}><span className="studio__doc-link-title">{document.title}</span><span className="studio__doc-link-meta">{documentKindLabel(document.kind)} · {formatRelativeDate(document.updatedAt)}{quality ? <span className="studio__quality-mark" data-quality={quality}>{quality === "pass" ? t("studio.quality.pass") : quality === "revise" ? t("studio.quality.revise") : t("studio.quality.block")}</span> : null}</span></button>;
         })}</div>
-        {listedDocuments.length === 0 && !creating ? <p className="studio__empty-note">{showRecycle ? "回收站还是空的。" : "还没有稿件；直接在这里创建第一章。"}</p> : null}
+        {listedDocuments.length === 0 && !creating ? <p className="studio__empty-note">{showRecycle ? t("studio.docs.recycleEmpty") : t("studio.docs.listEmpty")}</p> : null}
       </aside>
       {showRecycle ? <RecycleDesk document={listedDocuments.find((document) => document.id === activeDocumentId)} pending={archiveMutation.isPending} error={archiveMutation.error} onRestore={(document) => { setShowRecycle(false); updateWorkspaceParams({ document: null, outline: null, run: null }); archiveMutation.mutate({ document, archived: false }); }} /> : <StudioDesk key={detailQuery.data?.document.id ?? "pending"} projectId={projectId} detail={detailQuery.data} pending={Boolean(activeDocumentId) && detailQuery.isPending} error={detailQuery.error ?? archiveMutation.error} review={reviewQuery.data} reviewPending={reviewQuery.isPending} reviewError={reviewQuery.error} focusTarget={focusTarget} runId={effectiveRunId} onRunChange={(runId) => { setDismissedRunId(null); updateWorkspaceParams({ document: activeDocumentId, outline: null, run: runId }); }} onDismissRun={() => { if (effectiveRunId) setDismissedRunId(effectiveRunId); updateWorkspaceParams({ run: null }); }} onCreateDocument={() => setCreating(true)} onArchive={async (document) => { const ready = await flushDraftRef.current?.(); if (ready !== false) archiveMutation.mutate({ document, archived: true }); }} onRefresh={refresh} onFlushReady={registerFlush} />}
     </div>}
@@ -347,7 +349,8 @@ export function StudioWorkspace() {
 }
 
 function StudioLoading() {
-  return <div className="studio__layout studio__loading" aria-busy="true" aria-label="正在展开写作台">
+  const { t } = useI18n();
+  return <div className="studio__layout studio__loading" aria-busy="true" aria-label={t("studio.loading.aria")}>
     <aside className="studio__loading-docs"><span /><span /><span /><span /></aside>
     <main className="studio__loading-paper"><div className="studio__loading-title" /><div className="studio__loading-lines">{Array.from({ length: 9 }, (_, index) => <span key={index} />)}</div></main>
     <aside className="studio__loading-tools"><span /><span /><span /></aside>
@@ -355,6 +358,7 @@ function StudioLoading() {
 }
 
 function CreateDocumentForm({ initialOutlineNodeId, outlineNodes, outlinePending, pending, error, onCancel, onOpenRecycle, onSubmit }: { initialOutlineNodeId: string | null; outlineNodes: OutlineNode[]; outlinePending: boolean; pending: boolean; error: unknown; onCancel: () => void; onOpenRecycle: () => void; onSubmit: (input: CreateDocumentInput) => void }) {
+  const { t } = useI18n();
   const [title, setTitle] = useState("");
   const [kind, setKind] = useState<StoryDocument["kind"]>("chapter");
   const [outlineNodeId, setOutlineNodeId] = useState(initialOutlineNodeId ?? "");
@@ -362,15 +366,17 @@ function CreateDocumentForm({ initialOutlineNodeId, outlineNodes, outlinePending
   const matchingNodes = outlineNodes.filter((node) => node.kind === kind);
   const selectedNode = matchingNodes.find((node) => node.id === outlineNodeId) ?? matchingNodes[0] ?? null;
   const resolvedTitle = title.trim() || selectedNode?.title || "";
-  return <form className="studio__inline-form" onSubmit={(event) => { event.preventDefault(); if (!resolvedTitle || (requiresOutline && !selectedNode)) return; onSubmit({ kind, title: resolvedTitle, outlineNodeId: requiresOutline ? selectedNode!.id : null }); }}><label>类型<select value={kind} onChange={(event) => { setKind(event.target.value as StoryDocument["kind"]); setOutlineNodeId(""); }}><option value="chapter">章节正文</option><option value="scene">场景正文</option><option value="outline">大纲稿</option><option value="synopsis">故事梗概</option><option value="note">写作笔记</option><option value="style-sample">风格样本</option></select></label>{requiresOutline ? <label>对应大纲<select aria-label="对应大纲节点" value={selectedNode?.id ?? ""} disabled={outlinePending || matchingNodes.length === 0} onChange={(event) => setOutlineNodeId(event.target.value)}>{outlinePending ? <option value="">读取大纲…</option> : matchingNodes.length === 0 ? <option value="">没有可绑定的{kind === "chapter" ? "章节" : "场景"}</option> : matchingNodes.map((node) => <option key={node.id} value={node.id}>{node.title}</option>)}</select></label> : null}<label>标题<input value={title} placeholder={selectedNode?.title ?? "给这件稿件题名"} onChange={(event) => setTitle(event.target.value)} /></label>{requiresOutline && !outlinePending && matchingNodes.length === 0 ? <div className="studio__form-note"><p>请先在“故事”里建立对应大纲；已绑定或已归档正文的节点不会重复出现。</p><button type="button" className="btn" onClick={onOpenRecycle}>打开稿件回收站</button></div> : null}{error ? <ErrorNote error={error} title="稿件未创建" /> : null}<div className="studio__inline-form-actions"><button type="button" className="btn" onClick={onCancel}>取消</button><button type="submit" className="btn btn--primary" disabled={pending || outlinePending || !resolvedTitle || (requiresOutline && !selectedNode)}>创建</button></div></form>;
+  return <form className="studio__inline-form" onSubmit={(event) => { event.preventDefault(); if (!resolvedTitle || (requiresOutline && !selectedNode)) return; onSubmit({ kind, title: resolvedTitle, outlineNodeId: requiresOutline ? selectedNode!.id : null }); }}><label>{t("studio.create.kindLabel")}<select value={kind} onChange={(event) => { setKind(event.target.value as StoryDocument["kind"]); setOutlineNodeId(""); }}><option value="chapter">{t("studio.create.kindChapter")}</option><option value="scene">{t("studio.create.kindScene")}</option><option value="outline">{t("studio.create.kindOutline")}</option><option value="synopsis">{t("studio.create.kindSynopsis")}</option><option value="note">{t("studio.create.kindNote")}</option><option value="style-sample">{t("studio.create.kindStyleSample")}</option></select></label>{requiresOutline ? <label>{t("studio.create.outlineLabel")}<select aria-label={t("studio.create.outlineNodeAria")} value={selectedNode?.id ?? ""} disabled={outlinePending || matchingNodes.length === 0} onChange={(event) => setOutlineNodeId(event.target.value)}>{outlinePending ? <option value="">{t("studio.create.outlineLoading")}</option> : matchingNodes.length === 0 ? <option value="">{t("studio.create.noBindable", { kind: kind === "chapter" ? t("studio.create.nodeKindChapter") : t("studio.create.nodeKindScene") })}</option> : matchingNodes.map((node) => <option key={node.id} value={node.id}>{node.title}</option>)}</select></label> : null}<label>{t("studio.create.titleLabel")}<input value={title} placeholder={selectedNode?.title ?? t("studio.create.titlePlaceholder")} onChange={(event) => setTitle(event.target.value)} /></label>{requiresOutline && !outlinePending && matchingNodes.length === 0 ? <div className="studio__form-note"><p>{t("studio.create.outlineMissingNote")}</p><button type="button" className="btn" onClick={onOpenRecycle}>{t("studio.create.openRecycle")}</button></div> : null}{error ? <ErrorNote error={error} title={t("studio.errors.createFailed")} /> : null}<div className="studio__inline-form-actions"><button type="button" className="btn" onClick={onCancel}>{t("common.action.cancel")}</button><button type="submit" className="btn btn--primary" disabled={pending || outlinePending || !resolvedTitle || (requiresOutline && !selectedNode)}>{t("common.action.create")}</button></div></form>;
 }
 
 function RecycleDesk({ document, pending, error, onRestore }: { document: StoryDocument | undefined; pending: boolean; error: unknown; onRestore: (document: StoryDocument) => void }) {
-  if (!document) return <main className="studio__desk studio__desk--empty"><Empty title="回收站是空的" description="移入回收站的章节会暂时保留在这里，可以随时恢复。" /></main>;
-  return <main className="studio__desk studio__desk--empty"><div className="studio__recycle-card"><span className="mono">RECYCLE BIN</span><h2>{document.title}</h2><p>{documentKindLabel(document.kind)} · 移入回收站于 {document.archivedAt?.slice(0, 16) ?? "—"}</p><p>回收站中的稿件不会参与新的写作、审稿或导出任务；恢复后会回到稿目。</p><button type="button" className="btn btn--primary" disabled={pending} onClick={() => onRestore(document)}><ArchiveRestore size={13} />{pending ? "恢复中…" : "恢复到稿目"}</button>{error ? <ErrorNote error={error} title="稿件未恢复" /> : null}</div></main>;
+  const { t } = useI18n();
+  if (!document) return <main className="studio__desk studio__desk--empty"><Empty title={t("studio.recycle.emptyTitle")} description={t("studio.recycle.emptyDescription")} /></main>;
+  return <main className="studio__desk studio__desk--empty"><div className="studio__recycle-card"><span className="mono">RECYCLE BIN</span><h2>{document.title}</h2><p>{documentKindLabel(document.kind)} · {t("studio.recycle.archivedAt", { time: document.archivedAt?.slice(0, 16) ?? "—" })}</p><p>{t("studio.recycle.note")}</p><button type="button" className="btn btn--primary" disabled={pending} onClick={() => onRestore(document)}><ArchiveRestore size={13} />{pending ? t("studio.recycle.restoring") : t("studio.recycle.restore")}</button>{error ? <ErrorNote error={error} title={t("studio.errors.restoreFailed")} /> : null}</div></main>;
 }
 
 function StudioDesk({ projectId, detail, pending, error, review, reviewPending, reviewError, focusTarget, runId, onRunChange, onDismissRun, onCreateDocument, onArchive, onRefresh, onFlushReady }: { projectId: string; detail: StudioDocumentDetail | undefined; pending: boolean; error: unknown; review: ReviewWorkspace | undefined; reviewPending: boolean; reviewError: unknown; focusTarget: string | null; runId: string | null; onRunChange: (runId: string) => void; onDismissRun: () => void; onCreateDocument: () => void; onArchive: (document: StoryDocument) => void | Promise<void>; onRefresh: () => void; onFlushReady: (flush: FlushDraft | null) => void }) {
+  const { t } = useI18n();
   const initialContent = detail?.draft?.content ?? detail?.currentVersion?.content ?? "";
   const [content, setContent] = useState(initialContent);
   const [draftSavedContent, setDraftSavedContent] = useState(initialContent);
@@ -558,6 +564,7 @@ function StudioDesk({ projectId, detail, pending, error, review, reviewPending, 
       onRefresh();
     },
   });
+
   const proposalMutation = useMutation({ mutationFn: (input: { proposal: EditProposal; action: "accept" | "reject" }) => decideEditProposal(input.proposal.id, input.action), onSuccess: onRefresh });
 
   /* 单章「交给 AI」：区别于多章 AI 快速创作（自动驾驶航次）；发起一个 chapter run。 */
@@ -590,7 +597,7 @@ function StudioDesk({ projectId, detail, pending, error, review, reviewPending, 
         projectId,
         kind: "chapter",
         taskId: created.run.id,
-        label: `交给 AI：《${detail!.document.title}》`,
+        label: t("studio.ai.taskLabel", { name: detail!.document.title }),
         createdAt: new Date().toISOString(),
         origin: { surface: "writing", documentId: detail!.document.id },
         documentId: detail!.document.id,
@@ -601,16 +608,18 @@ function StudioDesk({ projectId, detail, pending, error, review, reviewPending, 
   });
 
   if (pending) return <main className="studio__desk"><Skeleton lines={8} /></main>;
-  if (error) return <main className="studio__desk"><ErrorNote error={error} title="稿纸暂时无法加载" /></main>;
-  if (!detail) return <main className="studio__desk studio__desk--empty"><Empty title="稿纸还未开卷" description="新建一件自由稿件，或先去故事页规划章节。" action={<div className="studio__empty-actions"><button type="button" className="btn btn--primary" onClick={onCreateDocument}><Plus size={13} />新建第一件稿件</button><Link to={projectWorkspacePath(projectId, "bible")}>去故事页规划章节</Link></div>} /></main>;
+  if (error) return <main className="studio__desk"><ErrorNote error={error} title={t("studio.errors.detailLoad")} /></main>;
+  if (!detail) return <main className="studio__desk studio__desk--empty"><Empty title={t("studio.empty.title")} description={t("studio.empty.description")} action={<div className="studio__empty-actions"><button type="button" className="btn btn--primary" onClick={onCreateDocument}><Plus size={13} />{t("studio.empty.create")}</button><Link to={projectWorkspacePath(projectId, "bible")}>{t("studio.empty.planLink")}</Link></div>} /></main>;
   const hasSelection = selection.end > selection.start;
   const selectionNeedsCheckpoint = detail.currentVersion?.content !== content;
   const aiReady =
     detail.document.kind === "chapter" &&
     detail.document.outlineNodeId !== null;
   const anyError = versionMutation.error ?? draftMutation.error ?? commentMutation.error ?? editMutation.error ?? proposalMutation.error ?? statusMutation.error ?? aiMutation.error;
-  const activeToolLabel =
-    STUDIO_TOOLS.find((tool) => tool.id === activeTool)?.label ?? "写作工具";
+  const activeToolLabel = t(
+    STUDIO_TOOLS.find((tool) => tool.id === activeTool)?.labelKey ??
+      "studio.tools.fallback",
+  );
   const toolCount = (tool: StudioTool): number | null => {
     if (tool === "comments") return detail.comments.length;
     if (tool === "versions") return detail.versions.length;
@@ -619,17 +628,17 @@ function StudioDesk({ projectId, detail, pending, error, review, reviewPending, 
   };
   return <>
     <main className="studio__desk">
-      <header className="studio__desk-head"><p className="studio__desk-title">{detail.document.title}</p><span className="studio__desk-tag">{detail.versions.length} 版</span><span className="studio__desk-meta mono">{content === draftSavedContent && !draftMutation.isPending ? "草稿已同步" : draftMutation.isPending ? "草稿同步中…" : "草稿未同步"}</span><button type="button" className="studio__text-button" onClick={() => setArchiveOpen(true)}><Archive size={12} />移入回收站</button></header>
-      {runId ? <WritingTaskPanel projectId={projectId} runId={runId} onRunChange={onRunChange} onDismiss={onDismissRun} onAccepted={() => { setTaskNotice("候选正文已采纳为正式版本；后续故事变化会继续在任务与故事变化中提示。"); onDismissRun(); }} onRefreshDocument={onRefresh} /> : null}
-      {taskNotice ? <p className="studio__task-accepted" role="status"><Check size={13} aria-hidden="true" />{taskNotice}<button type="button" aria-label="关闭采纳提示" onClick={() => setTaskNotice(null)}>×</button></p> : null}
-      <div className="studio__desk-editor">{content.length === 0 ? <div className="studio__blank-page-note"><span className="mono">OPENING · 空白稿纸</span><strong>从一个具体的画面开始</strong><p>{aiReady ? "写下一句对白、一个动作，或把本章交给下方的 AI 起草。" : "写下一句对白、一个动作，或一段尚未确定的想法。"}</p></div> : null}<textarea ref={textareaRef} className="studio__desk-textarea" aria-label="Markdown 正文编辑器" value={content} onChange={(event) => { contentRef.current = event.currentTarget.value; setContent(event.currentTarget.value); }} onSelect={(event) => setSelection({ start: event.currentTarget.selectionStart, end: event.currentTarget.selectionEnd })} placeholder="从这里开始写。" />
-        {anyError ? <ErrorNote error={anyError} title="写作台操作未完成；你的本地内容仍保留" /> : null}
-        {versionMutation.isSuccess ? <p className="studio__saved-note" role="status">版本已写入</p> : null}
-        <div className="studio__desk-foot"><span className="studio__desk-stat">{content.length} 字 · 选中 {selection.end - selection.start} 字</span><div className="studio__desk-actions">{aiReady ? <button type="button" className="studio__save-btn studio__save-btn--ai" disabled={aiMutation.isPending} title="发起一个单章后台任务（区别于多章 AI 快速创作）" onClick={() => aiMutation.mutate()}><Sparkles size={13} />{aiMutation.isPending ? "交稿中…" : "交给 AI"}</button> : detail.document.kind === "manuscript" ? <span className="studio__desk-hint">正文总稿用于汇总章节；<Link to={projectWorkspacePath(projectId, "bible")}>先建立章节</Link>，或<Link to={projectWorkspacePath(projectId, "autopilot")}>使用 AI 快速创作</Link></span> : detail.document.kind === "scene" ? <span className="studio__desk-hint">场景稿可使用右侧选区 AI 编辑；章节生产只对章节正文开放。</span> : <span className="studio__desk-hint">这件稿件未绑定章节大纲；<Link to={projectWorkspacePath(projectId, "bible")}>去故事页检查</Link></span>}<button type="button" className="studio__save-btn" disabled={versionMutation.isPending || !content.trim()} onClick={() => versionMutation.mutate()}><Save size={13} />{versionMutation.isPending ? "入版中…" : "保存新版本"}</button></div></div>
+      <header className="studio__desk-head"><p className="studio__desk-title">{detail.document.title}</p><span className="studio__desk-tag">{t("studio.desk.versionCount", { count: detail.versions.length })}</span><span className="studio__desk-meta mono">{content === draftSavedContent && !draftMutation.isPending ? t("studio.desk.draftSynced") : draftMutation.isPending ? t("studio.desk.draftSyncing") : t("studio.desk.draftUnsynced")}</span><button type="button" className="studio__text-button" onClick={() => setArchiveOpen(true)}><Archive size={12} />{t("studio.desk.archive")}</button></header>
+      {runId ? <WritingTaskPanel projectId={projectId} runId={runId} onRunChange={onRunChange} onDismiss={onDismissRun} onAccepted={() => { setTaskNotice(t("studio.task.acceptedNotice")); onDismissRun(); }} onRefreshDocument={onRefresh} /> : null}
+      {taskNotice ? <p className="studio__task-accepted" role="status"><Check size={13} aria-hidden="true" />{taskNotice}<button type="button" aria-label={t("studio.task.dismissNoticeAria")} onClick={() => setTaskNotice(null)}>×</button></p> : null}
+      <div className="studio__desk-editor">{content.length === 0 ? <div className="studio__blank-page-note"><span className="mono">{t("studio.desk.blankTagline")}</span><strong>{t("studio.desk.blankHeading")}</strong><p>{aiReady ? t("studio.desk.blankHintAi") : t("studio.desk.blankHintPlain")}</p></div> : null}<textarea ref={textareaRef} className="studio__desk-textarea" aria-label={t("studio.desk.editorAria")} value={content} onChange={(event) => { contentRef.current = event.currentTarget.value; setContent(event.currentTarget.value); }} onSelect={(event) => setSelection({ start: event.currentTarget.selectionStart, end: event.currentTarget.selectionEnd })} placeholder={t("studio.desk.editorPlaceholder")} />
+        {anyError ? <ErrorNote error={anyError} title={t("studio.desk.operationErrorTitle")} /> : null}
+        {versionMutation.isSuccess ? <p className="studio__saved-note" role="status">{t("studio.desk.versionSaved")}</p> : null}
+        <div className="studio__desk-foot"><span className="studio__desk-stat">{t("studio.desk.stats", { count: content.length, selected: selection.end - selection.start })}</span><div className="studio__desk-actions">{aiReady ? <button type="button" className="studio__save-btn studio__save-btn--ai" disabled={aiMutation.isPending} title={t("studio.ai.buttonTitle")} onClick={() => aiMutation.mutate()}><Sparkles size={13} />{aiMutation.isPending ? t("studio.ai.submitting") : t("studio.ai.button")}</button> : detail.document.kind === "manuscript" ? <span className="studio__desk-hint">{t("studio.hint.manuscriptPrefix")}<Link to={projectWorkspacePath(projectId, "bible")}>{t("studio.hint.manuscriptLinkChapters")}</Link>{t("studio.hint.manuscriptMiddle")}<Link to={projectWorkspacePath(projectId, "autopilot")}>{t("studio.hint.manuscriptLinkAutopilot")}</Link></span> : detail.document.kind === "scene" ? <span className="studio__desk-hint">{t("studio.hint.scene")}</span> : <span className="studio__desk-hint">{t("studio.hint.unboundPrefix")}<Link to={projectWorkspacePath(projectId, "bible")}>{t("studio.hint.unboundLink")}</Link></span>}<button type="button" className="studio__save-btn" disabled={versionMutation.isPending || !content.trim()} onClick={() => versionMutation.mutate()}><Save size={13} />{versionMutation.isPending ? t("studio.desk.savingVersion") : t("studio.desk.saveVersion")}</button></div></div>
       </div>
     </main>
-    <aside className="studio__side" aria-label="写作工具坞">
-      <nav className="studio__tool-nav" role="tablist" aria-label="写作工具">
+    <aside className="studio__side" aria-label={t("studio.tools.dockAria")}>
+      <nav className="studio__tool-nav" role="tablist" aria-label={t("studio.tools.navAria")}>
         {STUDIO_TOOLS.map((tool) => {
           const count = toolCount(tool.id);
           return (
@@ -642,7 +651,7 @@ function StudioDesk({ projectId, detail, pending, error, review, reviewPending, 
               onClick={() => setToolSelection({ focusTarget, tool: tool.id })}
             >
               <StudioToolIcon tool={tool.id} />
-              <span>{tool.label}</span>
+              <span>{t(tool.labelKey)}</span>
               {count !== null ? <small>{count}</small> : null}
             </button>
           );
@@ -652,7 +661,7 @@ function StudioDesk({ projectId, detail, pending, error, review, reviewPending, 
         className="studio__tool-panel"
         id="studio-tool-panel"
         role="tabpanel"
-        aria-label={`${activeToolLabel}工具`}
+        aria-label={t("studio.tools.panelAria", { label: activeToolLabel })}
       >
         {activeTool === "review" ? <ReviewPanel projectId={projectId} document={detail.document} workspace={review} pending={reviewPending} error={reviewError} /> : null}
         {activeTool === "revisions" ? <RevisionProposalPanel projectId={projectId} activeDocumentId={detail.document.id} /> : null}
@@ -660,13 +669,13 @@ function StudioDesk({ projectId, detail, pending, error, review, reviewPending, 
         {activeTool === "comments" ? <CommentPanel comments={detail.comments} pending={statusMutation.isPending} onToggle={(comment) => statusMutation.mutate(comment)} /> : null}
         {activeTool === "versions" ? <VersionPanel versions={detail.versions} currentVersionId={detail.document.currentVersionId} pending={restoreMutation.isPending} onRestore={setRestoreTarget} /> : null}
         {activeTool === "selection" ? <>
-          <section className="studio__selection-tools" aria-label="选区操作"><h3>选区工具</h3><blockquote>{hasSelection ? content.slice(selection.start, selection.end) : "在正文里选择一段文字后，可创建版本锚定批注或生成可审 diff。"}</blockquote><div className="studio__selection-grid"><div className="studio__selection-cell"><label>批注<textarea value={commentBody} onChange={(event) => setCommentBody(event.target.value)} /></label><button type="button" className="btn" disabled={!hasSelection || !commentBody.trim() || commentMutation.isPending} onClick={() => commentMutation.mutate()}><MessageSquarePlus size={12} />{selectionNeedsCheckpoint ? "保存版本并批注" : "创建批注"}</button></div><div className="studio__selection-cell"><label>AI 编辑指令<textarea value={editInstruction} onChange={(event) => setEditInstruction(event.target.value)} /></label><button type="button" className="btn btn--primary" disabled={!hasSelection || !editInstruction.trim() || editMutation.isPending} onClick={() => editMutation.mutate()}><Sparkles size={12} />{editMutation.isPending ? "正在生成提案…" : "生成编辑提案"}</button>{editMutation.data ? <p className="studio__saved-note" role="status">AI 编辑任务已开始；可以离开此页，完成后提案会回到这里。 <Link to={`${projectWorkspacePath(projectId, "runs")}?run=${encodeURIComponent(editMutation.data.run.id)}`}>查看运行进度</Link></p> : null}</div></div></section>
+          <section className="studio__selection-tools" aria-label={t("studio.selection.aria")}><h3>{t("studio.selection.title")}</h3><blockquote>{hasSelection ? content.slice(selection.start, selection.end) : t("studio.selection.emptyQuote")}</blockquote><div className="studio__selection-grid"><div className="studio__selection-cell"><label>{t("studio.selection.commentLabel")}<textarea value={commentBody} onChange={(event) => setCommentBody(event.target.value)} /></label><button type="button" className="btn" disabled={!hasSelection || !commentBody.trim() || commentMutation.isPending} onClick={() => commentMutation.mutate()}><MessageSquarePlus size={12} />{selectionNeedsCheckpoint ? t("studio.selection.commentCheckpoint") : t("studio.selection.commentCreate")}</button></div><div className="studio__selection-cell"><label>{t("studio.selection.editLabel")}<textarea value={editInstruction} onChange={(event) => setEditInstruction(event.target.value)} /></label><button type="button" className="btn btn--primary" disabled={!hasSelection || !editInstruction.trim() || editMutation.isPending} onClick={() => editMutation.mutate()}><Sparkles size={12} />{editMutation.isPending ? t("studio.selection.editPending") : t("studio.selection.editSubmit")}</button>{editMutation.data ? <p className="studio__saved-note" role="status">{t("studio.selection.editStarted")} <Link to={`${projectWorkspacePath(projectId, "runs")}?run=${encodeURIComponent(editMutation.data.run.id)}`}>{t("studio.selection.editProgressLink")}</Link></p> : null}</div></div></section>
           <ProposalPanel proposals={detail.proposals} pending={proposalMutation.isPending} onDecide={(proposal, action) => proposalMutation.mutate({ proposal, action })} />
         </> : null}
       </section>
     </aside>
-    {restoreTarget ? <ConfirmDialog title="恢复历史版本" confirmLabel="恢复为新版本" pending={restoreMutation.isPending} onCancel={() => setRestoreTarget(null)} onConfirm={() => restoreMutation.mutate(restoreTarget)}><p>不会改写旧版本；系统会把所选内容追加为一个新的不可变版本。当前本地草稿会保留到服务端，若发生 409 请重新加载后再决定。</p>{restoreMutation.isError ? <ErrorNote error={restoreMutation.error} title="版本未恢复" /> : null}</ConfirmDialog> : null}
-    {archiveOpen ? <ConfirmDialog title="移入回收站" confirmLabel="移入回收站" danger onCancel={() => setArchiveOpen(false)} onConfirm={() => { setArchiveOpen(false); if (detail) void onArchive(detail.document); }}><p>稿件会从当前稿目隐藏，但正文、版本、批注和审稿记录都会保留。之后可以在回收站恢复。</p></ConfirmDialog> : null}
+    {restoreTarget ? <ConfirmDialog title={t("studio.confirm.restoreTitle")} confirmLabel={t("studio.confirm.restoreLabel")} pending={restoreMutation.isPending} onCancel={() => setRestoreTarget(null)} onConfirm={() => restoreMutation.mutate(restoreTarget)}><p>{t("studio.confirm.restoreBody")}</p>{restoreMutation.isError ? <ErrorNote error={restoreMutation.error} title={t("studio.errors.restoreVersionFailed")} /> : null}</ConfirmDialog> : null}
+    {archiveOpen ? <ConfirmDialog title={t("studio.desk.archive")} confirmLabel={t("studio.desk.archive")} danger onCancel={() => setArchiveOpen(false)} onConfirm={() => { setArchiveOpen(false); if (detail) void onArchive(detail.document); }}><p>{t("studio.confirm.archiveBody")}</p></ConfirmDialog> : null}
   </>;
 }
 
@@ -691,6 +700,7 @@ function StudioToolIcon({ tool }: { tool: StudioTool }) {
 /* ---- 审稿（完整展开）：现状文档的最新报告 + verdict + issue 裁定 ------------ */
 
 function ReviewPanel({ projectId, document, workspace, pending, error }: { projectId: string; document: StoryDocument; workspace: ReviewWorkspace | undefined; pending: boolean; error: unknown }) {
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const [flash, setFlash] = useState<string | null>(null);
   const reviewRequestRef = useRef<{ versionId: string; requestId: string } | null>(null);
@@ -698,7 +708,7 @@ function ReviewPanel({ projectId, document, workspace, pending, error }: { proje
     mutationFn: (input: { issue: ReviewWorkspaceIssue; action: "accept" | "reject" | "false_positive" | "intentional_keep" }) =>
       decideReviewIssue(projectId, input.issue.id, { action: input.action, note: null, expectedStatus: input.issue.status }),
     onSuccess: (_data, input) => {
-      setFlash(`${reviewIssueActionLabel(input.action)} · 已写入底稿`);
+      setFlash(t("studio.review.decisionFlash", { action: reviewIssueActionLabel(input.action) }));
       window.setTimeout(() => setFlash(null), 2200);
       void queryClient.invalidateQueries({ queryKey: ["project", projectId, "review"] });
       void queryClient.invalidateQueries({ queryKey: ["project", projectId, "studio"] });
@@ -707,7 +717,7 @@ function ReviewPanel({ projectId, document, workspace, pending, error }: { proje
   const reviewMutation = useMutation({
     mutationFn: () => {
       if (!document.currentVersionId) {
-        throw new Error("当前稿件还没有可送审的正式版本");
+        throw new Error(t("studio.review.errorNoVersion"));
       }
       if (reviewRequestRef.current?.versionId !== document.currentVersionId) {
         reviewRequestRef.current = {
@@ -723,12 +733,12 @@ function ReviewPanel({ projectId, document, workspace, pending, error }: { proje
     },
     onSuccess: (created) => {
       reviewRequestRef.current = null;
-      setFlash("当前版本已送审，完成后报告会自动回到这里");
+      setFlash(t("studio.review.submittedFlash"));
       rememberTask({
         projectId,
         kind: "chapter",
         taskId: created.run.id,
-        label: `审稿：《${document.title}》`,
+        label: t("studio.task.reviewTaskLabel", { name: document.title }),
         createdAt: new Date().toISOString(),
         origin: { surface: "writing", documentId: document.id },
         documentId: document.id,
@@ -745,8 +755,8 @@ function ReviewPanel({ projectId, document, workspace, pending, error }: { proje
     (report) => report.documentVersionId === document.currentVersionId,
   );
   const latest: ReviewWorkspaceReport | null = currentReports[0] ?? null;
-  if (error) return <Panel title="审稿" count={0}><ErrorNote error={error} title="审稿结果暂时无法加载" /></Panel>;
-  if (pending) return <Panel title="审稿" count={0}><Skeleton lines={3} /></Panel>;
+  if (error) return <Panel title={t("studio.tools.review")} count={0}><ErrorNote error={error} title={t("studio.errors.reviewLoad")} /></Panel>;
+  if (pending) return <Panel title={t("studio.tools.review")} count={0}><Skeleton lines={3} /></Panel>;
   const canReview =
     document.kind === "chapter" &&
     document.outlineNodeId !== null &&
@@ -757,26 +767,26 @@ function ReviewPanel({ projectId, document, workspace, pending, error }: { proje
       report.issues.some((issue) => issue.status === "open"),
   );
   const openCount = visibleReports.flatMap((report) => report.issues).filter((issue) => issue.status === "open").length;
-  return <Panel title="审稿" count={openCount}>
+  return <Panel title={t("studio.tools.review")} count={openCount}>
     <div className="studio__review-command">
-      <p className="studio__section-intro">{latest ? "当前版本的审稿与过去仍未裁定的问题都会保留在这里。" : document.kind === "manuscript" ? "正文总稿不单独触发审稿；请在对应章节稿中审阅。" : "本稿尚无审稿报告；当前正文版本还没有完成审阅。"}</p>
-      {canReview ? <button type="button" className="btn" disabled={reviewMutation.isPending} onClick={() => reviewMutation.mutate()}><Check size={12} aria-hidden="true" />{reviewMutation.isPending ? "送审中…" : latest ? "重新审稿" : "审稿当前版本"}</button> : null}
+      <p className="studio__section-intro">{latest ? t("studio.review.introCurrent") : document.kind === "manuscript" ? t("studio.review.introManuscript") : t("studio.review.introNone")}</p>
+      {canReview ? <button type="button" className="btn" disabled={reviewMutation.isPending} onClick={() => reviewMutation.mutate()}><Check size={12} aria-hidden="true" />{reviewMutation.isPending ? t("studio.review.submitting") : latest ? t("studio.review.rereview") : t("studio.review.reviewCurrent")}</button> : null}
     </div>
-    {reviewMutation.isError ? <ErrorNote error={reviewMutation.error} title="当前版本未能送审" /> : null}
-    {!latest && visibleReports.length > 0 ? <p className="studio__review-stale">以下报告属于过去版本，不代表当前正文。</p> : null}
-    {!latest && visibleReports.length === 0 ? <p className="studio__panel-empty">保存出正式版本后，可以从这里单独审稿，不会改写正文。</p> : null}
+    {reviewMutation.isError ? <ErrorNote error={reviewMutation.error} title={t("studio.errors.reviewSubmitFailed")} /> : null}
+    {!latest && visibleReports.length > 0 ? <p className="studio__review-stale">{t("studio.review.staleNote")}</p> : null}
+    {!latest && visibleReports.length === 0 ? <p className="studio__panel-empty">{t("studio.review.emptyNote")}</p> : null}
     {visibleReports.map((report, index) => {
       const reportOpenIssues = report.issues.filter((issue) => issue.status === "open");
       return <details key={report.id} className="studio__review-report" open={index === 0 || reportOpenIssues.length > 0}>
-        <summary><strong>{report.id === latest?.id ? "当前版本" : "过去未结审稿"}</strong><span>{reviewVerdictLabel(report.verdict)} · {reportOpenIssues.length} 项待裁定 · {report.createdAt.slice(0, 16)}</span></summary>
+        <summary><strong>{report.id === latest?.id ? t("studio.review.reportCurrent") : t("studio.review.reportPast")}</strong><span>{t("studio.review.reportMeta", { verdict: reviewVerdictLabel(report.verdict), count: reportOpenIssues.length, time: report.createdAt.slice(0, 16) })}</span></summary>
         <div className="studio__review-report-body">
-          <div className="review__report" aria-label="审稿结论">
+          <div className="review__report" aria-label={t("studio.review.reportAria")}>
             <div className="review__report-head"><p className="review__report-verdict" data-v={report.verdict}>{reviewVerdictLabel(report.verdict)}</p><p className="review__report-summary">{report.summary}</p></div>
-            <div className="review__report-scores" aria-label="评分细项">{Object.entries(report.scores).map(([key, value]) => <span key={key}>{reviewScoreLabel(key)} · {value}</span>)}</div>
+            <div className="review__report-scores" aria-label={t("studio.review.scoresAria")}>{Object.entries(report.scores).map(([key, value]) => <span key={key}>{reviewScoreLabel(key)} · {value}</span>)}</div>
           </div>
-          {report.reviewedContent ? <details className="studio__reviewed-copy"><summary>展开查看当时送审的完整正文 · {report.reviewedContent.length} 字</summary><div className="review__doc-body review__doc-body--desk" aria-label="被审正文（完整）">{markQuotes(report.reviewedContent, report.issues.flatMap((issue) => issue.evidence.map((entry) => entry.quote)).filter(Boolean))}</div></details> : null}
-          {report.issues.length === 0 ? <div className="review__empty"><strong>审得很干净</strong>这份稿没有新的问题要裁定。</div> : <div className="review__issues">{report.issues.map((issue) => <IssueCard key={issue.id} issue={issue} pending={decideMutation.isPending} onDecide={(action) => decideMutation.mutate({ issue, action })} />)}</div>}
-          {reportOpenIssues.length === 0 && report.issues.length > 0 ? <p className="studio__panel-empty">这份报告中的 {report.issues.length} 项都已裁定。</p> : null}
+          {report.reviewedContent ? <details className="studio__reviewed-copy"><summary>{t("studio.review.reviewedCopySummary", { count: report.reviewedContent.length })}</summary><div className="review__doc-body review__doc-body--desk" aria-label={t("studio.review.reviewedCopyAria")}>{markQuotes(report.reviewedContent, report.issues.flatMap((issue) => issue.evidence.map((entry) => entry.quote)).filter(Boolean))}</div></details> : null}
+          {report.issues.length === 0 ? <div className="review__empty"><strong>{t("studio.review.cleanTitle")}</strong>{t("studio.review.cleanBody")}</div> : <div className="review__issues">{report.issues.map((issue) => <IssueCard key={issue.id} issue={issue} pending={decideMutation.isPending} onDecide={(action) => decideMutation.mutate({ issue, action })} />)}</div>}
+          {reportOpenIssues.length === 0 && report.issues.length > 0 ? <p className="studio__panel-empty">{t("studio.review.allDecided", { count: report.issues.length })}</p> : null}
         </div>
       </details>;
     })}
@@ -810,6 +820,7 @@ function currentDocumentQuality(
 }
 
 function IssueCard({ issue, pending, onDecide }: { issue: ReviewWorkspaceIssue; pending: boolean; onDecide: (action: "accept" | "reject" | "false_positive" | "intentional_keep") => void }) {
+  const { t } = useI18n();
   const decided = issue.decision !== null;
   return (
     <article className="review__issue" data-decided={decided}>
@@ -830,11 +841,11 @@ function IssueCard({ issue, pending, onDecide }: { issue: ReviewWorkspaceIssue; 
       ) : null}
       {issue.suggestedDirection ? <p className="review__issue-suggest">{issue.suggestedDirection}</p> : null}
       {!decided ? (
-        <div className="review__decider" role="group" aria-label="裁定">
-          <button type="button" className="review__decider-btn" disabled={pending} onClick={() => onDecide("accept")}><Check size={11} strokeWidth={2} aria-hidden="true" />接受</button>
-          <button type="button" className="review__decider-btn" disabled={pending} onClick={() => onDecide("reject")}>拒绝</button>
-          <button type="button" className="review__decider-btn" disabled={pending} onClick={() => onDecide("false_positive")}>误报</button>
-          <button type="button" className="review__decider-btn" disabled={pending} onClick={() => onDecide("intentional_keep")}>故意保留</button>
+        <div className="review__decider" role="group" aria-label={t("studio.review.deciderAria")}>
+          <button type="button" className="review__decider-btn" disabled={pending} onClick={() => onDecide("accept")}><Check size={11} strokeWidth={2} aria-hidden="true" />{t("studio.decide.accept")}</button>
+          <button type="button" className="review__decider-btn" disabled={pending} onClick={() => onDecide("reject")}>{t("studio.decide.reject")}</button>
+          <button type="button" className="review__decider-btn" disabled={pending} onClick={() => onDecide("false_positive")}>{t("studio.review.falsePositive")}</button>
+          <button type="button" className="review__decider-btn" disabled={pending} onClick={() => onDecide("intentional_keep")}>{t("studio.review.intentionalKeep")}</button>
         </div>
       ) : null}
     </article>
@@ -844,6 +855,7 @@ function IssueCard({ issue, pending, onDecide }: { issue: ReviewWorkspaceIssue; 
 /* ---- 修订提案：base 对照 + revised 全文 + apply/reject --------------------- */
 
 function RevisionProposalPanel({ projectId, activeDocumentId }: { projectId: string; activeDocumentId: string }) {
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: ["project", projectId, "review"],
@@ -861,28 +873,28 @@ function RevisionProposalPanel({ projectId, activeDocumentId }: { projectId: str
     (proposal) => proposal.documentId === activeDocumentId,
   );
   if (query.isPending) return null;
-  return <Panel title="修订提案" count={proposals.length}>
-    {query.isError ? <ErrorNote error={query.error} title="修订提案暂时无法加载" /> : proposals.length === 0 ? (
-      <p className="studio__panel-empty">当前正文没有待采纳的整篇修订。</p>
+  return <Panel title={t("studio.revisions.title")} count={proposals.length}>
+    {query.isError ? <ErrorNote error={query.error} title={t("studio.errors.revisionsLoad")} /> : proposals.length === 0 ? (
+      <p className="studio__panel-empty">{t("studio.revisions.empty")}</p>
     ) : proposals.map((proposal) => (
       <article key={proposal.id} className="studio__proposal" data-status={proposal.status}>
-        <strong>整篇修订 · {proposalStatusLabel(proposal.status)}</strong>
+        <strong>{t("studio.revisions.itemTitle", { status: proposalStatusLabel(proposal.status) })}</strong>
         {proposal.baseContent ? (
-          <details className="studio__proposal-base"><summary>对照：原稿 {proposal.baseContent.length} 字</summary><pre>{proposal.baseContent}</pre></details>
+          <details className="studio__proposal-base"><summary>{t("studio.revisions.baseSummary", { count: proposal.baseContent.length })}</summary><pre>{proposal.baseContent}</pre></details>
         ) : null}
         {/* 修改差异完整展开：revised 正文一字不省。 */}
-        <div className="review__doc-body review__doc-body--desk" aria-label={`修订后正文（完整） · ${proposal.revisedContent.length} 字`}>{proposal.revisedContent}</div>
+        <div className="review__doc-body review__doc-body--desk" aria-label={t("studio.revisions.revisedAria", { count: proposal.revisedContent.length })}>{proposal.revisedContent}</div>
         {proposal.diff && Object.keys(proposal.diff).length > 0 ? (
-          <details className="studio__proposal-base"><summary>查看详细差异</summary><pre className="review__proposal-diff">{JSON.stringify(proposal.diff, null, 2)}</pre></details>
+          <details className="studio__proposal-base"><summary>{t("studio.revisions.diffSummary")}</summary><pre className="review__proposal-diff">{JSON.stringify(proposal.diff, null, 2)}</pre></details>
         ) : null}
-        {proposal.addressedIssueIds.length > 0 ? <small>回应 {proposal.addressedIssueIds.length} 个审稿问题</small> : null}
+        {proposal.addressedIssueIds.length > 0 ? <small>{t("studio.revisions.addressedIssues", { count: proposal.addressedIssueIds.length })}</small> : null}
         {proposal.status === "proposed" ? (
           <div className="studio__proposal-actions">
-            <button type="button" className="btn btn--primary" disabled={mutation.isPending} onClick={() => mutation.mutate({ proposal, action: "apply" })}>应用为新版本</button>
-            <button type="button" className="btn" disabled={mutation.isPending} onClick={() => mutation.mutate({ proposal, action: "reject" })}>拒绝</button>
+            <button type="button" className="btn btn--primary" disabled={mutation.isPending} onClick={() => mutation.mutate({ proposal, action: "apply" })}>{t("studio.revisions.apply")}</button>
+            <button type="button" className="btn" disabled={mutation.isPending} onClick={() => mutation.mutate({ proposal, action: "reject" })}>{t("studio.decide.reject")}</button>
           </div>
         ) : <small>{proposalStatusLabel(proposal.status)}{proposal.decidedAt ? ` · ${proposal.decidedAt.slice(0, 16)}` : ""}</small>}
-        {mutation.isError ? <ErrorNote error={mutation.error} title="提案裁定未完成" /> : null}
+        {mutation.isError ? <ErrorNote error={mutation.error} title={t("studio.errors.proposalDecideFailed")} /> : null}
       </article>
     ))}
   </Panel>;
@@ -891,6 +903,7 @@ function RevisionProposalPanel({ projectId, activeDocumentId }: { projectId: str
 /* ---- 故事变化裁定（canon change set） -------------------------------------- */
 
 function CanonChangesPanel({ projectId, document, versions }: { projectId: string; document: StoryDocument; versions: DocumentVersion[] }) {
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const [forceTarget, setForceTarget] = useState<CanonChangeSetView | null>(null);
   const query = useQuery({
@@ -935,35 +948,35 @@ function CanonChangesPanel({ projectId, document, versions }: { projectId: strin
   const activeSettlement = settlementRuns.find((run) => !TERMINAL_RUN_STATUSES.has(run.status));
   const failedSettlement = [...settlementRuns].reverse().find((run) => run.status === "failed");
   const conflict = settlementConflictDetails(mutation.error);
-  if (query.isPending || runsQuery.isPending) return <Panel title="故事变化" count={0}><Skeleton lines={2} /></Panel>;
-  return <Panel title="故事变化" count={sets.length}>
-    {query.isError || runsQuery.isError ? <ErrorNote error={query.error ?? runsQuery.error} title="故事变化暂时无法加载" /> : <>
-        {activeSettlement ? <p className="studio__settlement-status" role="status">正在从本章正文提取故事变化；完成后回到这里裁定，不会直接改人物、时间线或伏笔。</p>
-          : failedSettlement ? <p className="studio__settlement-status" data-tone="failed">最近一次变化提取失败，正文和版本不受影响；<Link to={`${projectWorkspacePath(projectId, "runs")}?run=${encodeURIComponent(failedSettlement.id)}`}>查看任务详情</Link>。</p> : null}
+  if (query.isPending || runsQuery.isPending) return <Panel title={t("studio.canon.title")} count={0}><Skeleton lines={2} /></Panel>;
+  return <Panel title={t("studio.canon.title")} count={sets.length}>
+    {query.isError || runsQuery.isError ? <ErrorNote error={query.error ?? runsQuery.error} title={t("studio.errors.canonLoad")} /> : <>
+        {activeSettlement ? <p className="studio__settlement-status" role="status">{t("studio.canon.settlementRunning")}</p>
+          : failedSettlement ? <p className="studio__settlement-status" data-tone="failed">{t("studio.canon.settlementFailedPrefix")}<Link to={`${projectWorkspacePath(projectId, "runs")}?run=${encodeURIComponent(failedSettlement.id)}`}>{t("studio.task.detailLink")}</Link>{t("studio.canon.settlementFailedSuffix")}</p> : null}
         {sets.length === 0 && !activeSettlement ? (
-          <p className="studio__panel-empty">当前正文没有待裁定的故事变化。</p>
+          <p className="studio__panel-empty">{t("studio.canon.empty")}</p>
         ) : sets.length > 0 ? <>
-        <p className="studio__section-intro">只显示由当前正文带来的变化；采纳前不会改写人物、时间线或伏笔。</p>
+        <p className="studio__section-intro">{t("studio.canon.intro")}</p>
         {sets.map((set) => {
           const items = canonChangeItems(set.changes, entityNames);
           return (
           <article key={set.id} className="studio__proposal" data-status={set.status}>
-            <strong>{canonSummary(set.changes) ?? "正文带来一组新变化"}</strong>
-            {items.length > 0 ? <ul className="studio__canon-items">{items.map((item, index) => <li key={`${item.label}-${index}`}><span>{item.label}</span><p>{item.text}</p></li>)}</ul> : <p className="studio__panel-empty">这组变化没有可读条目，请到技术运行中排查。</p>}
+            <strong>{canonSummary(set.changes) ?? t("studio.canon.fallbackSummary")}</strong>
+            {items.length > 0 ? <ul className="studio__canon-items">{items.map((item, index) => <li key={`${item.label}-${index}`}><span>{item.label}</span><p>{item.text}</p></li>)}</ul> : <p className="studio__panel-empty">{t("studio.canon.noItems")}</p>}
             <small>{set.createdAt.slice(0, 16)}</small>
             {set.status === "candidate" ? (
               <div className="studio__proposal-actions">
-                <button type="button" className="btn btn--primary" disabled={mutation.isPending} onClick={() => mutation.mutate({ set, action: "apply" })}>采纳这些变化</button>
-                {conflict?.forceAllowed && mutation.variables?.set.id === set.id ? <button type="button" className="btn" disabled={mutation.isPending} onClick={() => setForceTarget(set)}>强制采纳</button> : null}
-                <button type="button" className="btn" disabled={mutation.isPending} onClick={() => mutation.mutate({ set, action: "reject" })}>暂不采纳</button>
+                <button type="button" className="btn btn--primary" disabled={mutation.isPending} onClick={() => mutation.mutate({ set, action: "apply" })}>{t("studio.canon.apply")}</button>
+                {conflict?.forceAllowed && mutation.variables?.set.id === set.id ? <button type="button" className="btn" disabled={mutation.isPending} onClick={() => setForceTarget(set)}>{t("studio.canon.forceApply")}</button> : null}
+                <button type="button" className="btn" disabled={mutation.isPending} onClick={() => mutation.mutate({ set, action: "reject" })}>{t("studio.canon.defer")}</button>
               </div>
             ) : null}
           </article>
         );})}
-        {mutation.isError ? conflict ? <div className="studio__settlement-status" data-tone="failed" role="alert"><strong>变化与当前正典冲突</strong><ul>{conflict.conflicts.map((item, index) => <li key={`${item.path}-${index}`}>{settlementConflictLabel(item.reason)} · {item.path}{item.existingIds.length > 0 ? ` · 当前记录 ${item.existingIds.join(", ")}` : ""}</li>)}</ul>{conflict.forceAllowed ? <p>这些冲突可在确认后覆盖；也可以暂不采纳整组变化。</p> : <p>这类冲突不能强制覆盖，请暂不采纳并修正文中的变化来源。</p>}</div> : <ErrorNote error={mutation.error} title="变化裁定未完成" /> : null}
+        {mutation.isError ? conflict ? <div className="studio__settlement-status" data-tone="failed" role="alert"><strong>{t("studio.canon.conflictTitle")}</strong><ul>{conflict.conflicts.map((item, index) => <li key={`${item.path}-${index}`}>{settlementConflictLabel(item.reason)} · {item.path}{item.existingIds.length > 0 ? ` · ${t("studio.canon.conflictRecords", { ids: item.existingIds.join(", ") })}` : ""}</li>)}</ul>{conflict.forceAllowed ? <p>{t("studio.canon.conflictForceable")}</p> : <p>{t("studio.canon.conflictNotForceable")}</p>}</div> : <ErrorNote error={mutation.error} title={t("studio.errors.canonDecideFailed")} /> : null}
       </> : null}
       </>}
-    {forceTarget ? <ConfirmDialog title="强制采纳故事变化" confirmLabel="确认强制采纳" danger pending={mutation.isPending} onCancel={() => setForceTarget(null)} onConfirm={() => mutation.mutate({ set: forceTarget, action: "apply", conflictPolicy: "force" })}><p>这会覆盖冲突中已锁定或已变化的当前记录，并整组应用这些故事变化。操作成功后，等待中的章节任务会自动继续。</p></ConfirmDialog> : null}
+    {forceTarget ? <ConfirmDialog title={t("studio.canon.forceTitle")} confirmLabel={t("studio.canon.forceConfirm")} danger pending={mutation.isPending} onCancel={() => setForceTarget(null)} onConfirm={() => mutation.mutate({ set: forceTarget, action: "apply", conflictPolicy: "force" })}><p>{t("studio.canon.forceBody")}</p></ConfirmDialog> : null}
   </Panel>;
 }
 
@@ -989,44 +1002,68 @@ function isUnknownRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function settlementConflictLabel(reason: string): string {
-  return ({
-    target_locked: "目标记录已锁定",
-    status_changed: "目标状态已变化",
-    target_not_current: "目标已不是当前记录",
-    target_slot_mismatch: "目标与命题不匹配",
-    target_not_found: "目标记录不存在",
-    target_pair_mismatch: "关系双方与目标不匹配",
-  } as Record<string, string>)[reason] ?? reason;
+  const keys: Record<string, MessageKey> = {
+    target_locked: "studio.canon.reason.targetLocked",
+    status_changed: "studio.canon.reason.statusChanged",
+    target_not_current: "studio.canon.reason.targetNotCurrent",
+    target_slot_mismatch: "studio.canon.reason.targetSlotMismatch",
+    target_not_found: "studio.canon.reason.targetNotFound",
+    target_pair_mismatch: "studio.canon.reason.targetPairMismatch",
+  };
+  const messageKey = keys[reason];
+  return messageKey ? translate(getLocale(), messageKey) : reason;
 }
 
-function CommentPanel({ comments, pending, onToggle }: { comments: DocumentComment[]; pending: boolean; onToggle: (comment: DocumentComment) => void }) { return <Panel title="批注" count={comments.length}>{comments.length === 0 ? <p className="studio__panel-empty">暂无批注。</p> : comments.map((comment) => <article key={comment.id} className="studio__pin"><span className="studio__pin-state" data-s={comment.status}>{comment.status === "open" ? "待处理" : "已解决"}</span><blockquote>{comment.quote}</blockquote><p>{comment.body}</p><small>正文位置 {comment.startOffset}–{comment.endOffset}</small><button type="button" className="btn" disabled={pending} onClick={() => onToggle(comment)}>{comment.status === "open" ? "标为已解决" : "重新打开"}</button></article>)}</Panel>; }
-function VersionPanel({ versions, currentVersionId, pending, onRestore }: { versions: DocumentVersion[]; currentVersionId: string | null; pending: boolean; onRestore: (version: DocumentVersion) => void }) { return <Panel title="历史版本" count={versions.length}>{versions.map((version, index) => <article key={version.id} className="studio__version" data-current={version.id === currentVersionId}><span className="studio__version-no mono">v{versions.length - index}</span><span className="studio__version-meta"><strong>{versionSourceLabel(version.source)}</strong> · {version.content.length} 字 · {version.createdAt.slice(0, 16)}</span>{version.id !== currentVersionId ? <button type="button" className="btn" disabled={pending} onClick={() => onRestore(version)}><Undo2 size={11} />恢复</button> : null}</article>)}</Panel>; }
-function ProposalPanel({ proposals, pending, onDecide }: { proposals: EditProposal[]; pending: boolean; onDecide: (proposal: EditProposal, action: "accept" | "reject") => void }) { return <Panel title="选区修改" count={proposals.length}>{proposals.length === 0 ? <p className="studio__panel-empty">暂无选区修改建议。</p> : proposals.map((proposal) => <article key={proposal.id} className="studio__proposal" data-status={proposal.status}><strong>{proposal.instruction}</strong><del>{proposal.originalText}</del><ins>{proposal.replacementText}</ins>{proposal.status === "proposed" ? <div className="studio__proposal-actions"><button type="button" className="btn btn--primary" disabled={pending} onClick={() => onDecide(proposal, "accept")}>接受</button><button type="button" className="btn" disabled={pending} onClick={() => onDecide(proposal, "reject")}>拒绝</button></div> : <small>{proposalStatusLabel(proposal.status)}</small>}</article>)}</Panel>; }
+function CommentPanel({ comments, pending, onToggle }: { comments: DocumentComment[]; pending: boolean; onToggle: (comment: DocumentComment) => void }) { const { t } = useI18n(); return <Panel title={t("studio.comments.title")} count={comments.length}>{comments.length === 0 ? <p className="studio__panel-empty">{t("studio.comments.empty")}</p> : comments.map((comment) => <article key={comment.id} className="studio__pin"><span className="studio__pin-state" data-s={comment.status}>{comment.status === "open" ? t("studio.comments.open") : t("studio.comments.resolved")}</span><blockquote>{comment.quote}</blockquote><p>{comment.body}</p><small>{t("studio.comments.position", { start: comment.startOffset, end: comment.endOffset })}</small><button type="button" className="btn" disabled={pending} onClick={() => onToggle(comment)}>{comment.status === "open" ? t("studio.comments.markResolved") : t("studio.comments.reopen")}</button></article>)}</Panel>; }
+function VersionPanel({ versions, currentVersionId, pending, onRestore }: { versions: DocumentVersion[]; currentVersionId: string | null; pending: boolean; onRestore: (version: DocumentVersion) => void }) { const { t } = useI18n(); return <Panel title={t("studio.versions.title")} count={versions.length}>{versions.map((version, index) => <article key={version.id} className="studio__version" data-current={version.id === currentVersionId}><span className="studio__version-no mono">v{versions.length - index}</span><span className="studio__version-meta">{t("studio.versions.meta", { source: versionSourceLabel(version.source), count: version.content.length, time: version.createdAt.slice(0, 16) })}</span>{version.id !== currentVersionId ? <button type="button" className="btn" disabled={pending} onClick={() => onRestore(version)}><Undo2 size={11} />{t("studio.versions.restore")}</button> : null}</article>)}</Panel>; }
+function ProposalPanel({ proposals, pending, onDecide }: { proposals: EditProposal[]; pending: boolean; onDecide: (proposal: EditProposal, action: "accept" | "reject") => void }) { const { t } = useI18n(); return <Panel title={t("studio.proposals.title")} count={proposals.length}>{proposals.length === 0 ? <p className="studio__panel-empty">{t("studio.proposals.empty")}</p> : proposals.map((proposal) => <article key={proposal.id} className="studio__proposal" data-status={proposal.status}><strong>{proposal.instruction}</strong><del>{proposal.originalText}</del><ins>{proposal.replacementText}</ins>{proposal.status === "proposed" ? <div className="studio__proposal-actions"><button type="button" className="btn btn--primary" disabled={pending} onClick={() => onDecide(proposal, "accept")}>{t("studio.decide.accept")}</button><button type="button" className="btn" disabled={pending} onClick={() => onDecide(proposal, "reject")}>{t("studio.decide.reject")}</button></div> : <small>{proposalStatusLabel(proposal.status)}</small>}</article>)}</Panel>; }
 function Panel({ title, count, children }: { title: string; count: number; children: React.ReactNode }) {
   const head = <><p className="studio__panel-title">{title}</p><span className="studio__panel-count">{count}</span></>;
   return <section className="studio__panel"><header className="studio__panel-head">{head}</header><div className="studio__panel-body">{children}</div></section>;
 }
 
 function reviewScoreLabel(key: string): string {
-  return ({ continuity: "连续性", pacing: "节奏", character: "人物", prose: "文句", goal: "章节目标", pov: "视角" } as Record<string, string>)[key] ?? key;
+  const keys: Record<string, MessageKey> = {
+    continuity: "studio.review.score.continuity",
+    pacing: "studio.review.score.pacing",
+    character: "studio.review.score.character",
+    prose: "studio.review.score.prose",
+    goal: "studio.review.score.goal",
+    pov: "studio.review.score.pov",
+  };
+  const messageKey = keys[key];
+  return messageKey ? translate(getLocale(), messageKey) : key;
 }
 
 function reviewSeverityLabel(value: ReviewWorkspaceIssue["severity"]): string {
-  return { info: "提示", minor: "轻微", major: "重要", critical: "严重" }[value];
+  const keys: Record<ReviewWorkspaceIssue["severity"], MessageKey> = {
+    info: "studio.review.severity.info",
+    minor: "studio.review.severity.minor",
+    major: "studio.review.severity.major",
+    critical: "studio.review.severity.critical",
+  };
+  return translate(getLocale(), keys[value]);
 }
 
 function proposalStatusLabel(value: ReviewRevisionProposal["status"] | EditProposal["status"]): string {
-  return ({ proposed: "待决定", accepted: "已采纳", rejected: "已拒绝", superseded: "已被新版本替代" } as Record<string, string>)[value] ?? value;
+  const keys: Record<string, MessageKey> = {
+    proposed: "studio.status.proposed",
+    accepted: "studio.status.accepted",
+    rejected: "studio.status.rejected",
+    superseded: "studio.status.superseded",
+  };
+  const messageKey = keys[value];
+  return messageKey ? translate(getLocale(), messageKey) : value;
 }
 
 function versionSourceLabel(source: string): string {
-  if (source === "manual") return "手动保存";
-  if (source === "manual:comment-checkpoint") return "批注前保存";
-  if (source === "manual:selection-baseline") return "选区修改前保存";
-  if (source.startsWith("run:")) return "AI 正文";
-  if (source.startsWith("revision:")) return "AI 修订";
-  if (source.startsWith("restore:")) return "恢复历史内容";
-  return "正文版本";
+  if (source === "manual") return translate(getLocale(), "studio.versionSource.manual");
+  if (source === "manual:comment-checkpoint") return translate(getLocale(), "studio.versionSource.commentCheckpoint");
+  if (source === "manual:selection-baseline") return translate(getLocale(), "studio.versionSource.selectionBaseline");
+  if (source.startsWith("run:")) return translate(getLocale(), "studio.versionSource.aiContent");
+  if (source.startsWith("revision:")) return translate(getLocale(), "studio.versionSource.aiRevision");
+  if (source.startsWith("restore:")) return translate(getLocale(), "studio.versionSource.restored");
+  return translate(getLocale(), "studio.versionSource.fallback");
 }
 
 function changeSetTouchesVersions(value: unknown, versionIds: Set<string>): boolean {
@@ -1056,30 +1093,36 @@ function canonChangeItems(
   changes: Record<string, unknown>,
   entityNames: Map<string, string>,
 ): Array<{ label: string; text: string }> {
+  const locale = getLocale();
   const rows: Array<{ label: string; text: string }> = [];
   const records = (key: string) => Array.isArray(changes[key])
     ? (changes[key] as unknown[]).filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object" && !Array.isArray(item))
     : [];
   const text = (record: Record<string, unknown>, key: string) => typeof record[key] === "string" ? record[key] : "";
-  const entity = (id: string) => entityNames.get(id) ?? "相关人物或事物";
+  const entity = (id: string) => entityNames.get(id) ?? translate(locale, "studio.canon.unknownEntity");
   for (const item of records("stateDelta")) {
-    rows.push({ label: "状态变化", text: `${text(item, "key")}：${text(item, "before") || "此前未记录"} → ${text(item, "after")}` });
+    rows.push({ label: translate(locale, "studio.canon.itemLabel.stateDelta"), text: translate(locale, "studio.canon.stateDeltaText", { key: text(item, "key"), before: text(item, "before") || translate(locale, "studio.canon.noPriorRecord"), after: text(item, "after") }) });
   }
   for (const item of records("factCandidates")) {
-    const value = item.value === null || item.value === undefined ? "不再成立" : String(item.value);
-    rows.push({ label: "故事事实", text: `${entity(text(item, "subjectId"))} · ${text(item, "predicate")}：${value}` });
+    const value = item.value === null || item.value === undefined ? translate(locale, "studio.canon.factNoLongerHolds") : String(item.value);
+    rows.push({ label: translate(locale, "studio.canon.itemLabel.fact"), text: translate(locale, "studio.canon.factText", { entity: entity(text(item, "subjectId")), predicate: text(item, "predicate"), value }) });
   }
   for (const item of records("timelineCandidates")) {
-    rows.push({ label: "时间线", text: [text(item, "title"), text(item, "storyTime"), text(item, "description")].filter(Boolean).join(" · ") });
+    rows.push({ label: translate(locale, "studio.canon.itemLabel.timeline"), text: [text(item, "title"), text(item, "storyTime"), text(item, "description")].filter(Boolean).join(" · ") });
   }
   for (const item of records("relationshipCandidates")) {
-    rows.push({ label: "人物关系", text: `${entity(text(item, "fromEntityId"))} 与 ${entity(text(item, "toEntityId"))}：${text(item, "relation")}；${text(item, "change")}` });
+    rows.push({ label: translate(locale, "studio.canon.itemLabel.relationship"), text: translate(locale, "studio.canon.relationshipText", { from: entity(text(item, "fromEntityId")), to: entity(text(item, "toEntityId")), relation: text(item, "relation"), change: text(item, "change") }) });
   }
   for (const item of records("foreshadowCandidates")) {
-    const action = ({ plant: "埋下", develop: "推进", resolve: "回收" } as Record<string, string>)[text(item, "action")] ?? "更新";
-    rows.push({ label: "伏笔", text: `${action}「${text(item, "title")}」` });
+    const actionKeys: Record<string, MessageKey> = {
+      plant: "studio.canon.foreshadowAction.plant",
+      develop: "studio.canon.foreshadowAction.develop",
+      resolve: "studio.canon.foreshadowAction.resolve",
+    };
+    const action = translate(locale, actionKeys[text(item, "action")] ?? "studio.canon.foreshadowAction.fallback");
+    rows.push({ label: translate(locale, "studio.canon.itemLabel.foreshadow"), text: translate(locale, "studio.canon.foreshadowText", { action, title: text(item, "title") }) });
   }
-  return rows.filter((row) => row.text.replace(/[：；·「」]/g, "").trim());
+  return rows.filter((row) => row.text.replace(/[：:；；·「」]/g, "").trim());
 }
 
 /* ---- 高亮：把正文中的证据句提警出框（与旧审稿室同一手势） --------------------- */

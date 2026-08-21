@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
+import { getLocale, translate, useI18n } from "../i18n";
+
 import "./trial-access-gate.css";
 
 const TURNSTILE_SCRIPT =
@@ -86,6 +88,7 @@ function sessionUrl(): string | null {
 }
 
 export function TrialAccessGate({ children }: { children: ReactNode }) {
+  const { t } = useI18n();
   const [state, setState] = useState<"checking" | "challenge" | "ready">(
     trialMode ? "checking" : "ready",
   );
@@ -112,7 +115,7 @@ export function TrialAccessGate({ children }: { children: ReactNode }) {
       })
       .catch(() => {
         if (disposed) return;
-        setMessage("验证服务连接超时，请重新加载验证");
+        setMessage(translate(getLocale(), "shell.trial.timeout"));
         setState("challenge");
       })
       .finally(() => window.clearTimeout(timeout));
@@ -155,19 +158,22 @@ export function TrialAccessGate({ children }: { children: ReactNode }) {
               signal: controller.signal,
             })
               .then((response) => {
-                if (!response.ok) throw new Error("验证未通过，请重试");
+                if (!response.ok)
+                  throw new Error(translate(getLocale(), "shell.trial.rejected"));
                 setState("ready");
               })
               .catch((error: unknown) => {
                 setMessage(
-                  error instanceof Error ? error.message : "验证未通过，请重试",
+                  error instanceof Error
+                    ? error.message
+                    : translate(getLocale(), "shell.trial.rejected"),
                 );
                 if (api && widgetId) api.reset(widgetId);
               })
               .finally(() => window.clearTimeout(timeout));
           },
           "error-callback": () =>
-            setMessage("验证组件暂时不可用，请重新加载验证"),
+            setMessage(translate(getLocale(), "shell.trial.unavailable")),
           "expired-callback": () => {
             if (api && widgetId) api.reset(widgetId);
           },
@@ -177,7 +183,7 @@ export function TrialAccessGate({ children }: { children: ReactNode }) {
         document
           .querySelector<HTMLScriptElement>("script[data-narrative-turnstile]")
           ?.remove();
-        setMessage("验证组件加载失败，请检查网络或内容拦截设置后重试");
+        setMessage(translate(getLocale(), "shell.trial.loadFailed"));
       });
     return () => {
       disposed = true;
@@ -192,13 +198,13 @@ export function TrialAccessGate({ children }: { children: ReactNode }) {
     <main className="trial-access" aria-busy={state === "checking"}>
       <section className="trial-access__card" aria-live="polite">
         <p className="trial-access__eyebrow mono">NarraLume</p>
-        <h1>进入在线体验</h1>
+        <h1>{t("shell.trial.title")}</h1>
         <p>
           {configurationMissing
-            ? "体验站尚未完成验证配置。"
+            ? t("shell.trial.configMissing")
             : state === "checking"
-              ? "正在确认访问会话…"
-              : "请完成人机验证。"}
+              ? t("shell.trial.checking")
+              : t("shell.trial.challenge")}
         </p>
         {!configurationMissing && state === "challenge" ? (
           <div className="trial-access__widget" ref={container} />
@@ -213,7 +219,7 @@ export function TrialAccessGate({ children }: { children: ReactNode }) {
               setChallengeAttempt((attempt) => attempt + 1);
             }}
           >
-            重新加载验证
+            {t("shell.trial.reload")}
           </button>
         ) : null}
       </section>

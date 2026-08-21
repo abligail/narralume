@@ -36,7 +36,9 @@ export class NodeNarrativeDatabase extends NarrativeDatabase {
       const row = backup.prepare("PRAGMA integrity_check").get() as
         { integrity_check: string } | undefined;
       if (row?.integrity_check !== "ok") {
-        throw new MigrationError(`B1 迁移前备份完整性校验失败：${backupPath}`);
+        throw new MigrationError(
+          `Pre-B1 migration backup failed integrity check: ${backupPath}`,
+        );
       }
     } finally {
       backup.close();

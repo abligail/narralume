@@ -339,7 +339,7 @@ export const CreateCanonFactRequestSchema = z
     if (hasEntity === hasValue) {
       context.addIssue({
         code: "custom",
-        message: "objectEntityId 与 value 必须且只能提供一个",
+        message: "Provide exactly one of objectEntityId or value",
       });
     }
   });
@@ -364,13 +364,13 @@ export const ReviseCanonFactRequestSchema = z
     if (hasEntity === hasValue) {
       context.addIssue({
         code: "custom",
-        message: "objectEntityId 与 value 必须且只能提供一个",
+        message: "Provide exactly one of objectEntityId or value",
       });
     }
     if (value.knowledgeScope === "character" && !value.knowledgeSubjectId) {
       context.addIssue({
         code: "custom",
-        message: "角色认知范围必须指定对应角色",
+        message: "Character knowledge scope requires a knowledgeSubjectId",
       });
     }
   });

@@ -235,7 +235,7 @@ describe("NodeNarrativeDatabase", () => {
 
     expect(db.migrate([foundation])).toBe(1);
     expect(() => db.migrate([foundation, invalidRebuild])).toThrow(
-      /破坏了 1 行外键引用/,
+      /broke 1 foreign key references/,
     );
 
     expect(db.currentMigration()).toBe(1);

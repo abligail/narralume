@@ -12,20 +12,23 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import type { MessageKey } from "../i18n";
+
 /* 主导航收敛为五个创作面：书架 / 项目概览 / 故事 / 写作 / 交付。
    其余工作区（审稿、自动驾驶、运行账本、长篇推演、模型供给）暂挂「高级工具」组，
    随写作台合并与设置迁移逐步并入或退役。
-   seal 是左栏顶部「当前工作区印记」的白文单字，随路由切换。 */
+   seal 是左栏顶部「当前工作区印记」的白文单字，随路由切换。
+   label / blurb 是 i18n 字典键，展示侧用 t() / translate() 解析。 */
 
 export interface WorkspaceDef {
   id: string;
   path: string;
   projectScoped: boolean;
-  label: string;
+  label: MessageKey;
   en: string;
   index: string;
   icon: LucideIcon;
-  blurb: string;
+  blurb: MessageKey;
   seal: string;
 }
 
@@ -34,55 +37,55 @@ export const WORKSPACES: WorkspaceDef[] = [
     id: "shelf",
     path: "/shelf",
     projectScoped: false,
-    label: "书架",
+    label: "shell.nav.shelf",
     en: "STACKS",
     index: "01",
     icon: LibraryBig,
-    blurb: "作品编目、检索与建书入口",
+    blurb: "shell.nav.shelfBlurb",
     seal: "藏",
   },
   {
     id: "overview",
     path: "/projects/:projectId/overview",
     projectScoped: true,
-    label: "项目概览",
+    label: "shell.nav.overview",
     en: "OVERLOOK",
     index: "02",
     icon: Compass,
-    blurb: "当前进度、活动任务与下一步",
+    blurb: "shell.nav.overviewBlurb",
     seal: "览",
   },
   {
     id: "bible",
     path: "/projects/:projectId/bible",
     projectScoped: true,
-    label: "故事",
+    label: "shell.nav.bible",
     en: "CANON",
     index: "03",
     icon: BookOpenText,
-    blurb: "意图、人物、大纲与故事事实",
+    blurb: "shell.nav.bibleBlurb",
     seal: "典",
   },
   {
     id: "studio",
     path: "/projects/:projectId/studio",
     projectScoped: true,
-    label: "写作",
+    label: "shell.nav.studio",
     en: "DESK",
     index: "04",
     icon: PenLine,
-    blurb: "正文、版本、候选稿与审稿",
+    blurb: "shell.nav.studioBlurb",
     seal: "稿",
   },
   {
     id: "delivery",
     path: "/projects/:projectId/delivery",
     projectScoped: true,
-    label: "交付",
+    label: "shell.nav.delivery",
     en: "PRESS",
     index: "05",
     icon: Truck,
-    blurb: "质量门、印务导出与备份",
+    blurb: "shell.nav.deliveryBlurb",
     seal: "付",
   },
 ];
@@ -93,11 +96,11 @@ export const QUICK_WORKSPACES: WorkspaceDef[] = [
     id: "autopilot",
     path: "/projects/:projectId/autopilot",
     projectScoped: true,
-    label: "AI 快速创作",
+    label: "shell.nav.autopilot",
     en: "QUICK CREATE",
     index: "Q1",
     icon: Radar,
-    blurb: "按默认链路连续完成多章，作者可随时介入",
+    blurb: "shell.nav.autopilotBlurb",
     seal: "创",
   },
 ];
@@ -108,33 +111,33 @@ export const ADVANCED_WORKSPACES: WorkspaceDef[] = [
     id: "runs",
     path: "/projects/:projectId/runs",
     projectScoped: true,
-    label: "运行中心",
+    label: "shell.nav.runs",
     en: "LEDGER",
     index: "L1",
     icon: Activity,
-    blurb: "全部运行的期号档案",
+    blurb: "shell.nav.runsBlurb",
     seal: "行",
   },
   {
     id: "lab",
     path: "/projects/:projectId/lab",
     projectScoped: true,
-    label: "长篇推演",
+    label: "shell.nav.lab",
     en: "LOOM",
     index: "L2",
     icon: Brain,
-    blurb: "剧情预测、故事记忆与变更影响预演",
+    blurb: "shell.nav.labBlurb",
     seal: "演",
   },
   {
     id: "supply",
     path: "/settings",
     projectScoped: false,
-    label: "设置",
+    label: "shell.nav.settings",
     en: "SETTINGS",
     index: "S1",
     icon: Cpu,
-    blurb: "默认生成模型与岗位继承（含 Provider/模型/派岗）",
+    blurb: "shell.nav.settingsBlurb",
     seal: "配",
   },
 ];

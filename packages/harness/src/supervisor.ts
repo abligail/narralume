@@ -278,7 +278,7 @@ export class HarnessSupervisor {
             step.id,
             {
               code: "worker.missing",
-              message: `步骤 ${step.kind} 没有注册 worker`,
+              message: `Step ${step.kind} has no registered worker`,
               retryable: false,
             },
             this.now(),

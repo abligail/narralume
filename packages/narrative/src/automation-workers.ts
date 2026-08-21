@@ -103,7 +103,7 @@ export class AutomationWorkerSuite {
     signal: AbortSignal,
   ): Promise<StepExecutionResult> {
     const project = this.projects.get(snapshot.run.projectId);
-    if (!project) throw permanent("project.not_found", "作品不存在");
+    if (!project) throw permanent("project.not_found", "Project not found");
     const braindump = policyString(snapshot.run.policy, "braindump");
     const preferences = policyRecord(snapshot.run.policy, "preferences");
     const creativePreferences = {
@@ -239,7 +239,7 @@ export class AutomationWorkerSuite {
     const sessionId = policyString(snapshot.run.policy, "sessionId");
     const session = this.automation.requireSession(sessionId);
     const project = this.projects.get(session.projectId);
-    if (!project) throw permanent("project.not_found", "作品不存在");
+    if (!project) throw permanent("project.not_found", "Project not found");
     const compass = this.automation.getCompass(session.projectId);
     const intent = this.story.getAuthorIntent(session.projectId);
     const outline = this.story.listOutline(session.projectId);
@@ -352,11 +352,15 @@ export class AutomationWorkerSuite {
       if (!baseline || outlineFingerprint(outline) !== baseline) {
         throw permanent(
           "outline.baseline.conflict",
-          "滚动规划生成后大纲已被其他编辑改变，本轮规划已失效，请重新规划",
+          "The outline was changed by other edits after rolling planning; this plan is stale, please plan again",
         );
       }
       const root = outline.find((node) => node.kind === "book");
-      if (!root) throw permanent("outline.root.missing", "作品缺少全书根节点");
+      if (!root)
+        throw permanent(
+          "outline.root.missing",
+          "Project is missing the book root node",
+        );
       let volume = latestNode(outline, "volume");
       if (!volume) {
         volume = this.story.insertOutlineNode(
@@ -596,7 +600,7 @@ export class AutomationWorkerSuite {
     if (node.kind !== scopeType) {
       throw permanent(
         "planning_review.scope.invalid",
-        `复盘目标 ${node.kind} 不是 ${scopeType}`,
+        `Planning review target kind ${node.kind} is not ${scopeType}`,
       );
     }
     const outline = this.story.listOutline(snapshot.run.projectId);
@@ -700,7 +704,8 @@ function requiredArtifact(
   const artifact = snapshot.steps.find(
     (step) => step.kind === kind && step.status === "succeeded",
   )?.outputArtifact;
-  if (!artifact) throw permanent("artifact.missing", `缺少 ${kind} 工件`);
+  if (!artifact)
+    throw permanent("artifact.missing", `Missing ${kind} artifact`);
   return { ...artifact };
 }
 
@@ -740,7 +745,7 @@ function policyString(
 ): string {
   const value = policy[key];
   if (typeof value !== "string" || !value.trim()) {
-    throw permanent("run.policy.invalid", `运行策略缺少 ${key}`);
+    throw permanent("run.policy.invalid", `Run policy is missing ${key}`);
   }
   return value;
 }

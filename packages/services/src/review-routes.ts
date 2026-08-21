@@ -67,7 +67,7 @@ export function registerReviewRoutes(
   app.route("GET", "/api/projects/:projectId/reviews", async (request) => {
     const { projectId } = ProjectParamsSchema.parse(request.params);
     if (!projects.get(projectId))
-      throw new ReviewRouteError("project.not_found", "作品不存在", 404);
+      throw new ReviewRouteError("project.not_found", "Project not found", 404);
     return ReviewWorkspaceSchema.parse({
       reports: reviews.listProjectReports(projectId),
       proposals: reviews.listRevisionProposals(projectId),
@@ -82,7 +82,11 @@ export function registerReviewRoutes(
       const input = DecideReviewIssueRequestSchema.parse(request.body);
       try {
         if (!projects.get(projectId)) {
-          throw new ReviewRouteError("project.not_found", "作品不存在", 404);
+          throw new ReviewRouteError(
+            "project.not_found",
+            "Project not found",
+            404,
+          );
         }
         const scope = `review-issue:${projectId}:${issueId}:decision`;
         const requestHash = hashRequest(input);
@@ -92,7 +96,7 @@ export function registerReviewRoutes(
             if (replay.requestHash !== requestHash) {
               throw new ReviewRouteError(
                 "review.issue.idempotency_conflict",
-                "同一个 requestId 已用于不同的审稿裁定",
+                "The same requestId was already used for a different review decision",
                 409,
               );
             }
@@ -103,7 +107,7 @@ export function registerReviewRoutes(
           if (existing && existing.action !== input.action) {
             throw new ReviewRouteError(
               "review.issue.already_decided",
-              `审稿问题已裁定为 ${existing.action}，不能改为 ${input.action}`,
+              `The review issue was already decided as ${existing.action} and cannot be changed to ${input.action}`,
               409,
             );
           }
@@ -155,7 +159,11 @@ export function registerReviewRoutes(
     async (request) => {
       const { projectId } = ProjectParamsSchema.parse(request.params);
       if (!projects.get(projectId))
-        throw new ReviewRouteError("project.not_found", "作品不存在", 404);
+        throw new ReviewRouteError(
+          "project.not_found",
+          "Project not found",
+          404,
+        );
       return { changeSets: reviews.listCanonChangeSets(projectId) };
     },
   );
@@ -170,7 +178,11 @@ export function registerReviewRoutes(
       const decision = DecideCanonChangeSetRequestSchema.parse(request.body);
       try {
         if (!projects.get(projectId)) {
-          throw new ReviewRouteError("project.not_found", "作品不存在", 404);
+          throw new ReviewRouteError(
+            "project.not_found",
+            "Project not found",
+            404,
+          );
         }
         const scope = `canon-change-set:${projectId}:${changeSetId}:decision`;
         const requestHash = hashRequest(decision);
@@ -180,7 +192,7 @@ export function registerReviewRoutes(
             if (replay.requestHash !== requestHash) {
               throw new ReviewRouteError(
                 "canon_change_set.idempotency_conflict",
-                "同一个 requestId 已用于不同的故事变化裁定",
+                "The same requestId was already used for a different canon change decision",
                 409,
               );
             }
@@ -205,7 +217,7 @@ export function registerReviewRoutes(
             if (!sameDecision) {
               throw new ReviewRouteError(
                 "canon_change_set.already_decided",
-                `故事变化已处于 ${current.status}，不能执行 ${decision.action}`,
+                `The canon change set is already in state "${current.status}" and cannot be ${decision.action}`,
                 409,
               );
             }
@@ -284,7 +296,7 @@ export function registerReviewRoutes(
         if (error instanceof SettlementConflictError)
           throw new ReviewRouteError(
             error.code,
-            "这些故事变化与当前正典存在冲突",
+            "These story changes conflict with the current canon",
             409,
             {
               conflicts: error.conflicts,
@@ -310,7 +322,11 @@ export function registerReviewRoutes(
       const decision = DecideRevisionProposalRequestSchema.parse(request.body);
       try {
         if (!projects.get(projectId)) {
-          throw new ReviewRouteError("project.not_found", "作品不存在", 404);
+          throw new ReviewRouteError(
+            "project.not_found",
+            "Project not found",
+            404,
+          );
         }
         const scope = `revision-proposal:${projectId}:${proposalId}:decision`;
         const requestHash = hashRequest(decision);
@@ -320,7 +336,7 @@ export function registerReviewRoutes(
             if (replay.requestHash !== requestHash) {
               throw new ReviewRouteError(
                 "revision_proposal.idempotency_conflict",
-                "同一个 requestId 已用于不同的修订提案裁定",
+                "The same requestId was already used for a different revision proposal decision",
                 409,
               );
             }
@@ -335,7 +351,7 @@ export function registerReviewRoutes(
             if (!sameDecision) {
               throw new ReviewRouteError(
                 "revision_proposal.already_decided",
-                `修订提案已处于 ${current.status}，不能执行 ${decision.action}`,
+                `The revision proposal is already in state "${current.status}" and cannot be ${decision.action}`,
                 409,
               );
             }

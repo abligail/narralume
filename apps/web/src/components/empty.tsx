@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { useI18n } from "../i18n";
+
 import { Seal } from "./seal";
 
 /* 通用空态：一枚小朱印 + 宋体题句 + 描述 + 可选动作。 */
@@ -21,9 +23,14 @@ export function Empty({
   titleAs: Title = "h2",
   sealVariant = "empty",
 }: EmptyProps) {
+  const { t } = useI18n();
   return (
     <div className="empty">
-      <Seal char={seal} variant={sealVariant} label={`页面印记「${seal}」`} />
+      <Seal
+        char={seal}
+        variant={sealVariant}
+        label={t("components.empty.sealLabel", { char: seal })}
+      />
       <Title className="empty__title">{title}</Title>
       {description ? <p className="empty__description">{description}</p> : null}
       {action ? <div className="empty__action">{action}</div> : null}

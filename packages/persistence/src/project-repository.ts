@@ -189,7 +189,7 @@ export class PersistenceNotFoundError extends Error {
   readonly id: string;
 
   constructor(entity: string, id: string) {
-    super(`${entity} ${id} 不存在`);
+    super(`${entity} ${id} does not exist`);
     this.name = "PersistenceNotFoundError";
     this.entity = entity;
     this.id = id;

@@ -46,7 +46,10 @@ export interface CreateProjectInput {
 export function createProject(input: CreateProjectInput): Project {
   const title = input.title.trim();
   if (title.length === 0) {
-    throw new DomainError("project.title.empty", "作品标题不能为空");
+    throw new DomainError(
+      "project.title.empty",
+      "Project title must not be empty",
+    );
   }
 
   return {
@@ -70,7 +73,7 @@ export function transitionProjectPhase(
   if (!PROJECT_PHASE_TRANSITIONS[project.phase].includes(next)) {
     throw new DomainError(
       "project.phase.invalid_transition",
-      `不能从 ${project.phase} 切换到 ${next}`,
+      `Cannot transition from ${project.phase} to ${next}`,
     );
   }
   return { ...project, phase: next, updatedAt: now };

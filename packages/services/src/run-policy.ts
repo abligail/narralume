@@ -153,14 +153,14 @@ export function requireWritingAssignment(
   if (!resolved) {
     throw new RunServiceError(
       "model.assignment.unavailable",
-      "请先配置可用的默认生成模型",
+      "Configure an available default generation model first",
       422,
     );
   }
   if (!credentialConfigured(resolved.provider.credentialRef, environment)) {
     throw new RunServiceError(
       "model.credential.missing",
-      "模型配置缺少服务端密钥",
+      "The model configuration is missing a server-side API key",
       422,
     );
   }
@@ -260,7 +260,7 @@ export function requireRunInProject(
     snapshot.run.projectId !== projectId ||
     (projects !== undefined && projects.get(projectId) === null)
   ) {
-    throw new RunServiceError("run.not_found", "运行不存在", 404);
+    throw new RunServiceError("run.not_found", "Run not found", 404);
   }
   return snapshot;
 }
@@ -275,7 +275,7 @@ export function requireAwaitReason(
   ) {
     throw new RunServiceError(
       "run.action.not_available",
-      `当前运行不能执行该动作，预期停靠原因 ${expected}`,
+      `The run cannot perform this action right now; expected await reason: ${expected}`,
       409,
     );
   }
@@ -285,7 +285,7 @@ export function requireViablePartial(content: string): void {
   if ([...content].length < MIN_VIABLE_PARTIAL_CHARACTERS) {
     throw new RunServiceError(
       "run.stream.too_short",
-      `partial 正文不足 ${MIN_VIABLE_PARTIAL_CHARACTERS} 字符，只能丢弃或重新生成`,
+      `The partial manuscript is shorter than ${MIN_VIABLE_PARTIAL_CHARACTERS} characters; it can only be discarded or regenerated`,
       422,
     );
   }

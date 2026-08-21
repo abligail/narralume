@@ -4,8 +4,9 @@ import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { setLocale } from "../src/i18n";
 import type { CoCreateSession, CoCreateSessionDetail, StoryPersona, StoryTurn } from "../src/lib/api";
 import { CoCreateWorkspace } from "../src/workspaces/studio/cocreate";
 
@@ -158,6 +159,10 @@ function renderCoCreate(requestedSessionId?: string | null) {
     </QueryClientProvider>,
   );
 }
+
+beforeEach(() => {
+  setLocale("zh-CN");
+});
 
 afterEach(() => {
   cleanup();

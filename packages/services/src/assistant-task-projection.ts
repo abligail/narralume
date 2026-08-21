@@ -267,7 +267,9 @@ export class AssistantTaskProjectionService {
       lastError: goal?.lastError
         ? {
             code: String(goal.lastError.code ?? "long_goal.failed"),
-            message: String(goal.lastError.message ?? "长期任务失败"),
+            message: String(
+              goal.lastError.message ?? "Long-running goal failed",
+            ),
           }
         : activityLastError(activity),
       linkedSources: [
@@ -531,10 +533,10 @@ function activityLastError(
     const message =
       typeof error.message === "string" && error.message
         ? error.message
-        : "工具执行失败";
+        : "Tool execution failed";
     return { code, message };
   }
-  return { code: "assistant.tool.failed", message: "工具执行失败" };
+  return { code: "assistant.tool.failed", message: "Tool execution failed" };
 }
 
 function runSummary(

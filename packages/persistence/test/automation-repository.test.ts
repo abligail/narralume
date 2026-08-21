@@ -247,7 +247,8 @@ describe("SqliteAutomationRepository", () => {
     expect(automation.reconcileSteerClassifications("session-1", now)).toBe(1);
     expect(automation.requireSteer("steer-failed")).toMatchObject({
       status: "rejected",
-      rationale: "影响范围判断失败，这条创作指示未应用",
+      rationale:
+        "Impact assessment failed, so this steering instruction was not applied",
     });
 
     automation.requestSessionControl("session-1", "pause", now);

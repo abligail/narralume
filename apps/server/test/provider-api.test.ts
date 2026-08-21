@@ -419,7 +419,8 @@ describe("provider/model/assignment API", () => {
         {
           stage: "text",
           status: "failed",
-          detail: "未配置环境变量 NARRATIVE_UNSET_PROBE_KEY",
+          detail:
+            "Environment variable NARRATIVE_UNSET_PROBE_KEY is not configured",
         },
       ],
     });

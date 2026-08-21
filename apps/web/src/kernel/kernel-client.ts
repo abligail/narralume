@@ -7,6 +7,8 @@
  * 每 origin 只允许一个。
  */
 
+import { getLocale, translate } from "../i18n";
+
 export type KernelEventListener = (frame: string) => void;
 
 interface KernelResponseFrame {
@@ -65,7 +67,7 @@ function acquireKernelLock(): Promise<void> {
     void navigator.locks
       .request("narralume-kernel", { ifAvailable: true }, (lock) => {
         if (!lock) {
-          reject(new Error("本地内核已被另一个标签页占用，请关闭其他叙灯页面后重试"));
+          reject(new Error(translate(getLocale(), "components.kernel.lockBusy")));
           return;
         }
         resolve();
@@ -109,10 +111,19 @@ function ensureWorker(): Worker {
     // ready / fatal 在 bootPromise 里处理。
   });
   instance.addEventListener("messageerror", () =>
-    failWorker(instance, new Error("内核消息反序列化失败")),
+    failWorker(
+      instance,
+      new Error(translate(getLocale(), "components.kernel.deserializeFailed")),
+    ),
   );
   instance.addEventListener("error", (event: ErrorEvent) =>
-    failWorker(instance, new Error(event.message || "内核 Worker 已终止")),
+    failWorker(
+      instance,
+      new Error(
+        event.message ||
+          translate(getLocale(), "components.kernel.workerTerminated"),
+      ),
+    ),
   );
   worker = instance;
   return instance;
@@ -128,10 +139,12 @@ export function bootKernel(): Promise<void> {
       const timer = setTimeout(() => {
         failWorker(
           instance,
-          new Error("内核启动超时（Worker 可能加载失败或被其他标签页占用）"),
+          new Error(translate(getLocale(), "components.kernel.bootTimeout")),
         );
         finish();
-        reject(new Error("内核启动超时（Worker 可能加载失败或被其他标签页占用）"));
+        reject(
+          new Error(translate(getLocale(), "components.kernel.bootTimeout")),
+        );
       }, 30_000);
       const finish = () => {
         clearTimeout(timer);
@@ -155,9 +168,12 @@ export function bootKernel(): Promise<void> {
         }
       };
       const onError = (event: ErrorEvent) => {
-        failWorker(instance, new Error(event.message || "内核 Worker 启动失败"));
+        const message =
+          event.message ||
+          translate(getLocale(), "components.kernel.workerBootFailed");
+        failWorker(instance, new Error(message));
         finish();
-        reject(new Error(event.message || "内核 Worker 启动失败"));
+        reject(new Error(message));
       };
       instance.addEventListener("message", onMessage);
       instance.addEventListener("error", onError);
@@ -174,7 +190,10 @@ export function bootKernel(): Promise<void> {
 
 function shutdownKernel(): void {
   if (worker) {
-    failWorker(worker, new Error("页面已关闭，内核已停止"));
+    failWorker(
+      worker,
+      new Error(translate(getLocale(), "components.kernel.pageClosed")),
+    );
     return;
   }
   releaseKernelLock?.();
@@ -251,7 +270,7 @@ export async function kernelRequest(init: KernelRequestInit): Promise<{
   if (!frame.ok) {
     const error = frame.error ?? {
       code: "internal",
-      message: "内核请求失败",
+      message: translate(getLocale(), "components.kernel.requestFailed"),
     };
     throw new KernelApiError({
       status: frame.status ?? 500,

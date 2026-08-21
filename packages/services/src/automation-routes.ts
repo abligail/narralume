@@ -96,7 +96,7 @@ export function registerAutomationRoutes(
       if (replay.requestHash !== requestHash) {
         throw new AutomationServiceError(
           "project_foundation.idempotency_conflict",
-          "同一个 requestId 已用于不同的创建内容",
+          "The same requestId was already used for different creation content",
           409,
         );
       }
@@ -183,7 +183,7 @@ export function registerAutomationRoutes(
         if (replay.run.policy.creationRequestHash !== requestHash) {
           throw new AutomationServiceError(
             "foundation.idempotency_conflict",
-            "同一个 requestId 已用于不同的故事方向请求",
+            "The same requestId was already used for a different foundation request",
             409,
           );
         }
@@ -312,7 +312,7 @@ export function registerAutomationRoutes(
         body: {
           error: {
             code: "story_compass.not_found",
-            message: "尚未建立故事指南针",
+            message: "No story compass has been established yet",
           },
         },
       };
@@ -328,7 +328,7 @@ export function registerAutomationRoutes(
     if ((current?.version ?? null) !== input.expectedVersion) {
       throw new AutomationServiceError(
         "compass.version.conflict",
-        "故事指南针已被其他流程更新，请刷新后再保存",
+        "The story compass was updated by another process; refresh and save again",
         409,
       );
     }
@@ -363,7 +363,7 @@ export function registerAutomationRoutes(
         if (replay.chapterPolicy.creationRequestHash !== requestHash) {
           throw new AutomationServiceError(
             "autopilot.session.idempotency_conflict",
-            "同一个 requestId 已用于不同的快速创作请求",
+            "The same requestId was already used for a different autopilot request",
             409,
           );
         }
@@ -381,7 +381,7 @@ export function registerAutomationRoutes(
       if (activeSession) {
         throw new AutomationServiceError(
           "autopilot.session.active",
-          `作品已有进行中的快速创作任务：${activeSession.id}`,
+          `The project already has an active autopilot session: ${activeSession.id}`,
           409,
         );
       }
@@ -391,7 +391,7 @@ export function registerAutomationRoutes(
       if (activeRun) {
         throw new AutomationServiceError(
           "project.writing_task.active",
-          `作品已有进行中的章节任务：${activeRun.id}`,
+          `The project already has an active chapter run: ${activeRun.id}`,
           409,
         );
       }
@@ -465,7 +465,7 @@ export function registerAutomationRoutes(
             if (replay.requestHash !== requestHash) {
               throw new AutomationServiceError(
                 "autopilot.action.idempotency_conflict",
-                "同一个 requestId 已用于不同的快速创作确认动作",
+                "The same requestId was already used for a different autopilot confirmation",
                 409,
               );
             }
@@ -478,7 +478,7 @@ export function registerAutomationRoutes(
             if (!session.currentRunId) {
               throw new AutomationServiceError(
                 "autopilot.chapter.none",
-                "当前没有等待确认的章节计划",
+                "There is no chapter plan awaiting confirmation",
                 409,
               );
             }
@@ -489,7 +489,7 @@ export function registerAutomationRoutes(
             ) {
               throw new AutomationServiceError(
                 "autopilot.plan.not_awaiting_approval",
-                "当前章节计划尚未进入确认边界",
+                "The current chapter plan has not reached the confirmation boundary yet",
                 409,
               );
             }
@@ -500,7 +500,7 @@ export function registerAutomationRoutes(
             if (!session.currentRunId) {
               throw new AutomationServiceError(
                 "autopilot.chapter.none",
-                "当前没有等待验收的章节",
+                "There is no chapter awaiting acceptance",
                 409,
               );
             }
@@ -511,7 +511,7 @@ export function registerAutomationRoutes(
             ) {
               throw new AutomationServiceError(
                 "autopilot.chapter.not_awaiting_approval",
-                "当前章节尚未进入提交验收边界",
+                "The current chapter has not reached the acceptance boundary yet",
                 409,
               );
             }
@@ -562,7 +562,7 @@ export function registerAutomationRoutes(
         if (!session.currentRunId) {
           throw new AutomationServiceError(
             "autopilot.chapter.none",
-            "当前没有等待验收的章节正文",
+            "There is no chapter manuscript awaiting acceptance",
             409,
           );
         }
@@ -571,7 +571,7 @@ export function registerAutomationRoutes(
           if (current.run.policy.revisionInstruction !== input.instruction) {
             throw new AutomationServiceError(
               "revision.idempotency_conflict",
-              "同一个 requestId 已用于不同的修订要求",
+              "The same requestId was already used for a different revision request",
               409,
             );
           }
@@ -629,7 +629,7 @@ export function registerAutomationRoutes(
         if (replay.content !== input.content) {
           throw new AutomationServiceError(
             "autopilot.steer.idempotency_conflict",
-            "同一个 requestId 已用于不同的创作指示",
+            "The same requestId was already used for a different steer instruction",
             409,
           );
         }
@@ -638,7 +638,7 @@ export function registerAutomationRoutes(
       if (isTerminalSessionStatus(session.status)) {
         throw new AutomationServiceError(
           "autopilot.steer.session_terminal",
-          "快速创作已经结束，不能再提交新的创作指示",
+          "The autopilot session has ended and no longer accepts new steer instructions",
           409,
         );
       }
@@ -704,7 +704,7 @@ export function registerAutomationRoutes(
         if (steer.sessionId !== sessionId) {
           throw new AutomationServiceError(
             "autopilot.steer.scope_mismatch",
-            "创作指示不属于当前快速创作任务",
+            "The steer instruction does not belong to the current autopilot session",
             404,
           );
         }
@@ -716,14 +716,14 @@ export function registerAutomationRoutes(
         ) {
           throw new AutomationServiceError(
             "autopilot.steer.not_decidable",
-            "这条创作指示当前不需要裁定",
+            "This steer instruction does not need a decision right now",
             409,
           );
         }
         if (session.status !== "awaiting_user") {
           throw new AutomationServiceError(
             "autopilot.session.not_awaiting_steer",
-            "快速创作任务当前不在等待创作指示裁定",
+            "The autopilot session is not waiting for a steer decision",
             409,
           );
         }
@@ -875,7 +875,7 @@ function sessionProductProjection(
 function requireProject(projects: SqliteProjectRepository, projectId: string) {
   const project = projects.get(projectId);
   if (!project) {
-    throw new RunRouteError("project.not_found", "作品不存在", 404);
+    throw new RunRouteError("project.not_found", "Project not found", 404);
   }
   return project;
 }

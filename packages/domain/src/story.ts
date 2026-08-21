@@ -63,29 +63,32 @@ export function createOutlineNode(input: CreateOutlineNodeInput): OutlineNode {
   const title = requiredText(
     input.title,
     "outline.title.empty",
-    "大纲节点标题不能为空",
+    "Outline node title must not be empty",
   );
   if (!Number.isInteger(input.ordinal) || input.ordinal < 0) {
     throw new DomainError(
       "outline.ordinal.invalid",
-      "大纲节点顺序必须是非负整数",
+      "Outline node ordinal must be a non-negative integer",
     );
   }
   if (input.parent) {
     if (input.parent.projectId !== input.projectId) {
       throw new DomainError(
         "outline.parent.cross_project",
-        "父节点不属于当前作品",
+        "The parent node does not belong to this project",
       );
     }
     if (!CHILD_KINDS[input.parent.kind].includes(input.kind)) {
       throw new DomainError(
         "outline.parent.invalid_kind",
-        `${input.parent.kind} 下不能创建 ${input.kind}`,
+        `Cannot create ${input.kind} under ${input.parent.kind}`,
       );
     }
   } else if (input.kind !== "book") {
-    throw new DomainError("outline.root.invalid_kind", "根节点必须是 book");
+    throw new DomainError(
+      "outline.root.invalid_kind",
+      "The root node must be a book",
+    );
   }
 
   return {

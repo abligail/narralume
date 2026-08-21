@@ -26,6 +26,12 @@ import { Link } from "react-router";
 
 import { ErrorNote } from "../components/error-note";
 import {
+  getLocale,
+  translate,
+  useI18n,
+  type MessageKey,
+} from "../i18n";
+import {
   archiveAssistantConversation,
   configureAssistantConversation,
   controlAutopilotSession,
@@ -91,6 +97,7 @@ export function ProjectAssistant({
   onClose,
 }: ProjectAssistantProps) {
   const queryClient = useQueryClient();
+  const { t } = useI18n();
   const [draft, setDraft] = useState("");
   const [usePageContext, setUsePageContext] = useState(true);
   const [conversationId, setConversationId] = useState<string | null>(() =>
@@ -146,7 +153,7 @@ export function ProjectAssistant({
     mutationFn: (title?: string) =>
       createAssistantConversation(projectId, {
         requestId: createRequestId(),
-        title: title ?? "项目协作",
+        title: title ?? translate(getLocale(), "assistant.conversation.defaultTitle"),
       }),
     onSuccess: (conversation) => {
       pendingSendRef.current = null;
@@ -176,7 +183,7 @@ export function ProjectAssistant({
       return;
     }
     defaultConversationRequestedRef.current = true;
-    createMutation.mutate("项目协作");
+    createMutation.mutate(undefined);
   }, [conversationsQuery.data, createMutation]);
 
   const archiveMutation = useMutation({
@@ -243,7 +250,7 @@ export function ProjectAssistant({
       if (!targetConversationId) {
         const conversation = await createAssistantConversation(projectId, {
           requestId: pending.conversationRequestId,
-          title: "项目协作",
+          title: translate(getLocale(), "assistant.conversation.defaultTitle"),
         });
         targetConversationId = conversation.id;
         pending.targetConversationId = conversation.id;
@@ -359,11 +366,11 @@ export function ProjectAssistant({
           type="button"
           className="assistant-trigger"
           onClick={onOpen}
-          aria-label="打开项目协作"
-          title="项目协作（⌘J）"
+          aria-label={t("assistant.trigger.open")}
+          title={t("assistant.trigger.title")}
         >
           <MessageSquareText size={17} strokeWidth={1.5} aria-hidden="true" />
-          <span>协作</span>
+          <span>{t("assistant.trigger.label")}</span>
           {activeCount > 0 ? (
             <span className="assistant-trigger__count mono">{activeCount}</span>
           ) : null}
@@ -380,7 +387,7 @@ export function ProjectAssistant({
         <aside
           className="assistant-panel"
           data-open="true"
-          aria-label="项目协作"
+          aria-label={t("assistant.panel.label")}
         >
         <header className="assistant-panel__head">
           <div className="assistant-panel__identity">
@@ -395,15 +402,15 @@ export function ProjectAssistant({
                   }}
                   autoFocus
                   maxLength={200}
-                  aria-label="对话新名称"
-                  placeholder="给这条对话起个名字"
+                  aria-label={t("assistant.conversation.renameLabel")}
+                  placeholder={t("assistant.conversation.renamePlaceholder")}
                 />
                 <button
                   type="submit"
                   className="assistant-conv__rename-save"
                   disabled={renameMutation.isPending || !renameDraft.trim()}
                 >
-                  {renameMutation.isPending ? "保存中…" : "保存"}
+                  {renameMutation.isPending ? t("common.state.saving") : t("common.action.save")}
                 </button>
               </form>
             ) : (
@@ -421,8 +428,8 @@ export function ProjectAssistant({
             <button
               type="button"
               className="assistant-panel__icon"
-              aria-label="重命名当前协作对话"
-              title="重命名当前协作对话"
+              aria-label={t("assistant.conversation.renameAction")}
+              title={t("assistant.conversation.renameAction")}
               disabled={!conversationId}
               onClick={() => {
                 setRenameDraft(currentConversation?.title ?? "");
@@ -434,8 +441,8 @@ export function ProjectAssistant({
             <button
               type="button"
               className="assistant-panel__icon"
-              aria-label="归档当前协作对话"
-              title="归档当前协作对话"
+              aria-label={t("assistant.conversation.archiveAction")}
+              title={t("assistant.conversation.archiveAction")}
               disabled={
                 !conversationId || conversationArchived || archiveMutation.isPending
               }
@@ -446,12 +453,14 @@ export function ProjectAssistant({
             <button
               type="button"
               className="assistant-panel__icon"
-              aria-label="新建协作对话"
-              title="新建协作对话"
+              aria-label={t("assistant.conversation.createAction")}
+              title={t("assistant.conversation.createAction")}
               disabled={createMutation.isPending}
               onClick={() =>
                 createMutation.mutate(
-                  `协作对话 ${(conversationsQuery.data?.length ?? 0) + 1}`,
+                  t("assistant.conversation.newTitle", {
+                    count: (conversationsQuery.data?.length ?? 0) + 1,
+                  }),
                 )
               }
             >
@@ -460,7 +469,7 @@ export function ProjectAssistant({
             <button
               type="button"
               className="assistant-panel__icon"
-              aria-label="关闭项目协作"
+              aria-label={t("assistant.panel.close")}
               onClick={onClose}
             >
               <X size={17} strokeWidth={1.5} aria-hidden="true" />
@@ -478,10 +487,10 @@ export function ProjectAssistant({
           {conversationsQuery.isError ? (
             <ErrorNote
               error={conversationsQuery.error}
-              title="协作记录取不回来"
+              title={t("assistant.errors.loadConversations")}
             />
           ) : detailQuery.isError ? (
-            <ErrorNote error={detailQuery.error} title="协作现场取不回来" />
+            <ErrorNote error={detailQuery.error} title={t("assistant.errors.loadDetail")} />
           ) : entries.length > 0 ? (
             <ol className="assistant-timeline" aria-live="polite">
               {entries.map((entry) => (
@@ -535,7 +544,7 @@ export function ProjectAssistant({
                 (Boolean(conversationId) && detailQuery.isPending) ? (
             <div className="assistant-panel__loading" role="status">
               <CircleDashed size={18} strokeWidth={1.4} aria-hidden="true" />
-              正在翻阅项目记录…
+              {t("assistant.loading")}
             </div>
           ) : (
             <AssistantWelcome onPrompt={submit} />
@@ -544,24 +553,24 @@ export function ProjectAssistant({
 
         <footer className="assistant-composer">
           {sendMutation.isError ? (
-            <ErrorNote error={sendMutation.error} title="这条消息没有送达" />
+            <ErrorNote error={sendMutation.error} title={t("assistant.errors.sendMessage")} />
           ) : null}
           {activityMutation.isError ? (
             <ErrorNote
               error={activityMutation.error}
-              title="这项操作没有执行"
+              title={t("assistant.errors.decideActivity")}
             />
           ) : null}
           {archiveMutation.isError ? (
-            <ErrorNote error={archiveMutation.error} title="对话没有归档" />
+            <ErrorNote error={archiveMutation.error} title={t("assistant.errors.archive")} />
           ) : null}
           {renameMutation.isError ? (
-            <ErrorNote error={renameMutation.error} title="对话没有改名" />
+            <ErrorNote error={renameMutation.error} title={t("assistant.errors.rename")} />
           ) : null}
           {configureMutation.isError ? (
             <ErrorNote
               error={configureMutation.error}
-              title="模型设置没有保存"
+              title={t("assistant.errors.configure")}
             />
           ) : null}
           <AssistantModelControls
@@ -574,7 +583,7 @@ export function ProjectAssistant({
             }
           />
           <label className="assistant-composer__field">
-            <span className="sr-only">给项目助手的消息</span>
+            <span className="sr-only">{t("assistant.composer.messageLabel")}</span>
             <textarea
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
@@ -590,7 +599,7 @@ export function ProjectAssistant({
                   submit();
                 }
               }}
-              placeholder="询问作品，或明确交代一项任务…"
+              placeholder={t("assistant.composer.placeholder")}
               rows={3}
               maxLength={100_000}
               disabled={conversationArchived}
@@ -598,7 +607,7 @@ export function ProjectAssistant({
             <button
               type="button"
               className="assistant-composer__send"
-              aria-label="发送消息"
+              aria-label={t("assistant.composer.send")}
               disabled={
                 conversationArchived || !draft.trim() || sendMutation.isPending
               }
@@ -618,11 +627,11 @@ export function ProjectAssistant({
           </label>
           <p className="assistant-composer__note">
             {conversationArchived ? (
-              <span>这条对话已归档，只能查看历史记录</span>
+              <span>{t("assistant.conversation.archivedNote")}</span>
             ) : (
               <>
-                <span>Enter 发送 · Ctrl/⌘ Enter 换行</span>
-                <span>持久操作会先等你确认</span>
+                <span>{t("assistant.composer.sendHint")}</span>
+                <span>{t("assistant.composer.persistHint")}</span>
               </>
             )}
           </p>
@@ -646,6 +655,7 @@ function ConversationPicker({
 }) {
   const [open, setOpen] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+  const { t } = useI18n();
   const rootRef = useRef<HTMLSpanElement | null>(null);
   const active = conversations.filter((c) => c.status !== "archived");
   const archived = conversations.filter((c) => c.status === "archived");
@@ -686,14 +696,14 @@ function ConversationPicker({
         onClick={() => setOpen((v) => !v)}
       >
         <span className="assistant-conv__label">
-          {current ? current.title : "项目协作"}
+          {current ? current.title : t("assistant.conversation.defaultTitle")}
         </span>
         <ChevronDown size={14} strokeWidth={1.5} aria-hidden="true" />
       </button>
       {open ? (
-        <div className="assistant-conv__menu" role="listbox" aria-label="协作对话">
+        <div className="assistant-conv__menu" role="listbox" aria-label={t("assistant.conversation.pickerLabel")}>
           {active.length === 0 && archived.length === 0 ? (
-            <p className="assistant-conv__empty">还没有协作对话</p>
+            <p className="assistant-conv__empty">{t("assistant.conversation.empty")}</p>
           ) : null}
           {active.map((conversation) => (
             <button
@@ -715,7 +725,7 @@ function ConversationPicker({
                 aria-expanded={showArchived}
                 onClick={() => setShowArchived((v) => !v)}
               >
-                已归档（{archived.length}）
+                {t("assistant.conversation.archivedGroup", { count: archived.length })}
                 <ChevronDown
                   size={13}
                   strokeWidth={1.5}
@@ -745,12 +755,16 @@ function ConversationPicker({
   );
 }
 
-const ASSISTANT_EFFORT_LABELS = {
-  off: "关闭",
-  low: "低",
-  medium: "中",
-  high: "高",
-} as const;
+const ASSISTANT_EFFORT_LEVELS = ["off", "low", "medium", "high"] as const;
+
+type AssistantEffortLevel = (typeof ASSISTANT_EFFORT_LEVELS)[number];
+
+const ASSISTANT_EFFORT_LABEL_KEYS: Record<AssistantEffortLevel, MessageKey> = {
+  off: "assistant.effort.off",
+  low: "assistant.effort.low",
+  medium: "assistant.effort.medium",
+  high: "assistant.effort.high",
+};
 
 /** composer 上方的模型胶囊：同协议换模型 + 对话级思考档。 */
 function AssistantModelControls({
@@ -769,6 +783,7 @@ function AssistantModelControls({
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const { t } = useI18n();
   /* 胶囊在关闭状态也要显示当前生效模型名，清单常驻拉取（staleTime 抑制重复）。 */
   const providersQuery = useQuery({
     queryKey: ["assistant-models", "providers"],
@@ -868,7 +883,7 @@ function AssistantModelControls({
         className="assistant-model__trigger"
         aria-haspopup="dialog"
         aria-expanded={open}
-        aria-label="对话模型与思考档"
+        aria-label={t("assistant.model.label")}
         disabled={disabled || pending}
         onClick={() => setOpen((value) => !value)}
       >
@@ -876,13 +891,13 @@ function AssistantModelControls({
         <span className="assistant-model__name">
           {effectiveModel
             ? effectiveModel.modelId
-            : "未配置默认模型"}
+            : t("assistant.model.unconfiguredDefault")}
         </span>
         {overrideModel ? null : (
-          <span className="assistant-model__default mono">默认</span>
+          <span className="assistant-model__default mono">{t("assistant.model.defaultBadge")}</span>
         )}
         <span className="assistant-model__effort mono">
-          思考·{ASSISTANT_EFFORT_LABELS[effort]}
+          {t("assistant.model.effortTag", { effort: t(ASSISTANT_EFFORT_LABEL_KEYS[effort]) })}
         </span>
         <ChevronDown size={13} strokeWidth={1.5} aria-hidden="true" />
       </button>
@@ -890,10 +905,10 @@ function AssistantModelControls({
         <div
           className="assistant-model__menu"
           role="dialog"
-          aria-label="对话模型与思考档"
+          aria-label={t("assistant.model.label")}
         >
-          <p className="assistant-model__section mono">模型</p>
-          <div role="listbox" aria-label="对话模型">
+          <p className="assistant-model__section mono">{t("assistant.model.sectionModel")}</p>
+          <div role="listbox" aria-label={t("assistant.model.listboxLabel")}>
             <button
               type="button"
               role="option"
@@ -904,8 +919,8 @@ function AssistantModelControls({
                 onConfigure({ modelId: null });
               }}
             >
-              跟随默认
-              {defaultModel ? ` · ${defaultModel.modelId}` : "（未配置）"}
+              {t("assistant.model.followDefault")}
+              {defaultModel ? ` · ${defaultModel.modelId}` : t("assistant.model.noDefault")}
             </button>
             {grouped.map(([providerName, groupModels]) => (
               <div
@@ -933,18 +948,16 @@ function AssistantModelControls({
               </div>
             ))}
             {open && (providersQuery.isPending || modelsQuery.isPending) ? (
-              <p className="assistant-conv__empty">正在读取模型清单…</p>
+              <p className="assistant-conv__empty">{t("assistant.model.loadingModels")}</p>
             ) : candidates.length === 0 ? (
               <p className="assistant-conv__empty">
-                没有与当前模型同协议的其它可用模型
+                {t("assistant.model.noSameProtocol")}
               </p>
             ) : null}
           </div>
-          <p className="assistant-model__section mono">思考档</p>
+          <p className="assistant-model__section mono">{t("assistant.model.sectionEffort")}</p>
           <div className="assistant-model__efforts">
-            {(Object.keys(ASSISTANT_EFFORT_LABELS) as Array<
-              keyof typeof ASSISTANT_EFFORT_LABELS
-            >).map((level) => (
+            {ASSISTANT_EFFORT_LEVELS.map((level) => (
               <button
                 key={level}
                 type="button"
@@ -957,13 +970,12 @@ function AssistantModelControls({
                 {effort === level ? (
                   <Check size={12} strokeWidth={1.8} aria-hidden="true" />
                 ) : null}
-                {ASSISTANT_EFFORT_LABELS[level]}
+                {t(ASSISTANT_EFFORT_LABEL_KEYS[level])}
               </button>
             ))}
           </div>
           <p className="assistant-model__note">
-            只显示与当前模型同协议（{effectiveProvider?.wireApi ?? "—"}）的模型；
-            跨协议请到设置页修改默认生成模型。思考档对下一条消息生效。
+            {t("assistant.model.note", { api: effectiveProvider?.wireApi ?? "—" })}
           </p>
         </div>
       ) : null}
@@ -980,9 +992,10 @@ function ContextRibbon({
   usingPageContext: boolean;
   onToggleScope: () => void;
 }) {
+  const { t } = useI18n();
   const details = contextDetails(context);
   return (
-    <div className="assistant-context" aria-label="当前协作上下文">
+    <div className="assistant-context" aria-label={t("assistant.context.label")}>
       <span className="assistant-context__mark" aria-hidden="true" />
       <span>{surfaceLabel(context.surface)}</span>
       {details.map((detail) => (
@@ -993,20 +1006,21 @@ function ContextRibbon({
       <button
         type="button"
         className="assistant-context__scope"
-        title={usingPageContext ? "后续消息只使用项目全局上下文" : "后续消息重新跟随当前页面"}
+        title={usingPageContext ? t("assistant.context.projectOnlyTitle") : t("assistant.context.followPageTitle")}
         onClick={onToggleScope}
       >
-        {usingPageContext ? "仅看项目" : "跟随页面"}
+        {usingPageContext ? t("assistant.context.projectOnly") : t("assistant.context.followPage")}
       </button>
     </div>
   );
 }
 
 function AssistantWelcome({ onPrompt }: { onPrompt: (text: string) => void }) {
+  const { t } = useI18n();
   const prompts = [
-    "概括当前作品状态，并告诉我下一步最值得做什么",
-    "检查当前页面涉及的设定与大纲是否一致",
-    "列出正在进行或等待我处理的任务",
+    t("assistant.welcome.promptStatus"),
+    t("assistant.welcome.promptConsistency"),
+    t("assistant.welcome.promptTasks"),
   ];
   return (
     <section className="assistant-welcome">
@@ -1014,9 +1028,9 @@ function AssistantWelcome({ onPrompt }: { onPrompt: (text: string) => void }) {
         <Sparkles size={19} strokeWidth={1.35} />
       </div>
       <p className="assistant-welcome__eyebrow mono">CONTEXT IN HAND</p>
-      <h3>从你正在看的地方开始</h3>
+      <h3>{t("assistant.welcome.title")}</h3>
       <p>
-        我会读取当前作品、页面和选区。分析可以直接回答；写作和任务控制会先列成待确认动作。
+        {t("assistant.welcome.body")}
       </p>
       <div className="assistant-welcome__prompts">
         {prompts.map((prompt) => (
@@ -1031,12 +1045,13 @@ function AssistantWelcome({ onPrompt }: { onPrompt: (text: string) => void }) {
 }
 
 function MessageEntry({ message }: { message: AssistantMessageDto }) {
+  const { t } = useI18n();
   const isAssistant = message.role !== "user";
   return (
     <article
       className="assistant-message"
       data-role={message.role}
-      aria-label={isAssistant ? "助手回复" : "你的消息"}
+      aria-label={isAssistant ? t("assistant.message.assistantLabel") : t("assistant.message.authorLabel")}
     >
       <header>
         <span className="mono">
@@ -1088,6 +1103,7 @@ function ActivityEntry({
   onRetryChapter: (() => void) | null;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const { t } = useI18n();
   const href = activityHref(projectId, activity);
   const proposal = activity.availableActions.includes("confirm");
   const retryable = activity.availableActions.includes("retry");
@@ -1138,14 +1154,14 @@ function ActivityEntry({
               onClick={() => onDecision("confirm")}
             >
               <Check size={13} strokeWidth={1.7} aria-hidden="true" />
-              {pending ? "正在交办…" : "确认执行"}
+              {pending ? t("assistant.decision.confirming") : t("assistant.decision.confirm")}
             </button>
             <button
               type="button"
               disabled={pending}
               onClick={() => onDecision("reject")}
             >
-              不执行
+              {t("assistant.decision.reject")}
             </button>
           </div>
         ) : retryable ? (
@@ -1156,7 +1172,7 @@ function ActivityEntry({
               disabled={pending}
               onClick={() => onDecision("retry")}
             >
-              {pending ? "正在重试…" : "重试执行"}
+              {pending ? t("assistant.decision.retrying") : t("assistant.decision.retry")}
             </button>
           </div>
         ) : resumable ? (
@@ -1167,7 +1183,7 @@ function ActivityEntry({
               disabled={pending}
               onClick={() => onDecision("resume")}
             >
-              {pending ? "正在继续…" : "基于最新内容继续"}
+              {pending ? t("assistant.decision.resuming") : t("assistant.decision.resume")}
             </button>
             {cancellable ? (
               <button
@@ -1175,7 +1191,7 @@ function ActivityEntry({
                 disabled={pending}
                 onClick={() => onDecision("cancel")}
               >
-                取消任务
+                {t("assistant.activity.cancelTask")}
               </button>
             ) : null}
           </div>
@@ -1183,7 +1199,7 @@ function ActivityEntry({
         <div className="assistant-activity__actions">
           {href ? (
             <Link className="assistant-activity__link" to={href}>
-              {activity.status === "waiting" ? "前往处理" : "查看任务现场"}
+              {activity.status === "waiting" ? t("assistant.activity.openWaiting") : t("assistant.activity.openRun")}
               <ExternalLink size={12} strokeWidth={1.5} aria-hidden="true" />
             </Link>
           ) : null}
@@ -1192,9 +1208,9 @@ function ActivityEntry({
               type="button"
               disabled={pending}
               onClick={onCancelTask}
-              title="取消会终止尚未完成的步骤；已保存的正文和版本不会被删除"
+              title={t("assistant.activity.cancelTaskTitle")}
             >
-              取消任务
+              {t("assistant.activity.cancelTask")}
             </button>
           ) : null}
           {onRetryChapter ? (
@@ -1202,9 +1218,9 @@ function ActivityEntry({
               type="button"
               disabled={pending}
               onClick={onRetryChapter}
-              title="为同一章节重新发起一次 AI 写作任务"
+              title={t("assistant.activity.retryChapterTitle")}
             >
-              重试本章
+              {t("assistant.activity.retryChapter")}
             </button>
           ) : null}
           {hasDetail ? (
@@ -1214,7 +1230,7 @@ function ActivityEntry({
               aria-expanded={expanded}
               onClick={() => setExpanded((current) => !current)}
             >
-              {expanded ? "收起工作轨迹" : "展开工作轨迹"}
+              {expanded ? t("assistant.activity.collapseTrace") : t("assistant.activity.expandTrace")}
             </button>
           ) : null}
         </div>
@@ -1233,17 +1249,18 @@ function ActivityTrace({
   projectId: string;
   activity: AssistantActivityDto;
 }) {
+  const { t } = useI18n();
   return (
     <div className="assistant-trace">
       {activity.phaseKey ? (
         <p className="assistant-trace__row">
-          <span className="assistant-trace__label">当前阶段</span>
+          <span className="assistant-trace__label">{t("assistant.trace.phase")}</span>
           <span>{phaseLabel(activity.phaseKey)}</span>
         </p>
       ) : null}
       {activity.lastError ? (
         <p className="assistant-trace__row assistant-trace__row--error">
-          <span className="assistant-trace__label">最后错误</span>
+          <span className="assistant-trace__label">{t("assistant.trace.lastError")}</span>
           <span>
             {activity.lastError.message}
             <span className="mono"> · {activity.lastError.code}</span>
@@ -1252,7 +1269,7 @@ function ActivityTrace({
       ) : null}
       {activity.artifacts.length > 0 ? (
         <div className="assistant-trace__row">
-          <span className="assistant-trace__label">关键产物</span>
+          <span className="assistant-trace__label">{t("assistant.trace.artifacts")}</span>
           <ul className="assistant-trace__artifacts">
             {activity.artifacts.map((artifact) => (
               <li key={`${artifact.kind}:${artifact.id}`}>
@@ -1266,17 +1283,17 @@ function ActivityTrace({
       ) : null}
       {activity.linkedSources.length > 0 ? (
         <p className="assistant-trace__row">
-          <span className="assistant-trace__label">关联任务</span>
+          <span className="assistant-trace__label">{t("assistant.trace.linked")}</span>
           <span className="mono">
             {activity.linkedSources
-              .map((source) => `${source.type === "run" ? "运行" : "会话"} ${shortId(source.id)}`)
+              .map((source) => `${source.type === "run" ? t("assistant.trace.sourceRun") : t("assistant.trace.sourceSession")} ${shortId(source.id)}`)
               .join(" · ")}
           </span>
         </p>
       ) : null}
       {activity.toolCall ? (
         <p className="assistant-trace__row">
-          <span className="assistant-trace__label">领域动作</span>
+          <span className="assistant-trace__label">{t("assistant.trace.toolCall")}</span>
           <span>{toolCallLabel(activity.toolCall)}</span>
         </p>
       ) : null}
@@ -1284,56 +1301,60 @@ function ActivityTrace({
   );
 }
 
+const PHASE_LABEL_KEYS: Record<string, MessageKey> = {
+  queued: "assistant.phase.queued",
+  preparing: "assistant.phase.preparing",
+  planning: "assistant.phase.planning",
+  paused: "assistant.phase.paused",
+  awaiting_author: "assistant.phase.awaitingAuthor",
+  completed: "assistant.phase.completed",
+  cancelled: "assistant.phase.cancelled",
+  failed: "assistant.phase.failed",
+  chapter: "assistant.phase.chapter",
+  "assistant.context": "assistant.phase.assistantContext",
+  "assistant.respond": "assistant.phase.assistantRespond",
+  "assistant.stage": "assistant.phase.assistantStage",
+  "canon.context": "assistant.phase.canonContext",
+  "canon.candidate": "assistant.phase.canonCandidate",
+  "canon.stage": "assistant.phase.canonStage",
+  "foundation.generate": "assistant.phase.foundationGenerate",
+  "outline.generate": "assistant.phase.outlineGenerate",
+  foundation: "assistant.phase.foundation",
+  outline: "assistant.phase.outline",
+  writing: "assistant.phase.writing",
+  done: "assistant.phase.done",
+  paused_baseline: "assistant.phase.pausedBaseline",
+  "context.compile": "assistant.phase.contextCompile",
+  "scene.plan": "assistant.phase.scenePlan",
+  "draft.generate": "assistant.phase.draftGenerate",
+  "deterministic.check": "assistant.phase.deterministicCheck",
+  "semantic.review": "assistant.phase.semanticReview",
+  "revision.generate": "assistant.phase.revisionGenerate",
+  "chapter.settle": "assistant.phase.chapterSettle",
+  "chapter.commit": "assistant.phase.chapterCommit",
+};
+
 function phaseLabel(phaseKey: string): string {
-  const labels: Record<string, string> = {
-    queued: "排队等待",
-    preparing: "准备上下文",
-    planning: "滚动规划",
-    paused: "已暂停",
-    awaiting_author: "等待作者处理",
-    completed: "已完成",
-    cancelled: "已取消",
-    failed: "需要处理失败",
-    chapter: "章节推进",
-    "assistant.context": "读取当前作品",
-    "assistant.respond": "理解并组织回复",
-    "assistant.stage": "整理结果",
-    "canon.context": "读取当前故事板块",
-    "canon.candidate": "整理候选修改",
-    "canon.stage": "保存待采纳候选",
-    "foundation.generate": "整理故事方向",
-    "outline.generate": "规划后续章节",
-    foundation: "整理故事方向",
-    outline: "补齐章节大纲",
-    writing: "连续创作章节",
-    done: "已完成",
-    paused_baseline: "基线变化，等待你处理",
-    "context.compile": "装配本章上下文",
-    "scene.plan": "规划本章",
-    "draft.generate": "写作正文",
-    "deterministic.check": "检查正文",
-    "semantic.review": "轻量审稿",
-    "revision.generate": "修订正文",
-    "chapter.settle": "结算故事状态",
-    "chapter.commit": "保存本章",
-  };
-  return labels[phaseKey] ?? phaseKey;
+  const key = PHASE_LABEL_KEYS[phaseKey];
+  return key ? translate(getLocale(), key) : phaseKey;
 }
 
+const TOOL_CALL_LABEL_KEYS: Record<string, MessageKey> = {
+  "story.inspect": "assistant.toolCall.storyInspect",
+  "review.inspect": "assistant.toolCall.reviewInspect",
+  "foundation.start": "assistant.toolCall.foundationStart",
+  "chapter.start": "assistant.toolCall.chapterStart",
+  "autopilot.start": "assistant.toolCall.autopilotStart",
+  "outline.plan.start": "assistant.toolCall.outlinePlanStart",
+  "canon.candidate.start": "assistant.toolCall.canonCandidateStart",
+  "selection.edit.start": "assistant.toolCall.selectionEditStart",
+  "long_goal.start": "assistant.toolCall.longGoalStart",
+  "task.control": "assistant.toolCall.taskControl",
+};
+
 function toolCallLabel(toolCall: NonNullable<AssistantActivityDto["toolCall"]>) {
-  const labels: Record<string, string> = {
-    "story.inspect": "查看故事状态",
-    "review.inspect": "查看审稿状态",
-    "foundation.start": "整理故事方向",
-    "chapter.start": "开始单章写作",
-    "autopilot.start": "开始 AI 快速创作",
-    "outline.plan.start": "规划后续章节",
-    "canon.candidate.start": "生成 Canon 候选修改",
-    "selection.edit.start": "修改选中文本",
-    "long_goal.start": "启动复合创作任务",
-    "task.control": "控制当前任务",
-  };
-  return labels[toolCall.name] ?? toolCall.name;
+  const key = TOOL_CALL_LABEL_KEYS[toolCall.name];
+  return key ? translate(getLocale(), key) : toolCall.name;
 }
 
 function artifactHref(
@@ -1472,47 +1493,63 @@ function ActivityStatusIcon({
 }
 
 function activityKindLabel(kind: AssistantActivityDto["kind"]): string {
-  if (kind === "tool") return "待确认动作";
-  if (kind === "long_goal") return "复合任务";
-  if (kind === "assistant_response") return "正在回应";
-  return "项目任务";
+  if (kind === "tool") return translate(getLocale(), "assistant.activity.kind.tool");
+  if (kind === "long_goal")
+    return translate(getLocale(), "assistant.activity.kind.longGoal");
+  if (kind === "assistant_response")
+    return translate(getLocale(), "assistant.activity.kind.assistantResponse");
+  return translate(getLocale(), "assistant.activity.kind.task");
 }
 
 function contextDetails(context: AssistantContext): string[] {
   const details: string[] = [];
   if (context.canonSpread) details.push(canonSpreadLabel(context.canonSpread));
-  if (context.outlineNodeId) details.push("当前章节");
-  if (context.documentId) details.push("当前稿件");
+  if (context.outlineNodeId)
+    details.push(translate(getLocale(), "assistant.context.outlineNode"));
+  if (context.documentId)
+    details.push(translate(getLocale(), "assistant.context.document"));
   if (context.selection && context.selection.end > context.selection.start) {
-    details.push(`选中 ${context.selection.end - context.selection.start} 字`);
+    details.push(
+      translate(getLocale(), "assistant.context.selection", {
+        count: context.selection.end - context.selection.start,
+      }),
+    );
   }
   return details;
 }
 
+const SURFACE_LABEL_KEYS: Record<string, MessageKey> = {
+  overview: "assistant.surface.overview",
+  bible: "assistant.surface.bible",
+  studio: "assistant.surface.studio",
+  autopilot: "assistant.surface.autopilot",
+  runs: "assistant.surface.runs",
+  lab: "assistant.surface.lab",
+  delivery: "assistant.surface.delivery",
+};
+
 function surfaceLabel(surface: string): string {
-  const labels: Record<string, string> = {
-    overview: "项目概览",
-    bible: "故事圣经",
-    studio: "写作台",
-    autopilot: "AI 快速创作",
-    runs: "运行中心",
-    lab: "长篇推演",
-    delivery: "交付",
-  };
-  return labels[surface] ?? "项目全局";
+  return translate(
+    getLocale(),
+    SURFACE_LABEL_KEYS[surface] ?? "assistant.surface.global",
+  );
 }
 
+const CANON_SPREAD_LABEL_KEYS: Record<
+  NonNullable<AssistantContext["canonSpread"]>,
+  MessageKey
+> = {
+  intent: "assistant.canonSpread.intent",
+  outline: "assistant.canonSpread.outline",
+  entities: "assistant.canonSpread.entities",
+  facts: "assistant.canonSpread.facts",
+  relations: "assistant.canonSpread.relations",
+  timeline: "assistant.canonSpread.timeline",
+  foreshadows: "assistant.canonSpread.foreshadows",
+};
+
 function canonSpreadLabel(spread: NonNullable<AssistantContext["canonSpread"]>) {
-  const labels: Record<typeof spread, string> = {
-    intent: "作者意图",
-    outline: "大纲",
-    entities: "实体",
-    facts: "正典事实",
-    relations: "关系",
-    timeline: "时间线",
-    foreshadows: "伏笔",
-  };
-  return labels[spread];
+  return translate(getLocale(), CANON_SPREAD_LABEL_KEYS[spread]);
 }
 
 function rememberedConversation(projectId: string): string | null {

@@ -46,7 +46,10 @@ export interface CreateDocumentInput {
 export function createDocument(input: CreateDocumentInput): Document {
   const title = input.title.trim();
   if (!title) {
-    throw new DomainError("document.title.empty", "文档标题不能为空");
+    throw new DomainError(
+      "document.title.empty",
+      "Document title must not be empty",
+    );
   }
   return {
     id: input.id,

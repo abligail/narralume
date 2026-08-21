@@ -382,7 +382,7 @@ export class SqliteLongNovelRepository {
     ) {
       throw new LongNovelPersistenceError(
         "prediction.context.stale",
-        "故事状态已经变化，这条预测不能再采纳，请重新生成",
+        "The story state has changed, so this prediction can no longer be adopted; please regenerate it",
       );
     }
     const changed = this.database.raw

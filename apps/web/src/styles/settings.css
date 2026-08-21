@@ -216,3 +216,21 @@
   font-family: var(--font-serif);
   color: var(--ink);
 }
+
+.settings__language {
+  display: flex;
+  gap: 0.5rem;
+}
+.settings__language-option {
+  padding: 0.35rem 1rem;
+  border: 1px solid var(--line, #8884);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.settings__language-option[data-active="true"] {
+  border-color: var(--canon);
+  color: var(--canon);
+}

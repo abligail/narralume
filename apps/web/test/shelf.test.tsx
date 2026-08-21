@@ -6,6 +6,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { setLocale } from "../src/i18n";
 import { ShelfWorkspace } from "../src/workspaces/shelf";
 
 /* fetch stub 纪律：vi.stubGlobal + URL 匹配，QueryClient 关 retry。 */
@@ -91,6 +92,8 @@ function renderShelf(entry = "/shelf") {
 }
 
 beforeEach(() => {
+  /* 字典 zh 保留原文，测试固定中文环境（jsdom 默认 navigator.language 为 en-US）。 */
+  setLocale("zh-CN");
   /* motion 的 useReducedMotion 依赖 matchMedia，jsdom 没有，统一桩掉。
      matches 置 true：reduced-motion 下 Lenis 不启、动效静态，最稳。 */
   Object.defineProperty(window, "matchMedia", {

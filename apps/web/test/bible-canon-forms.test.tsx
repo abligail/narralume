@@ -14,6 +14,7 @@ import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { CanonEntityTypeSchema } from "@narralume/contracts";
 
+import { setLocale } from "../src/i18n";
 import { BibleWorkspace } from "../src/workspaces/bible";
 
 /* CR-17/CR-18：实体表单枚举与事实表单宾语必须以后端契约为准。 */
@@ -180,6 +181,7 @@ function clickSave() {
 }
 
 beforeEach(() => {
+  setLocale("zh-CN");
   Object.defineProperty(window, "matchMedia", {
     configurable: true,
     writable: true,

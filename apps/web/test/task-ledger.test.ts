@@ -1,6 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
+import { setLocale } from "../src/i18n";
 import { taskHref } from "../src/lib/task-ledger";
+
+beforeEach(() => {
+  setLocale("zh-CN");
+});
 
 describe("任务现场链接", () => {
   it("共创运行回到具体故事房", () => {

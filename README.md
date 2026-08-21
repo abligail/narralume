@@ -2,216 +2,203 @@
   <img src="assets/narralume-logo-wide.svg" alt="NarraLume · 叙灯" width="960">
 </p>
 
-<h3 align="center">从故事设定集到定稿交付，把长篇小说真正写下去。</h3>
+<h3 align="center">Take a long-form story from its bible to a deliverable manuscript.</h3>
 
 <p align="center">
-  <a href="https://novelai.indevs.in/">在线体验</a> ·
-  <a href="https://github.com/abligail/narralume/releases/latest">下载发行包</a> ·
-  <a href="docs/user-guide.md">用户指南</a> ·
-  <a href="https://github.com/abligail/narralume">源代码</a> ·
-  <a href="README.en.md">English</a>
+  <a href="https://app.narralume.me/">Hosted demo</a> ·
+  <a href="https://github.com/abligail/narralume/releases/latest">Releases</a> ·
+  <a href="docs/user-guide.en.md">User guide</a> ·
+  <a href="https://github.com/abligail/narralume">Source</a> ·
+  <a href="README.zh.md">中文</a>
 </p>
 
-长篇写作的难处，通常不是“下一段该写什么”，而是人物、时间线、伏笔、大纲和已经写过的几万字会逐渐分散；一次修改可能牵动很多章节，AI 给出的新内容也未必应该直接变成正文。
+The hard part of a novel is rarely generating the next paragraph. It is keeping characters, chronology, promises, outline decisions, and tens of thousands of existing words in agreement. A change may affect several chapters, and an AI suggestion should not become part of the book simply because it was generated.
 
-NarraLume 把这些工作放进同一套写作环境：你可以维护故事资料、手写正文、保存版本、做批注和审稿，也可以把局部编辑、单章写作或连续创作交给 AI。AI 产出的正文和设定变化先作为候选保存，只有经过作者采纳，才进入正式版本或已确认设定。
+NarraLume keeps that work in one writing environment. You can maintain structured story material, write by hand, save versions, annotate and review a chapter, or delegate a selection, one chapter, or a continuous run to an AI model. Generated prose, revisions, and story changes remain candidates until the author accepts them.
 
-它首先是一款完整的写作工具，然后才是一款 AI 工具。没有模型时，建书、导入、整理故事、写正文、导出和备份都可以正常使用。
+It is a complete manual writing tool first and an AI-assisted tool second. Creating books, importing manuscripts, organizing the story, writing, exporting, and backing up do not require a model. The interface supports both Chinese and English; you can switch it at any time under Settings → Interface language.
 
-## 它如何处理长篇创作
+## How it approaches long-form writing
 
-| 原则                       | 在 NarraLume 中的做法                                                                                  |
-| -------------------------- | ------------------------------------------------------------------------------------------------------ |
-| 故事资料不是散落的聊天记录 | 作者意图、大纲、实体、已确认事实、关系、时间线和伏笔集中在“故事设定集”中，写作和审稿使用同一份上下文。 |
-| AI 建议不直接覆盖作品      | 正文、修订和故事变化先进入候选；作者可以查看差异、采纳、拒绝或保留。                                   |
-| 长任务不能离开页面就失联   | AI 任务有步骤、状态、检查点和运行记录。可以离开页面，之后从概览或运行中心回到原处。                    |
-| 作品必须能带走、能恢复     | 支持常用交付格式、单作品包、项目内容快照和完整 SQLite 备份，并明确区分各自用途。                       |
+| Principle                                          | NarraLume's approach                                                                                                                                   |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Story knowledge should not live in scattered chats | Author intent, outline, entities, canon facts, relationships, timeline events, and foreshadowing live in one story bible shared by writing and review. |
+| An AI suggestion is not a saved decision           | Prose, revisions, and story changes are staged as candidates that the author can compare, accept, reject, or keep for later.                           |
+| A long task should survive navigation and failure  | AI work has steps, states, checkpoints, and run records. The author can leave a page and return from the overview or run center.                       |
+| A manuscript must be portable and recoverable      | Delivery formats, single-project bundles, project snapshots, and full SQLite backups are separate tools with explicit recovery boundaries.             |
 
-这套约束让 AI 更像一位可以交稿、可以复核的协作者，而不是一个随时改写当前文本的聊天框。
+These constraints make AI behave more like a collaborator who submits reviewable work than a chat box that can silently replace the current draft.
 
-## 从一个想法到可交付稿
+## From an idea to a deliverable manuscript
 
-1. **建立作品**：从空白开始，使用 AI 引导整理创作方向，或导入 Markdown、纯文本、DOCX、HTML、EPUB 和 NarraLume 作品包。
-2. **写清作者意图**：记录题材承诺、主题、读者、语气、结局方向和不写边界，让后面的规划与审稿有判断依据。
-3. **整理故事设定集**：建立卷、章、场景与人物资料，把已经确认的事实、关系、时间线和伏笔分开维护。
-4. **进入写作台**：手写 Markdown 正文，保存版本和批注；也可以对选区发起局部编辑，或把一章交给 AI。
-5. **审稿与修订**：查看带证据的审稿问题，接受、拒绝、标记误报，或基于问题生成修订候选。
-6. **裁定故事变化**：章节产生的新事实不会静默写入已确认设定。人物状态、关系、时间线和伏笔变化需要单独采纳；锁定事实发生冲突时，任务会停下来等待决定。
-7. **交付与留档**：检查质量提醒，导出阅读或编辑格式，创建项目快照；升级、迁移和清理浏览器数据前再做完整库备份。
+1. **Create or import a book.** Begin from a blank project, let AI organize an initial direction, or import Markdown, plain text, DOCX, HTML, EPUB, or a NarraLume project bundle.
+2. **State the author's intent.** Record the reading promise, themes, audience, tone, ending direction, current focus, and boundaries that planning and review should respect.
+3. **Build the story bible.** Organize volumes, chapters, scenes, entities, confirmed facts, relationships, chronology, and foreshadowing.
+4. **Write in the studio.** Edit Markdown manually, save versions and comments, request a selection edit, or delegate a chapter.
+5. **Review and revise.** Inspect findings with evidence, accept or reject them, mark false positives, and create revision candidates when useful.
+6. **Decide story changes.** New character states, facts, relationships, timeline events, and foreshadowing do not enter canon silently. A conflict with a locked fact pauses the task for an author decision.
+7. **Deliver and preserve.** Review quality reminders, export the manuscript, create a project snapshot, and make a full-library backup before upgrades or migration.
 
 ```text
-想法或旧稿
-  → 作者意图、故事设定集与大纲
-  → 手写 / 局部编辑 / 单章委托 / 连续创作
-  → 审稿与故事变化候选
-  → 作者采纳
-  → 正式版本、导出与备份
+idea or existing manuscript
+  -> author intent, story bible, and outline
+  -> manual writing / selection edit / chapter delegation / continuous writing
+  -> review findings and story-change candidates
+  -> author decision
+  -> saved version, export, and backup
 ```
 
-## 功能全景
+## Feature map
 
-| 工作区      | 主要能力                                                                                     |
-| ----------- | -------------------------------------------------------------------------------------------- |
-| 书架        | 空白建书、AI 引导建书、旧稿导入、自定义封面、搜索、复制、归档和保留 30 天的回收站。          |
-| 项目概览    | 汇总章节与字数、活动任务、审稿问题、故事变化，以及当前最值得继续的入口。                     |
-| 故事设定集  | 维护作者意图、大纲、实体、已确认事实、关系、时间线和伏笔；AI 修改以差异候选呈现。            |
-| 写作台      | Markdown 正文、历史版本、批注、选区编辑、单章委托、审稿、修订、故事变化和共创沙盒。          |
-| AI 快速创作 | 先确认方向和边界，再连续推进多章；支持逐章确认、暂停、补充要求、重试和接回手写。             |
-| 项目助手    | 读取当前作品、页面和选区，回答问题或提出受约束的任务动作；持久操作仍需确认。                 |
-| 运行中心    | 查看 AI 任务的步骤、模型调用、检查点、失败原因和可用恢复动作。                               |
-| 长篇推演    | 进行故事记忆检索、剧情预测、记忆整理和设定变化影响预演，不直接改写作品。                     |
-| 交付与设置  | 质量提醒、多格式导出、项目快照、整库备份、模型渠道、岗位派任、Writing Skill 与 Agent Skill。 |
+| Workspace             | Main capabilities                                                                                                                               |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Bookshelf             | Blank and AI-guided creation, manuscript import, custom covers, search, duplication, archive, and a 30-day recycle bin.                         |
+| Project overview      | Chapter and word-count progress, active tasks, review findings, story changes, and the next useful entry point.                                 |
+| Story bible           | Author intent, outline, entities, canon, relationships, timeline, and foreshadowing, with AI changes shown as diffs.                            |
+| Writing studio        | Markdown prose, versions, comments, selection edits, chapter delegation, review, revisions, story changes, and a co-creation sandbox.           |
+| AI quick creation     | Direction and boundary confirmation, multi-chapter production, chapter-by-chapter review, pause, steer, retry, and hand-back to manual writing. |
+| Project assistant     | Context from the current project, page, and selection, with persistent actions still requiring confirmation.                                    |
+| Run center            | Task steps, model calls, checkpoints, errors, and available recovery actions.                                                                   |
+| Long-form lab         | Story-memory search, plot prediction, memory management, and impact previews that do not modify the book.                                       |
+| Delivery and settings | Quality reminders, exports, snapshots, full backups, providers, model assignments, Writing Skills, and Agent Skills.                            |
 
-### 书架
+### Bookshelf
 
-书架是项目的入口：可以从空白开始、让 AI 引导建书，也可以直接导入旧稿。封面支持自定义，删除的作品先进回收站，30 天内都能恢复。
+The bookshelf is where books begin: start from a blank project, let the AI guide creation, or import an existing manuscript. Covers are customizable, and deleted books stay in a recycle bin for 30 days.
 
-<p><img src="assets/narralume-shelf-1920x1080.png" alt="NarraLume 书架与自定义作品封面" width="1440"></p>
+<p><img src="assets/narralume-shelf-1920x1080.png" alt="The NarraLume bookshelf with a custom book cover" width="1440"></p>
 
-### 写作台
+### Writing studio
 
-写作台把稿目、正文、版本和审稿工具放在同一屏：左侧管章节结构，中间写正文，审稿问题和故事变化候选就在手边处理，不用切到别的工具。AI 产出始终先落为候选，作者采纳之后才会进入正式版本。
+The studio keeps chapters, prose, versions, and review tools on one screen: structure on the left, writing in the middle, and review findings or story-change candidates handled right beside them, without jumping to another tool. AI output always lands as a candidate first and enters the manuscript only after the author accepts it.
 
-<p><img src="assets/narralume-studio-1920x1080.png" alt="NarraLume 写作台的稿目、正文和审稿工具" width="1440"></p>
+<p><img src="assets/narralume-studio-1920x1080.png" alt="The NarraLume writing studio with manuscript, prose, and review tools" width="1440"></p>
 
-### 故事设定集
+### Story bible
 
-左侧七个板块分别管理作者意图、大纲、实体、已确认事实、关系、时间线和伏笔，避免设定跟着聊天记录四处散落。右侧可以直接编辑当前板块，也可以让 AI 先提交候选，再由作者查看差异。
+Seven sections keep author intent, outline, entities, canon, relationships, timeline events, and foreshadowing separate but available to the same writing workflow. The editing panel can save a direct change or stage an AI suggestion for the author to review first.
 
-<p><img src="assets/narralume-bible-1920x1080.png" alt="故事设定集与七个资料板块" width="1440"></p>
+<p><img src="assets/narralume-bible-1920x1080.png" alt="The seven-section story bible" width="1440"></p>
 
-### 项目助手
+### Project assistant
 
-助手固定在项目右侧，能看到当前作品、页面和选区，不必每次重新解释上下文。它可以回答问题、找到待办或提出任务动作，但正文采纳和持久操作仍会停下来等你确认。
+The assistant stays beside the current project and understands the page or selection already in view, so the author does not have to reconstruct context in every message. It can explain, locate work, and propose actions, while persistent changes still wait for confirmation.
 
-<p><img src="assets/narralume-assistant-1920x1080.png" alt="项目概览与 AI 助手侧栏" width="1440"></p>
+<p><img src="assets/narralume-assistant-1920x1080.png" alt="The context-aware project assistant sidebar" width="1440"></p>
 
-### AI 快速创作
+### AI quick creation
 
-快速创作不是一个“生成整本书”按钮，而是准备方向、确认边界、执行章节的三步流程。运行中可以暂停、补充要求、逐章确认，也能在设定冲突出现时回到任务现场处理。
+Quick creation is a three-step workflow for preparing a direction, confirming boundaries, and producing chapters. The author can pause, steer, review chapter by chapter, and resolve canon conflicts before the task continues.
 
-<p><img src="assets/narralume-autopilot-1920x1080.png" alt="AI 快速创作工作区" width="1440"></p>
+<p><img src="assets/narralume-autopilot-1920x1080.png" alt="The AI quick creation workspace" width="1440"></p>
 
-### 交付
+### Delivery
 
-交付页把质量提醒、常用导出格式和项目内容快照放在一起，写完后不用到处找收尾入口。质量检查只负责指出风险，不会替作者决定一部作品是否已经完成。
+Delivery brings quality reminders, common export formats, and project snapshots into one place. The checks point out unfinished work without pretending to decide whether the manuscript is ready.
 
-<p><img src="assets/narralume-delivery-1920x1080.png" alt="质量检查、导出与项目快照" width="1440"></p>
+<p><img src="assets/narralume-delivery-1920x1080.png" alt="Quality checks, exports, and project snapshots" width="1440"></p>
 
-## 选择适合你的写法
+## Three ways to write
 
-| 写法     | 适合的情况                                     | 作者仍然掌握什么                                   |
-| -------- | ---------------------------------------------- | -------------------------------------------------- |
-| 完全手写 | 已有明确计划，或不希望正文经过模型             | 全部正文、版本、故事资料、导出与备份               |
-| 局部协作 | 想改一段话、补一个场景、审一章或让 AI 完成单章 | 选区、指令、候选采纳和故事变化裁定                 |
-| 连续创作 | 已确认整体方向，希望集中推进多个章节           | 创作边界、目标章数、暂停与转向、逐章结果和冲突处理 |
+| Mode               | When it fits                                                                                               | What remains under author control                                                        |
+| ------------------ | ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Fully manual       | The plan is already clear, or the manuscript should not pass through a model                               | All prose, versions, story material, exports, and backups                                |
+| Focused assistance | A passage needs editing, a scene needs options, a chapter needs review, or one chapter should be delegated | Selection, instruction, candidate acceptance, and story-change decisions                 |
+| Continuous writing | The direction is confirmed and several chapters should move forward in one run                             | Boundaries, chapter target, pause and steering, chapter results, and conflict resolution |
 
-三种写法共用同一套正文版本和故事设定，不会因为切换模式而产生互不相认的项目副本。
+All three modes use the same manuscript versions and canon. Switching modes does not create incompatible copies of the project.
 
-## 开始使用
+## Choose an entry point
 
-| 适合谁           | 入口                                          | 前置条件                                       | 数据默认位置                              |
-| ---------------- | --------------------------------------------- | ---------------------------------------------- | ----------------------------------------- |
-| 想先试用         | [在线体验](https://novelai.indevs.in/)        | 支持 OPFS 和 Web Worker 的现代浏览器           | 当前站点的浏览器 OPFS                     |
-| Windows 普通用户 | [Windows 启动器](docs/quick-start.md#windows) | Windows x64；缺少 Node.js 时首次启动需要联网   | 发行目录 `data/`                          |
-| macOS 用户       | [macOS 启动器](docs/quick-start.md#macos)     | Apple Silicon；缺少 Node.js 时首次启动需要联网 | 发行目录 `data/`                          |
-| Linux 用户       | [Linux 启动器](docs/quick-start.md#linux)     | Linux x64；缺少 Node.js 时首次启动需要联网     | 发行目录 `data/`                          |
-| 贡献代码         | [开发环境](CONTRIBUTING.md)                   | Node.js 24+、npm 11+                           | `NARRATIVE_DATA_DIR`，默认 `./data`       |
-| 自托管           | [Docker Compose](docs/docker.md)              | Docker Engine/Desktop、Compose v2              | Docker 数据卷和独立备份目录               |
-| 维护公开在线体验 | [Cloudflare 指南](docs/deploy-cloud.md)       | Wrangler、域名、上游模型和安全策略             | 高级维护者路径；普通用户通常不需要 Bridge |
+| Audience               | Entry point                                        | Prerequisites                                            | Default data location                           |
+| ---------------------- | -------------------------------------------------- | -------------------------------------------------------- | ----------------------------------------------- |
+| First-time visitor     | [Hosted demo](https://app.narralume.me/)           | A modern browser with OPFS and Web Worker support        | The current site's browser OPFS                 |
+| Windows writer         | [Windows launcher](docs/quick-start.en.md#windows) | Windows x64; first launch may need network access        | `data/` beside the release files                |
+| macOS writer           | [macOS launcher](docs/quick-start.en.md#macos)     | Apple Silicon; first launch may need network access      | `data/` beside the release files                |
+| Linux writer           | [Linux launcher](docs/quick-start.en.md#linux)     | Linux x64; first launch may need network access          | `data/` beside the release files                |
+| Contributor            | [Development guide](CONTRIBUTING.md)               | Node.js 24+, npm 11+                                     | `NARRATIVE_DATA_DIR`, default `./data`          |
+| Self-hosting operator  | [Docker Compose](docs/docker.en.md)                | Docker Engine/Desktop and Compose v2                     | A Docker volume and a separate backup directory |
+| Public-demo maintainer | [Cloud deployment guide](docs/deploy-cloud.en.md)  | Wrangler, domains, upstream model, and a security policy | Advanced path; most users do not need Bridge    |
 
-### 十分钟完成第一条写作链路
+### A ten-minute first workflow
 
-1. 启动应用并打开“书架”。在线体验直接访问站点；本地发行包运行对应系统的 `Start-NarraLume` 脚本。
-2. 点击“空白建书”，填写书名和卷首语。暂时不配置模型也没有关系。
-3. 进入“故事”，先写作者意图，再建立一个章节大纲；人物和事实可以边写边补。
-4. 在“写作”中创建章节正文，输入内容并“保存新版本”。
-5. 打开“交付”，确认作品能够导出，再创建一个项目内容快照。
+1. Start NarraLume and open the bookshelf. Local release users can run the `Start-NarraLume` launcher for their platform.
+2. Create a blank book and enter a title and premise. Model configuration can wait.
+3. Open Story, write the author intent, and create one chapter outline. Characters and facts can be added as the draft grows.
+4. Create a chapter in the writing studio, enter text, and save a new version.
+5. Open Delivery, confirm that the project exports, and create a project snapshot.
 
-完成这五步后，再按需要配置模型、审稿或连续创作。完整操作见[用户指南](docs/user-guide.md)，不同系统的启动步骤见[快速开始](docs/quick-start.md)。
+After that path works, add model configuration, review, or continuous creation as needed. The detailed [user guide](docs/user-guide.en.md), [quick start](docs/quick-start.en.md), and the rest of the product documentation are available in both Chinese and English.
 
-## 导入、导出与备份
+## Import, export, and recovery
 
-| 类型             | 支持格式或范围                                       | 用途                                         |
-| ---------------- | ---------------------------------------------------- | -------------------------------------------- |
-| 旧稿导入         | Markdown、纯文本、DOCX、HTML、EPUB、NarraLume 作品包 | 把既有内容拆成候选，确认后写入项目           |
-| 阅读与编辑导出   | Markdown、纯文本、DOCX、EPUB                         | 交稿、继续排版或在其他工具中阅读             |
-| 作品包           | 单部作品及作者可见资料                               | 在不同 NarraLume 环境间迁移，不携带模型密钥  |
-| 项目内容快照     | 当前项目的资料、正文版本、批注、审稿和协作历史       | 在当前库中恢复为一部新作品，不覆盖原项目     |
-| 完整 SQLite 备份 | 整个作品库和本地设置                                 | 升级、迁移和灾备；可能包含本地保存的模型凭据 |
+| Object                     | Format or scope                                                                   | Intended use                                                                               |
+| -------------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Manuscript import          | Markdown, plain text, DOCX, HTML, EPUB, NarraLume project bundle                  | Analyze existing work into candidates before applying it to a project                      |
+| Reading and editing export | Markdown, plain text, DOCX, EPUB                                                  | Submission, layout work, or reading in another tool                                        |
+| Project bundle             | One book and its author-visible material                                          | Move a project between NarraLume environments without model credentials                    |
+| Project snapshot           | Story material, manuscript versions, comments, reviews, and collaboration history | Restore a new project inside the current library without overwriting the original          |
+| Full SQLite backup         | The entire library and local settings                                             | Upgrade, migration, and disaster recovery; may contain locally stored provider credentials |
 
-这些对象不是云同步，也不能互相替代。开始写真实作品前，请先阅读[数据、隐私与备份](docs/data-and-backup.md)。
+These objects are not cloud sync and are not interchangeable. Read [Data, privacy, and backup](docs/data-and-backup.en.md) before placing real work in any mode.
 
-## 模型配置
+## Models and data
 
-需要 AI 时，在“设置”中依次新建模型渠道、新建模型，并把模型派给“默认生成模型”。规划和审稿默认继承该模型，也可以单独覆盖；嵌入模型独立用于语义检索。
+Configure AI by creating a provider channel, registering its upstream model, and assigning that model to the default generation role. Planning and review inherit the default unless explicitly overridden; embeddings are configured separately for semantic search.
 
-目前支持三类上游协议：
+NarraLume supports OpenAI Chat Completions, OpenAI Responses, and Anthropic Messages. Direct browser requests require the provider to allow the current origin through CORS; the local Server does not have that browser restriction. See [Configuration](docs/configuration.en.md).
 
-- OpenAI Chat Completions；
-- OpenAI Responses；
-- Anthropic Messages。
+Bridge and Relay are only for maintainers running a public demo with a private or local upstream. Most users can skip them and use the hosted browser kernel, local Server, or Docker directly.
 
-浏览器内核直接请求上游时，上游必须允许当前站点的 CORS；本地 Server 代发请求时没有浏览器 CORS 限制。Base URL、环境变量、Bridge 和 Relay 配置见[配置说明](docs/configuration.md)。
+| Runtime                       | Work and run history                           | Important boundary                                                                                 |
+| ----------------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Hosted demo / browser kernel  | Site-scoped OPFS SQLite in the current browser | Clearing site data, using private browsing, or changing browsers may make the library inaccessible |
+| Local launcher / local Server | `data/narralume.sqlite` by default             | Do not copy the live database directly; use backup features or scripts                             |
+| Docker Compose                | The `narralume-data` volume                    | `docker compose down --volumes` deletes the volume; keep backups on an independent host path       |
 
-Bridge 和 Relay 只服务于维护公开在线体验的高级部署链路；普通用户使用在线版、本地 Server 或 Docker 时都可以跳过它们。
+Browser, local Server, and Docker libraries do not synchronize automatically. A downloaded full library may contain bring-your-own provider credentials and should be protected like the manuscript and API keys.
 
-## 数据放在哪里
+## Who it is for
 
-| 运行方式                 | 作品与运行记录                     | 需要注意                                                               |
-| ------------------------ | ---------------------------------- | ---------------------------------------------------------------------- |
-| 在线体验 / 浏览器内核    | 当前浏览器、当前站点的 OPFS SQLite | 清除站点数据、使用无痕窗口或更换浏览器后，原库可能无法访问             |
-| 本地启动器 / 本地 Server | 默认 `data/narralume.sqlite`       | 不要在服务运行时直接复制主数据库；使用备份功能或脚本                   |
-| Docker Compose           | `narralume-data` 数据卷            | `docker compose down --volumes` 会删除数据卷；备份应放在独立宿主机目录 |
+NarraLume fits authors who expect to maintain a book over time, care about continuity, want manual writing to remain primary, or prefer to choose their own models and data location.
 
-浏览器库、本地 Server 和 Docker 不会自动同步。在线体验中保存的自带模型密钥也位于当前站点的本地库；下载完整库后，应像保护正文和 API 密钥一样保护备份文件。
+It is not currently a real-time multi-user document or an account-based cloud sync service. A general chat tool is simpler for a one-off question; NarraLume becomes useful when the outline, versions, canon changes, and long-running tasks need to remain connected.
 
-## 适合与不适合
+## Documentation
 
-NarraLume 更适合希望长期维护一部作品、重视设定一致性、想保留手写主导权，或希望自行选择模型和数据位置的作者。
+| Document                                                | Purpose                                                                                                |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| [User guide](docs/user-guide.en.md)                     | Feature-by-feature use of the bookshelf, story bible, writing, AI, delivery, and settings              |
+| [Quick start](docs/quick-start.en.md)                   | Hosted, Windows, macOS/Linux, and development startup paths                                            |
+| [Configuration](docs/configuration.en.md)               | Providers, model assignments, environment variables, Bridge, and Relay                                 |
+| [Data, privacy, and backup](docs/data-and-backup.en.md) | Storage locations, bundles, snapshots, full backups, and recovery rehearsal                            |
+| [Docker Compose](docs/docker.en.md)                     | Local self-hosting, update, stop, and backup                                                           |
+| [Cloudflare deployment](docs/deploy-cloud.en.md)        | Advanced path for maintainers running a public Web, Relay, and local Bridge; most users do not need it |
 
-它目前不是多人实时协作文档，也不提供账号式云同步。只想临时问 AI 一个问题时，普通聊天工具更直接；需要持续管理大纲、正文版本、设定变化和长任务时，NarraLume 才会显示出它的价值。
-
-## 文档
-
-| 文档                                        | 解决什么问题                                                               |
-| ------------------------------------------- | -------------------------------------------------------------------------- |
-| [用户指南](docs/user-guide.md)              | 按书架、故事、写作、AI、交付和设置逐页说明功能                             |
-| [快速开始](docs/quick-start.md)             | 在线体验、Windows、macOS/Linux 和开发环境的启动步骤                        |
-| [配置](docs/configuration.md)               | 模型渠道、岗位派任、环境变量、Bridge 和 Relay                              |
-| [数据、隐私与备份](docs/data-and-backup.md) | 存储位置、作品包、项目快照、整库备份和恢复演练                             |
-| [Docker Compose](docs/docker.md)            | 本地自托管、更新、停止和备份                                               |
-| [Cloudflare 部署](docs/deploy-cloud.md)     | 维护公开 Web、Relay 和本机 Bridge 的高级安全与运维流程；普通用户通常不需要 |
-| [文档索引](docs/README.md)                  | 所有公开说明的入口                                                         |
-
-## 开发
+## Development
 
 ```bash
 npm ci
 npm run dev
 ```
 
-开发 Web 默认运行在 `http://127.0.0.1:4318`，Server/API 默认运行在 `http://127.0.0.1:4317`。
+The development Web app listens on `http://127.0.0.1:4318`; the Server/API listens on `http://127.0.0.1:4317`.
 
-| 命令                                          | 用途                                                       |
-| --------------------------------------------- | ---------------------------------------------------------- |
-| `npm run verify`                              | 执行格式、Lint、类型检查、测试、证据、许可证检查和生产构建 |
-| `npm run test:e2e`                            | 用 Playwright 验证跨页面与响应式流程                       |
-| `npm run release:build`                       | 为当前受支持的平台生成发行包                               |
-| `npm run deploy:web` / `npm run deploy:relay` | 预览或部署自己的 Cloudflare Web/Relay                      |
+| Command                                       | Purpose                                                                                                |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `npm run verify`                              | Run formatting, linting, type checks, tests, evidence checks, license checks, and the production build |
+| `npm run test:e2e`                            | Exercise cross-page and responsive workflows with Playwright                                           |
+| `npm run release:build`                       | Build the release archive for the current supported platform                                           |
+| `npm run deploy:web` / `npm run deploy:relay` | Preview or deploy your own Cloudflare Web and Relay                                                    |
 
-仓库按职责拆分：`apps/web` 是界面和浏览器内核，`apps/server` 是本地 API 与备份服务，`packages/` 保存领域、任务、持久化和共享契约，`deploy/` 与 `scripts/` 负责交付和运维。贡献前请阅读[参与贡献](CONTRIBUTING.md)。
+The repository is split by responsibility: `apps/web` contains the UI and browser kernel, `apps/server` contains the local API and backup service, `packages/` contains domain, task, persistence, and shared contracts, and `deploy/` plus `scripts/` handle delivery and operations.
 
-## 常见问题
+## Common questions
 
-- **没有模型能不能用？** 可以。建书、故事资料、大纲、手写、版本、批注、导入、导出和备份都不依赖模型。
-- **为什么浏览器调用模型会失败？** 先检查协议、Base URL、密钥和 CORS。不能开放浏览器 CORS 的上游可以通过本地 Server 访问。
-- **为什么升级后看不到作品？** 确认新实例使用的是原数据目录，不要让空 `data/` 覆盖旧数据库。迁移前先创建一致性备份。
-- **AI 会不会直接改掉正文？** 正文、修订和故事变化都有候选与采纳步骤；永久操作也不会只靠一句聊天指令完成。
-- **可以放到公网吗？** 可以自建，但远程访问必须配置高熵令牌、TLS、访问控制和独立备份。不要直接暴露本地 Server。
+- **Can it work without a model?** Yes. Books, story material, outlines, manual writing, versions, comments, imports, exports, and backups remain available.
+- **Why can a provider fail in the browser?** Check the protocol, Base URL, key, and CORS. An upstream that cannot allow browser CORS can be reached through the local Server.
+- **Why is a book missing after an upgrade?** Confirm that the new instance points to the original data directory. Do not replace an existing `data/` directory with an empty one.
+- **Can AI overwrite the manuscript?** Generated prose, revisions, and story changes pass through candidate and acceptance steps. Destructive operations are not completed by a chat instruction alone.
+- **Can it be exposed publicly?** It can be self-hosted, but remote access requires a high-entropy token, TLS, access control, and independent backups. Do not expose the local Server directly.
 
-NarraLume 使用 [Apache-2.0](LICENSE) 许可证。安全问题请按 [SECURITY.md](SECURITY.md) 私密报告，第三方依赖和演示封面来源见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
-
-## 友链
-
-- [linux.do](https://linux.do/)
+NarraLume is licensed under [Apache-2.0](LICENSE). Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request, report security issues privately through [SECURITY.md](SECURITY.md), and see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for dependency and demo-cover attribution.

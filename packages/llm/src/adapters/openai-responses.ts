@@ -68,7 +68,8 @@ export class OpenAIResponsesAdapter implements ModelAdapter {
       );
       return;
     }
-    if (!response.body) throw protocolError("Responses 流没有响应体");
+    if (!response.body)
+      throw protocolError("Responses stream has no response body");
 
     const tools = new Map<string, PendingResponseTool>();
     let started = false;
@@ -226,7 +227,7 @@ export class OpenAIResponsesAdapter implements ModelAdapter {
         const responseObject = asRecord(value.response);
         const error = asRecord(value.error) ?? asRecord(responseObject?.error);
         throw new ModelError(
-          asString(error?.message) ?? "Responses API 返回失败事件",
+          asString(error?.message) ?? "Responses API returned a failed event",
           {
             category: "server",
             retryable: true,

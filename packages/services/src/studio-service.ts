@@ -83,7 +83,11 @@ export function createSelectionEditRun(
   requireWritingAssignment(database, input.environment);
   const document = documents.get(input.projectId, input.documentId);
   if (!document)
-    throw new StudioServiceError("document.not_found", "文档不存在", 404);
+    throw new StudioServiceError(
+      "document.not_found",
+      "Document not found",
+      404,
+    );
   const draft = documents.getDraft(input.projectId, input.documentId);
   let version = documents.getVersion(
     input.projectId,
@@ -93,14 +97,14 @@ export function createSelectionEditRun(
   if (!version)
     throw new StudioServiceError(
       "document.version.not_found",
-      "选区基础版本不存在",
+      "The selection base version does not exist",
       404,
     );
   if (draft) {
     if (input.draftContentHash !== draft.contentHash) {
       throw new StudioServiceError(
         "edit.draft.changed",
-        "草稿内容已变化，请基于最新草稿重新发起 AI 修改",
+        "The draft content has changed; restart the AI edit from the latest draft",
         409,
       );
     }
@@ -110,7 +114,7 @@ export function createSelectionEditRun(
     ) {
       throw new StudioServiceError(
         "edit.base_version.conflict",
-        "草稿基础版本已经落后，请刷新正文后重新选择",
+        "The draft base version is stale; refresh the manuscript and reselect",
         409,
       );
     }
@@ -134,7 +138,7 @@ export function createSelectionEditRun(
   ) {
     throw new StudioServiceError(
       "edit.base_version.conflict",
-      "正文版本已变化，请基于当前版本重新选择",
+      "The manuscript version has changed; reselect based on the current version",
       409,
     );
   } else {
@@ -205,11 +209,15 @@ export function acceptEditProposal(
   const { proposal } = input;
   const document = documents.get(proposal.projectId, proposal.documentId);
   if (!document)
-    throw new StudioServiceError("document.not_found", "文档不存在", 404);
+    throw new StudioServiceError(
+      "document.not_found",
+      "Document not found",
+      404,
+    );
   if (document.currentVersionId !== proposal.baseVersionId) {
     throw new StudioServiceError(
       "edit.base_version.conflict",
-      "正文已变化，请基于新版本重新生成候选",
+      "The manuscript has changed; regenerate candidates based on the new version",
       409,
     );
   }
@@ -300,7 +308,7 @@ export function createReplyRun(
   if (!template)
     throw new StudioServiceError(
       "recipe.template.missing",
-      "共同创作配方模板不存在",
+      "The co-creation recipe template does not exist",
       500,
     );
   const recipe = compileCoCreateRecipeTemplate(
@@ -350,7 +358,7 @@ export function requireSelectionRange(
   if (start >= end || end > content.length) {
     throw new StudioServiceError(
       "edit.selection.invalid",
-      "选区已经失效，请基于当前内容重新选择",
+      "The selection is no longer valid; reselect based on the current content",
       422,
     );
   }
@@ -362,7 +370,7 @@ export function requireProject(
 ) {
   const project = projects.get(projectId);
   if (!project) {
-    throw new StudioServiceError("project.not_found", "作品不存在", 404);
+    throw new StudioServiceError("project.not_found", "Project not found", 404);
   }
   return project;
 }
@@ -375,7 +383,7 @@ export function requireActiveCoCreateSession(
   if (session.status !== "active") {
     throw new StudioServiceError(
       "cocreate.session.inactive",
-      "会话未激活，不能修改沙盒或启动生成任务",
+      "The session is not active; the sandbox cannot be modified and generation tasks cannot be started",
       409,
     );
   }
@@ -396,7 +404,7 @@ export function requireActiveCoCreateParticipants(
   if (participants.length === 0) {
     throw new StudioServiceError(
       "cocreate.participants.empty",
-      "至少启用一个未退役的 AI 参与者",
+      "Enable at least one non-retired AI participant",
       422,
     );
   }
@@ -408,7 +416,7 @@ export function requireActiveCoCreateParticipants(
   ) {
     throw new StudioServiceError(
       "cocreate.speaker.invalid",
-      "指定 Persona 未启用或已经退役",
+      "The specified Persona is not enabled or has been retired",
       422,
     );
   }

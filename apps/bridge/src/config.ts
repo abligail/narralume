@@ -43,16 +43,16 @@ export function readBridgeConfig(
   const parsed = BridgeEnvironmentSchema.parse(environment);
   const upstreamUrl = new URL(parsed.UPSTREAM_BASE_URL);
   if (!/^https?:$/u.test(upstreamUrl.protocol)) {
-    throw new Error("UPSTREAM_BASE_URL 必须是 HTTP(S) 地址");
+    throw new Error("UPSTREAM_BASE_URL must be an HTTP(S) URL");
   }
   if (upstreamUrl.username || upstreamUrl.password) {
-    throw new Error("UPSTREAM_BASE_URL 不得包含内嵌凭据");
+    throw new Error("UPSTREAM_BASE_URL must not contain embedded credentials");
   }
   if (
     upstreamUrl.protocol === "http:" &&
     !isLoopbackHost(upstreamUrl.hostname)
   ) {
-    throw new Error("公网 UPSTREAM_BASE_URL 必须使用 HTTPS");
+    throw new Error("A public UPSTREAM_BASE_URL must use HTTPS");
   }
   return {
     host: "127.0.0.1",

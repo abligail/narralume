@@ -44,7 +44,7 @@ export class SqliteDeliveryRepository {
       if (inserted.changes !== 1) {
         throw new DeliveryPersistenceError(
           "style.name.conflict",
-          "当前作品已有同名风格，请使用其他名称",
+          "A style with this name already exists in this project; please choose another name",
         );
       }
       return profile;
@@ -120,7 +120,7 @@ export class SqliteDeliveryRepository {
       if (duplicate) {
         throw new DeliveryPersistenceError(
           "style.name.conflict",
-          "当前作品已有同名风格，请使用其他名称",
+          "A style with this name already exists in this project; please choose another name",
         );
       }
       if (next.active) this.deactivateStyles(next.projectId, next.id);
@@ -177,7 +177,7 @@ export class SqliteDeliveryRepository {
       if (inserted.changes !== 1) {
         throw new DeliveryPersistenceError(
           "skill.name.conflict",
-          "当前作品已有同名 Writing Skill，请使用其他名称",
+          "A writing skill with this name already exists in this project; please choose another name",
         );
       }
       return skill;
@@ -312,7 +312,7 @@ export class SqliteDeliveryRepository {
       if (duplicate) {
         throw new DeliveryPersistenceError(
           "skill.name.conflict",
-          "当前作品已有同名 Writing Skill，请使用其他名称",
+          "A writing skill with this name already exists in this project; please choose another name",
         );
       }
       const result = this.database.raw
@@ -624,7 +624,7 @@ export class DeliveryVersionConflictError extends Error {
     readonly entity: string,
     readonly id: string,
   ) {
-    super(`${entity} ${id} 已被其他操作更新`);
+    super(`${entity} ${id} was updated by another operation`);
     this.name = "DeliveryVersionConflictError";
   }
 }

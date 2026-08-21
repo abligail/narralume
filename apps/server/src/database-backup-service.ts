@@ -34,7 +34,7 @@ export class DatabaseBackupService {
     if (database.path === ":memory:")
       throw new DatabaseBackupError(
         "backup.memory_database",
-        "内存数据库不支持文件级灾备",
+        "In-memory databases do not support file-based disaster recovery",
       );
     this.backupDirectory = resolve(backupDirectory);
     mkdirSync(this.backupDirectory, { recursive: true });
@@ -46,7 +46,7 @@ export class DatabaseBackupService {
     if (partials.length > 0)
       throw new DatabaseBackupError(
         "backup.partial_detected",
-        `备份目录存在未完成文件：${partials.join("、")}`,
+        `Backup directory contains unfinished files: ${partials.join(", ")}`,
       );
     const manifests = files
       .filter((file) => file.endsWith(".manifest.json"))
@@ -56,7 +56,7 @@ export class DatabaseBackupService {
         } catch (error) {
           throw new DatabaseBackupError(
             "backup.manifest_corrupt",
-            `备份清单损坏：${file}`,
+            `Backup manifest is corrupt: ${file}`,
             error,
           );
         }
@@ -70,13 +70,13 @@ export class DatabaseBackupService {
     if (orphaned.length > 0)
       throw new DatabaseBackupError(
         "backup.orphan_detected",
-        `备份目录存在无清单数据库：${orphaned.join("、")}`,
+        `Backup directory contains databases without a manifest: ${orphaned.join(", ")}`,
       );
     for (const manifest of manifests) {
       if (!existsSync(this.backupPath(manifest.databaseFile)))
         throw new DatabaseBackupError(
           "backup.file_missing",
-          `备份数据库文件不存在：${manifest.databaseFile}`,
+          `Backup database file does not exist: ${manifest.databaseFile}`,
         );
     }
     return manifests.sort((left, right) =>
@@ -103,7 +103,7 @@ export class DatabaseBackupService {
       unlinkSync(temporaryPath);
       throw new DatabaseBackupError(
         "backup.validation_failed",
-        "在线备份未通过 SQLite 完整性校验",
+        "Online backup failed the SQLite integrity check",
       );
     }
     renameSync(temporaryPath, databasePath);
@@ -132,7 +132,7 @@ export class DatabaseBackupService {
     if (!existsSync(databasePath))
       throw new DatabaseBackupError(
         "backup.file_missing",
-        "备份数据库文件不存在",
+        "Backup database file does not exist",
       );
     const sha256 = await hashFile(databasePath);
     const inspection = inspectDatabase(databasePath);
@@ -157,7 +157,7 @@ export class DatabaseBackupService {
     if (!preview.valid)
       throw new DatabaseBackupError(
         "backup.restore.invalid",
-        "备份未通过恢复前校验",
+        "Backup failed the pre-restore validation",
       );
     const requestedTargetDirectory = resolve(targetDirectoryInput);
     mkdirSync(requestedTargetDirectory, { recursive: true });
@@ -171,7 +171,7 @@ export class DatabaseBackupService {
     if (existsSync(databasePath) && !overwrite)
       throw new DatabaseBackupError(
         "backup.restore.target_exists",
-        "目标数据目录已包含数据库；如确认替换，请显式启用覆盖",
+        "Target data directory already contains a database; enable overwrite explicitly to replace it",
       );
     const temporaryPath = resolve(
       targetDirectory,
@@ -189,7 +189,7 @@ export class DatabaseBackupService {
       unlinkSync(temporaryPath);
       throw new DatabaseBackupError(
         "backup.restore.copy_invalid",
-        "恢复副本校验失败，现有数据未被修改",
+        "Restored copy failed validation; existing data was not modified",
       );
     }
     validateRestoreTarget(
@@ -219,10 +219,10 @@ export class DatabaseBackupService {
 
   private requireManifest(id: string) {
     if (!/^[0-9a-f-]{36}$/u.test(id))
-      throw new DatabaseBackupError("backup.id.invalid", "备份 ID 不合法");
+      throw new DatabaseBackupError("backup.id.invalid", "Invalid backup ID");
     const path = this.manifestPath(id);
     if (!existsSync(path))
-      throw new DatabaseBackupError("backup.not_found", "完整备份不存在");
+      throw new DatabaseBackupError("backup.not_found", "Backup not found");
     return this.readManifestFile(path);
   }
 
@@ -240,13 +240,13 @@ export class DatabaseBackupService {
     if (basename(databaseFile) !== databaseFile)
       throw new DatabaseBackupError(
         "backup.path.invalid",
-        "备份清单包含非法路径",
+        "Backup manifest contains an invalid path",
       );
     const path = resolve(this.backupDirectory, databaseFile);
     if (dirname(path) !== this.backupDirectory)
       throw new DatabaseBackupError(
         "backup.path.invalid",
-        "备份文件超出配置目录",
+        "Backup file lies outside the configured directory",
       );
     return path;
   }
@@ -261,19 +261,19 @@ function validateRestoreTarget(
   if (resolvedTarget === parse(resolvedTarget).root)
     throw new DatabaseBackupError(
       "backup.restore.root_forbidden",
-      "不能把磁盘根目录直接用作数据目录",
+      "A filesystem root cannot be used directly as a data directory",
     );
   assertNoLinkedPath(resolvedTarget);
   const realTarget = realpathSync.native(resolvedTarget);
   if (realTarget === currentDirectory)
     throw new DatabaseBackupError(
       "backup.restore.current_directory",
-      "运行中的数据目录不能被原地覆盖；请选择新的目录",
+      "The live data directory cannot be overwritten in place; choose a different directory",
     );
   if (realTarget === realpathSync.native(backupDirectory))
     throw new DatabaseBackupError(
       "backup.restore.backup_directory",
-      "备份目录不能同时用作恢复数据目录",
+      "The backup directory cannot also be used as the restore data directory",
     );
   return realTarget;
 }
@@ -288,7 +288,7 @@ function assertNoLinkedPath(path: string): void {
     if (lstatSync(current).isSymbolicLink())
       throw new DatabaseBackupError(
         "backup.restore.link_forbidden",
-        "恢复数据目录不能包含符号链接或目录联接",
+        "The restore data directory must not contain symbolic links or junctions",
       );
   }
 }
@@ -334,13 +334,13 @@ export function replaceDatabaseFile(
     } catch (rollbackError) {
       throw new DatabaseBackupError(
         "backup.restore.rollback_failed",
-        `恢复安装失败，旧数据库保留在 ${previousPath}`,
+        `Restore install failed; the previous database was kept at ${previousPath}`,
         new AggregateError([error, rollbackError]),
       );
     }
     throw new DatabaseBackupError(
       "backup.restore.install_failed",
-      "恢复安装失败，原数据库已还原",
+      "Restore install failed; the original database was rolled back",
       error,
     );
   }

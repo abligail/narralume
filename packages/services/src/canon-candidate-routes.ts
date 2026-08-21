@@ -75,7 +75,7 @@ export function registerCanonCandidateRoutes(
           ) {
             throw new CanonCandidateRouteError(
               "canon_candidate.idempotency_conflict",
-              "同一个 requestId 已用于不同的 Canon 候选请求",
+              "The same requestId was already used for a different Canon candidate request",
               409,
             );
           }
@@ -92,7 +92,7 @@ export function registerCanonCandidateRoutes(
         if (activeRun) {
           throw new CanonCandidateRouteError(
             "canon_candidate.active_run_exists",
-            `当前 Canon 页面已有进行中的候选任务：${activeRun.id}`,
+            `The current Canon spread already has an active candidate run: ${activeRun.id}`,
             409,
           );
         }
@@ -186,7 +186,11 @@ export function registerCanonCandidateRoutes(
 function requireProject(projects: SqliteProjectRepository, projectId: string) {
   const project = projects.get(projectId);
   if (!project)
-    throw new CanonCandidateRouteError("project.not_found", "作品不存在", 404);
+    throw new CanonCandidateRouteError(
+      "project.not_found",
+      "Project not found",
+      404,
+    );
   return project;
 }
 

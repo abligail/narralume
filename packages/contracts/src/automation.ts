@@ -50,7 +50,10 @@ export const StoryCompassSchema = z.object({
 export const GenerateFoundationRequestSchema = z
   .object({
     requestId: IdSchema,
-    braindump: z.string().trim().min(1, "命题与脑暴不能为空"),
+    braindump: z
+      .string()
+      .trim()
+      .min(1, "Premise and braindump must not be empty"),
     policy: ModelExecutionPolicySchema.optional(),
     preferences: z
       .object({

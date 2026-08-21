@@ -6,6 +6,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
+import { setLocale } from "../src/i18n";
 import { BibleWorkspace } from "../src/workspaces/bible";
 
 /* CR-65：故事圣经表单在资源刷新后必须重置本地字段，不能用新令牌提交旧内容。 */
@@ -57,6 +58,7 @@ function json(value: unknown, status = 200) {
 }
 
 beforeEach(() => {
+  setLocale("zh-CN");
   Object.defineProperty(window, "matchMedia", {
     configurable: true,
     writable: true,

@@ -191,7 +191,11 @@ export function registerDeliveryRoutes(
   app.route("DELETE", "/api/writing-skills/:skillId", async (request) => {
     const { skillId } = SkillParamsSchema.parse(request.params);
     if (!delivery.getWritingSkill(skillId))
-      throw new DeliveryRouteError("skill.not_found", "写作 Skill 不存在", 404);
+      throw new DeliveryRouteError(
+        "skill.not_found",
+        "Writing skill not found",
+        404,
+      );
     delivery.deleteWritingSkill(skillId);
     return { status: 204 };
   });
@@ -247,7 +251,11 @@ export function registerDeliveryRoutes(
     const { skillId } = SkillParamsSchema.parse(request.params);
     const skill = delivery.getWritingSkill(skillId);
     if (!skill)
-      throw new DeliveryRouteError("skill.not_found", "写作 Skill 不存在", 404);
+      throw new DeliveryRouteError(
+        "skill.not_found",
+        "Writing skill not found",
+        404,
+      );
     const bytes = await buildWritingSkillZip(
       skill,
       delivery.listWritingSkillReferences(skill.id),
@@ -272,7 +280,7 @@ export function registerDeliveryRoutes(
       if (!skill)
         throw new DeliveryRouteError(
           "skill.not_found",
-          "写作 Skill 不存在",
+          "Writing skill not found",
           404,
         );
       const applicable =
@@ -283,22 +291,22 @@ export function registerDeliveryRoutes(
           passed: skill.instructions.trim().length >= 20,
           message:
             skill.instructions.trim().length >= 20
-              ? "指令内容可运行"
-              : "指令内容过短",
+              ? "Instructions are long enough to assemble"
+              : "Instructions are too short",
         },
         {
           id: "scope",
           passed: applicable,
           message: applicable
-            ? `会在 ${input.scope} 作用域装配`
-            : `不会在 ${input.scope} 作用域装配`,
+            ? `Will be assembled in the "${input.scope}" scope`
+            : `Will not be assembled in the "${input.scope}" scope`,
         },
         {
           id: "references",
           passed: delivery
             .listWritingSkillReferences(skill.id)
             .every((reference) => reference.contentHash.length === 64),
-          message: "引用文档均有内容哈希",
+          message: "All references have a content hash",
         },
       ];
       return WritingSkillValidationSchema.parse({
@@ -379,7 +387,11 @@ export function registerDeliveryRoutes(
     const { batchId } = ImportParamsSchema.parse(request.params);
     const detail = delivery.getImportBatchDetail(batchId);
     if (!detail)
-      throw new DeliveryRouteError("import.not_found", "导入批次不存在", 404);
+      throw new DeliveryRouteError(
+        "import.not_found",
+        "Import batch not found",
+        404,
+      );
     return ImportBatchDetailSchema.parse(detail);
   });
 
@@ -392,7 +404,7 @@ export function registerDeliveryRoutes(
       if (["applied", "discarded"].includes(batch.status)) {
         throw new DeliveryRouteError(
           "import.candidate.batch_terminal",
-          "导入批次已经结束，不能再修改候选状态",
+          "The import batch has ended and candidate states can no longer be changed",
           409,
         );
       }
@@ -422,7 +434,7 @@ export function registerDeliveryRoutes(
       if (replay.run.policy.creationRequestHash !== requestHash) {
         throw new DeliveryRouteError(
           "import.analysis.idempotency_conflict",
-          "同一个 requestId 已用于不同的导入分析请求",
+          "The same requestId was already used for a different import analysis request",
           409,
         );
       }
@@ -437,7 +449,7 @@ export function registerDeliveryRoutes(
     if (!batch.targetProjectId) {
       throw new DeliveryRouteError(
         "import.analysis.target_required",
-        "AI 拆书需要先选择一个目标作品",
+        "AI splitting requires a target project",
         409,
       );
     }
@@ -445,7 +457,7 @@ export function registerDeliveryRoutes(
     if (batch.format === "narrative-bundle") {
       throw new DeliveryRouteError(
         "import.analysis.not_needed",
-        "完整作品包无需再次拆解",
+        "A complete project bundle does not need splitting",
         409,
       );
     }
@@ -460,8 +472,8 @@ export function registerDeliveryRoutes(
       throw new DeliveryRouteError(
         "import.analysis.not_available",
         batch.status === "analyzing"
-          ? "该导入批次已有进行中的分析任务"
-          : "该导入批次当前不能重新分析",
+          ? "The import batch already has an analysis run in progress"
+          : "The import batch cannot be re-analyzed right now",
         409,
       );
     }
@@ -608,7 +620,7 @@ export function registerDeliveryRoutes(
         if (replay.requestHash !== requestHash) {
           throw new DeliveryRouteError(
             "backup.restore.idempotency_conflict",
-            "同一个 requestId 已用于不同的备份恢复请求",
+            "The same requestId was already used for a different backup restore request",
             409,
           );
         }
@@ -665,6 +677,6 @@ export function deliveryErrorStatus(error: DeliveryServiceError) {
 
 function requireProject(projects: SqliteProjectRepository, projectId: string) {
   if (!projects.get(projectId)) {
-    throw new DeliveryRouteError("project.not_found", "作品不存在", 404);
+    throw new DeliveryRouteError("project.not_found", "Project not found", 404);
   }
 }

@@ -40,6 +40,8 @@ import {
 } from "@narralume/contracts";
 
 import { kernelRequest } from "../kernel/kernel-client";
+import { getLocale, translate, type MessageKey } from "../i18n";
+import { errors as zhErrors } from "../i18n/zh/errors";
 import {
   currentDriverMode,
   readDriverOverride,
@@ -106,36 +108,30 @@ export class ApiError extends Error {
 }
 
 export function apiErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : "请求失败";
+  if (error instanceof ApiError) {
+    const key = errorLookupKey(`message.${errorCodeKey(error.code)}`);
+    if (key) return translate(getLocale(), key);
+    return error.message;
+  }
+  if (error instanceof Error) return error.message;
+  return translate(getLocale(), "errors.message.requestFailed");
 }
 
-const ERROR_HINTS: Record<string, string> = {
-  "request.unknown_field":
-    "请求体包含未识别字段，说明前端仍在发送废弃契约；请升级前端后重试。",
-  "assignment.model_limits.required":
-    "写作 / 规划 / 审稿岗位的模型必须声明 contextWindow 与 maxOutputTokens 物理上限。",
-  "assignment.task_type.mismatch":
-    "模型的任务类型与目标岗位不一致，请选择 taskType 相同的模型。",
-  "assignment.model.disabled": "该模型已停用，先启用再分配。",
-  "assignment.provider.disabled": "模型所属 Provider 已停用，先启用再分配。",
-  "provider.assignment_in_use": "Provider 下仍有已分配模型，请先调整模型分配。",
-  "provider.models_in_use": "Provider 下仍有模型，请先删除或移动这些模型。",
-  "provider.environment_managed": "环境托管的 Provider 不能删除，可以将其停用。",
-  "provider.credential.required":
-    "创建 Provider 需要提供 credentialRef（原始密钥或 env:NAME 引用）。",
-  "model.environment_managed": "环境托管的模型不能删除，可以将其停用。",
-  "model.assignment_in_use": "模型仍被模型分配引用，请先调整分配。",
-  "model.identity_in_use":
-    "模型已有运行历史，Provider、上游模型名与任务类型不可修改；请新建模型。",
-  "model.history_in_use": "模型已有运行历史，不能删除；可以将其停用。",
-  "model.duplicate": "同一 Provider 下相同上游模型与任务类型的模型已存在。",
-  "model.assignment.unavailable":
-    "请先配置可用的写作（writing）模型分配，并声明上下文与输出上限。",
-  "model.credential.missing": "模型配置缺少服务端密钥。",
-  "run.terminal": "运行已处于终态，不能再执行该操作。",
-  "run.stream.not_found": "对应的 partial 流不存在，可能已被处理。",
-  "route.not_found": "接口不存在。",
-};
+/** 后端错误码（request.unknown_field、assignment.model_limits.required 等）转字典键的 camelCase。 */
+function errorCodeKey(code: string): string {
+  return code.replace(/[._-](\w)/g, (_sep, ch: string) => ch.toUpperCase());
+}
+
+/* 错误提示统一查 errors 字典（zh 为结构真相）；运行期按 code 拼键，先校验存在再翻译，
+   避免未知 code 落入 translate 的 missing-key 告警。 */
+function errorLookupKey(path: string): MessageKey | null {
+  let node: unknown = zhErrors;
+  for (const part of path.split(".")) {
+    if (!node || typeof node !== "object") return null;
+    node = (node as Record<string, unknown>)[part];
+  }
+  return typeof node === "string" ? (`errors.${path}` as MessageKey) : null;
+}
 
 /** 按后端错误码给出可读补充提示（探测失败阶段等由 details 另行渲染）。 */
 export function apiErrorHint(error: unknown): string | null {
@@ -143,16 +139,25 @@ export function apiErrorHint(error: unknown): string | null {
   if (error.code === "policy.unknown_field") {
     const fields = detailStringList(error.details, "fields");
     return fields.length
-      ? `策略包含未识别字段：${fields.join("、")}，请移除后重试。`
-      : "策略包含未识别字段，请移除后重试。";
+      ? translate(getLocale(), "errors.hint.policyUnknownFieldFields", {
+          fields: fields.join(fieldSeparator()),
+        })
+      : translate(getLocale(), "errors.hint.policyUnknownField");
   }
   if (error.code === "request.unknown_field") {
     const fields = detailStringList(error.details, "fields");
     return fields.length
-      ? `请求体包含未识别字段：${fields.join("、")}。${ERROR_HINTS["request.unknown_field"]}`
-      : (ERROR_HINTS["request.unknown_field"] ?? null);
+      ? translate(getLocale(), "errors.hint.requestUnknownFieldFields", {
+          fields: fields.join(fieldSeparator()),
+        })
+      : translate(getLocale(), "errors.hint.requestUnknownField");
   }
-  return ERROR_HINTS[error.code] ?? null;
+  const key = errorLookupKey(`hint.${errorCodeKey(error.code)}`);
+  return key ? translate(getLocale(), key) : null;
+}
+
+function fieldSeparator(): string {
+  return getLocale() === "zh-CN" ? "、" : ", ";
 }
 
 function detailStringList(details: unknown, key: string): string[] {

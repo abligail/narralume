@@ -155,7 +155,7 @@ export class SqliteAssistantLongGoalRepository {
     if (result.changes !== 1) {
       throw new AssistantLongGoalConflictError(
         "assistant.long_goal.conflict",
-        `长期目标版本已从 ${expectedVersion} 变化`,
+        `Long-term goal version has changed from ${expectedVersion}`,
       );
     }
     return this.requireGoal(id);

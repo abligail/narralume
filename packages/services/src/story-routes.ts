@@ -169,7 +169,7 @@ export function registerStoryRoutes(
     const { projectId } = ProjectParamsSchema.parse(request.params);
     const result = overview.get(projectId);
     if (!result) {
-      throw new StoryRouteError("project.not_found", "作品不存在", 404);
+      throw new StoryRouteError("project.not_found", "Project not found", 404);
     }
     return ProjectOverviewSchema.parse(result);
   });
@@ -189,7 +189,7 @@ export function registerStoryRoutes(
         if (replay.requestHash !== requestHash) {
           throw new StoryRouteError(
             "project.create.idempotency_conflict",
-            "同一个 requestId 已用于不同的空白建书请求",
+            "The same requestId was already used for a different blank-book creation request",
             409,
           );
         }
@@ -236,14 +236,18 @@ export function registerStoryRoutes(
       const input = UpdateProjectRequestSchema.parse(request.body);
       const current = projects.get(projectId);
       if (!current)
-        throw new StoryRouteError("project.not_found", "作品不存在", 404);
+        throw new StoryRouteError(
+          "project.not_found",
+          "Project not found",
+          404,
+        );
       // 资料与封面在同一事务中提交：版本前提失败时封面也不会被改动（CR-83）。
       const updated = database.transaction(() => {
         const latest = projects.get(projectId);
         if (!latest || latest.updatedAt !== input.expectedUpdatedAt)
           throw new StoryRouteError(
             "project.version.conflict",
-            "作品信息已变化，请刷新后再修改",
+            "The project details have changed; refresh before editing again",
             409,
           );
         const updatedAt = nextUpdatedAt(latest.updatedAt);
@@ -323,19 +327,19 @@ export function registerStoryRoutes(
     if (!project?.deletedAt)
       throw new StoryRouteError(
         "project.recycle.not_found",
-        "回收站中不存在该作品",
+        "The project is not in the recycle bin",
         404,
       );
     if (project.title !== input.confirmationTitle)
       throw new StoryRouteError(
         "project.purge.confirmation_mismatch",
-        "确认标题与作品标题不一致",
+        "The confirmation title does not match the project title",
         422,
       );
     if (!projects.purge(projectId, input.deletionToken))
       throw new StoryRouteError(
         "project.purge.token_mismatch",
-        "删除凭证无效，请刷新回收站后重试",
+        "The deletion token is invalid; refresh the recycle bin and try again",
         409,
       );
     return { status: 204 };
@@ -344,7 +348,7 @@ export function registerStoryRoutes(
   app.route("GET", "/api/projects/:projectId/story-bible", async (request) => {
     const { projectId } = ProjectParamsSchema.parse(request.params);
     const project = projects.get(projectId);
-    if (!project) return notFound("project.not_found", "作品不存在");
+    if (!project) return notFound("project.not_found", "Project not found");
     return StoryBibleSnapshotSchema.parse({
       project,
       intent: story.getAuthorIntent(projectId),
@@ -366,13 +370,13 @@ export function registerStoryRoutes(
   app.route("PUT", "/api/projects/:projectId/intent", async (request) => {
     const { projectId } = ProjectParamsSchema.parse(request.params);
     if (!projects.get(projectId))
-      return notFound("project.not_found", "作品不存在");
+      return notFound("project.not_found", "Project not found");
     const input = UpdateAuthorIntentRequestSchema.parse(request.body);
     const current = story.getAuthorIntent(projectId);
     if ((current?.updatedAt ?? null) !== input.expectedUpdatedAt) {
       throw new StoryRouteError(
         "intent.version.conflict",
-        "作者意图已被其他流程更新，请刷新后再编辑",
+        "The author intent was updated by another process; refresh before editing",
         409,
       );
     }
@@ -444,7 +448,7 @@ export function registerStoryRoutes(
       if (current.updatedAt !== input.expectedUpdatedAt) {
         throw new StoryRouteError(
           "outline.version.conflict",
-          "大纲节点已被其他流程更新，请刷新后再编辑",
+          "The outline node was updated by another process; refresh before editing",
           409,
         );
       }
@@ -496,13 +500,13 @@ export function registerStoryRoutes(
       if (current.updatedAt !== input.expectedUpdatedAt)
         throw new StoryRouteError(
           "outline.version.conflict",
-          "大纲节点已变化，请刷新后再移除",
+          "The outline node has changed; refresh before removing it",
           409,
         );
       if (current.kind === "book")
         throw new StoryRouteError(
           "outline.root.protected",
-          "全书根节点不能移除",
+          "The book root node cannot be removed",
           409,
         );
       const references = story.countOutlineReferences(nodeId);
@@ -537,7 +541,7 @@ export function registerStoryRoutes(
       if (current.updatedAt !== input.expectedUpdatedAt)
         throw new StoryRouteError(
           "canon.entity.version.conflict",
-          "实体已变化，请刷新后再移除",
+          "The entity has changed; refresh before removing it",
           409,
         );
       const references = canon.countEntityReferences(entityId);
@@ -603,7 +607,7 @@ export function registerStoryRoutes(
       if (current.updatedAt !== input.expectedUpdatedAt) {
         throw new StoryRouteError(
           "canon.entity.version.conflict",
-          "实体已被其他流程更新，请刷新后再编辑",
+          "The entity was updated by another process; refresh before editing",
           409,
         );
       }
@@ -697,11 +701,15 @@ export function registerStoryRoutes(
       const input = RemoveStoryResourceRequestSchema.parse(request.body);
       const current = state.getRelationship(projectId, relationshipId);
       if (!current)
-        throw new StoryRouteError("relationship.not_found", "关系不存在", 404);
+        throw new StoryRouteError(
+          "relationship.not_found",
+          "Relationship not found",
+          404,
+        );
       if (current.createdAt !== input.expectedUpdatedAt)
         throw new StoryRouteError(
           "relationship.version.conflict",
-          "关系已变化，请刷新后再移除",
+          "The relationship has changed; refresh before removing it",
           409,
         );
       const removed = state.removeRelationship(projectId, relationshipId, {
@@ -767,13 +775,13 @@ export function registerStoryRoutes(
       if (!current)
         throw new StoryRouteError(
           "timeline.not_found",
-          "时间线事件不存在",
+          "Timeline event not found",
           404,
         );
       if (current.updatedAt !== input.expectedUpdatedAt)
         throw new StoryRouteError(
           "timeline.version.conflict",
-          "时间线事件已变化，请刷新后再移除",
+          "The timeline event has changed; refresh before removing it",
           409,
         );
       const removed = state.removeTimelineEvent(
@@ -849,13 +857,13 @@ export function registerStoryRoutes(
       if (!current)
         throw new StoryRouteError(
           "timeline.not_found",
-          "时间线事件不存在",
+          "Timeline event not found",
           404,
         );
       if (current.updatedAt !== input.expectedUpdatedAt)
         throw new StoryRouteError(
           "timeline.version.conflict",
-          "时间线事件已变化，请刷新后再编辑",
+          "The timeline event has changed; refresh before editing",
           409,
         );
       const { expectedUpdatedAt, ...fields } = input;
@@ -885,11 +893,15 @@ export function registerStoryRoutes(
         .listForeshadows(projectId)
         .find((item) => item.id === foreshadowId);
       if (!current)
-        throw new StoryRouteError("foreshadow.not_found", "伏笔不存在", 404);
+        throw new StoryRouteError(
+          "foreshadow.not_found",
+          "Foreshadow not found",
+          404,
+        );
       if (current.updatedAt !== input.expectedUpdatedAt)
         throw new StoryRouteError(
           "foreshadow.version.conflict",
-          "伏笔已变化，请刷新后再移除",
+          "The foreshadow has changed; refresh before removing it",
           409,
         );
       const removed = state.removeForeshadow(
@@ -930,11 +942,15 @@ export function registerStoryRoutes(
         .listForeshadows(projectId)
         .find((item) => item.id === foreshadowId);
       if (!current)
-        throw new StoryRouteError("foreshadow.not_found", "伏笔不存在", 404);
+        throw new StoryRouteError(
+          "foreshadow.not_found",
+          "Foreshadow not found",
+          404,
+        );
       if (current.updatedAt !== input.expectedUpdatedAt)
         throw new StoryRouteError(
           "foreshadow.version.conflict",
-          "伏笔已被其他流程更新，请刷新后再编辑",
+          "The foreshadow was updated by another process; refresh before editing",
           409,
         );
       return ForeshadowSchema.parse(
@@ -973,7 +989,7 @@ export function registerStoryRoutes(
         if (replay.requestHash !== requestHash) {
           throw new StoryRouteError(
             "document.create.idempotency_conflict",
-            "同一个 requestId 已用于不同的稿件创建请求",
+            "The same requestId was already used for a different document creation request",
             409,
           );
         }
@@ -985,7 +1001,7 @@ export function registerStoryRoutes(
         if (!input.outlineNodeId) {
           throw new StoryRouteError(
             "document.outline_node.required",
-            "章节或场景正文必须绑定对应的大纲节点",
+            "Chapter or scene manuscripts must be bound to their outline node",
             422,
           );
         }
@@ -993,21 +1009,21 @@ export function registerStoryRoutes(
         if (!target || target.kind !== input.kind) {
           throw new StoryRouteError(
             "document.outline_node.invalid",
-            "正文绑定的大纲节点不存在或类型不匹配",
+            "The outline node bound to the manuscript does not exist or has the wrong kind",
             422,
           );
         }
         if (documents.getByOutlineNodeId(projectId, input.outlineNodeId)) {
           throw new StoryRouteError(
             "document.outline_node.in_use",
-            "该大纲节点已经有正文文档",
+            "The outline node already has a manuscript document",
             409,
           );
         }
       } else if (input.outlineNodeId) {
         throw new StoryRouteError(
           "document.outline_node.unsupported",
-          "只有章节或场景正文可以绑定大纲节点",
+          "Only chapter or scene manuscripts can be bound to an outline node",
           422,
         );
       }
@@ -1082,7 +1098,7 @@ export function registerStoryRoutes(
       if (!target)
         throw new StoryRouteError(
           "document.version.not_found",
-          "要恢复的版本不存在",
+          "The version to restore does not exist",
           404,
         );
       // 恢复 = 以目标版本内容再走一次提交副作用链（含自动结算）。
@@ -1145,7 +1161,7 @@ function requireProject(
   projectId: string,
 ): void {
   if (!projects.get(projectId)) {
-    throw new StoryRouteError("project.not_found", "作品不存在", 404);
+    throw new StoryRouteError("project.not_found", "Project not found", 404);
   }
 }
 

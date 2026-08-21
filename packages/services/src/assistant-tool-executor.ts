@@ -80,7 +80,7 @@ export class AssistantToolExecutor {
     if (!project) {
       throw new AssistantToolExecutionError(
         "project.not_found",
-        "作品不存在",
+        "Project not found",
         404,
       );
     }
@@ -90,7 +90,7 @@ export class AssistantToolExecutor {
     ) {
       throw new AssistantToolExecutionError(
         "assistant.tool.read_only",
-        "只读查询不需要交办执行",
+        "Read-only queries do not need delegated execution",
         409,
       );
     }
@@ -248,7 +248,7 @@ export class AssistantToolExecutor {
     if (target.kind !== "chapter") {
       throw new AssistantToolExecutionError(
         "run.target.not_chapter",
-        "章节生产只能选择章节节点",
+        "Chapter production requires a chapter outline node",
         422,
       );
     }
@@ -260,7 +260,7 @@ export class AssistantToolExecutor {
       if (!template) {
         throw new AssistantToolExecutionError(
           "recipe.template.missing",
-          "章节生产配方模板不存在",
+          "Chapter production recipe template not found",
           500,
         );
       }
@@ -441,7 +441,7 @@ export class AssistantToolExecutor {
       if (activeRun) {
         throw new AssistantToolExecutionError(
           "canon_candidate.active_run_exists",
-          `当前 Canon 页面已有进行中的候选任务：${activeRun.id}`,
+          `The current Canon spread already has an active candidate run: ${activeRun.id}`,
           409,
         );
       }
@@ -510,14 +510,14 @@ export class AssistantToolExecutor {
     if (!document) {
       throw new AssistantToolExecutionError(
         "document.not_found",
-        "当前作品中不存在该文档",
+        "The document does not exist in this project",
         404,
       );
     }
     if (!document.currentVersionId) {
       throw new AssistantToolExecutionError(
         "document.version.missing",
-        "该稿件还没有可作为基线的正文版本",
+        "This manuscript has no manuscript version to use as a baseline",
         409,
       );
     }
@@ -529,7 +529,7 @@ export class AssistantToolExecutor {
     if (!baseVersion) {
       throw new AssistantToolExecutionError(
         "document.version.not_found",
-        "选区基础版本不存在",
+        "Selection base version not found",
         404,
       );
     }
@@ -539,7 +539,7 @@ export class AssistantToolExecutor {
     ) {
       throw new AssistantToolExecutionError(
         "edit.selection.invalid",
-        "选区超出当前正文范围，请重新选择后再发起",
+        "The selection is outside the current manuscript; re-select and try again",
         422,
       );
     }
@@ -599,7 +599,7 @@ export class AssistantToolExecutor {
     if (!coordinator) {
       throw new AssistantToolExecutionError(
         "assistant.long_goal.unavailable",
-        "复合创作任务协调器未启用",
+        "The composite creation coordinator is not enabled",
         503,
       );
     }
@@ -673,7 +673,7 @@ export class AssistantToolExecutor {
       if (!run || run.projectId !== projectId) {
         throw new AssistantToolExecutionError(
           "run.not_found",
-          "当前作品中不存在该运行",
+          "The run does not exist in this project",
           404,
         );
       }
@@ -697,11 +697,11 @@ export class AssistantToolExecutor {
       } else if (run.status === "failed_recoverable") {
         throw new AssistantToolExecutionError(
           "assistant.tool.action_unavailable",
-          "该运行正在等待自动重试或残稿处理，不能直接继续",
+          "This run is waiting for an automatic retry or a partial-manuscript decision and cannot be resumed directly",
           409,
         );
       } else if (run.status !== "running" && run.status !== "pending") {
-        throw terminalControl("运行", run.status, action);
+        throw terminalControl("Run", run.status, action);
       }
       this.wakeRuns();
       return {
@@ -714,13 +714,13 @@ export class AssistantToolExecutor {
     if (!session || session.projectId !== projectId) {
       throw new AssistantToolExecutionError(
         "autopilot_session.not_found",
-        "当前作品中不存在该连续创作任务",
+        "The writing session does not exist in this project",
         404,
       );
     }
     if (isSessionResolutionAction(action)) {
       if (session.status !== "failed") {
-        throw terminalControl("连续创作", session.status, action);
+        throw terminalControl("Autopilot session", session.status, action);
       }
       if (session.lastError?.code === "child.fatal" && action !== "stop") {
         requireWritingAssignment(this.database, this.options.environment);
@@ -779,7 +779,7 @@ export class AssistantToolExecutor {
       }
       this.automation.resumeSession(sourceId, now);
     } else if (!["pending", "planning", "running"].includes(session.status)) {
-      throw terminalControl("连续创作", session.status, action);
+      throw terminalControl("Writing session", session.status, action);
     }
     this.wakeRuns();
     this.wakeAutopilot();
@@ -799,7 +799,7 @@ export class AssistantToolExecutor {
     if (session) {
       throw new AssistantToolExecutionError(
         "project.writing_task.active",
-        `作品已有进行中的快速创作任务：${session.id}`,
+        `The project already has an active autopilot session: ${session.id}`,
         409,
       );
     }
@@ -809,7 +809,7 @@ export class AssistantToolExecutor {
     if (run) {
       throw new AssistantToolExecutionError(
         "project.writing_task.active",
-        `作品已有进行中的章节任务：${run.id}`,
+        `The project already has an active chapter run: ${run.id}`,
         409,
       );
     }
@@ -856,7 +856,7 @@ function errorCode(error: unknown): string {
 }
 
 function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : "工具执行失败";
+  return error instanceof Error ? error.message : "Tool execution failed";
 }
 
 function assistantPolicy(
@@ -932,7 +932,7 @@ function requiredEnum<const T extends readonly string[]>(
 function invalidArguments(key: string): AssistantToolExecutionError {
   return new AssistantToolExecutionError(
     "assistant.tool.arguments_invalid",
-    `工具参数 ${key} 不合法`,
+    `Invalid tool argument: ${key}`,
     422,
   );
 }
@@ -966,7 +966,7 @@ function isTerminalSessionStatus(status: string): boolean {
 function sourceCollision(id: string): AssistantToolExecutionError {
   return new AssistantToolExecutionError(
     "assistant.tool.source_collision",
-    `确定性任务标识 ${id} 已被其他作品占用`,
+    `Deterministic task id ${id} is already used by another project`,
     409,
   );
 }
@@ -978,7 +978,7 @@ function terminalControl(
 ): AssistantToolExecutionError {
   return new AssistantToolExecutionError(
     "assistant.tool.task_terminal",
-    `${label}处于 ${status}，不能执行 ${action}`,
+    `${label} is in state "${status}" and cannot be ${action}`,
     409,
   );
 }

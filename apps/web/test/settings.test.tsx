@@ -6,6 +6,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { setLocale } from "../src/i18n";
 import { SettingsWorkspace } from "../src/workspaces/settings";
 
 const PROVIDERS = [
@@ -135,6 +136,7 @@ async function openChannelManagement() {
 }
 
 beforeEach(() => {
+  setLocale("zh-CN");
   Object.defineProperty(window, "matchMedia", {
     configurable: true,
     writable: true,

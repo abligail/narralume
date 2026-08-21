@@ -47,7 +47,7 @@ export class ContextCompiler {
     if (duplicateIds.length > 0) {
       throw new ContextCompileError(
         "context.source.duplicate",
-        `上下文来源 ID 重复：${duplicateIds.join(", ")}`,
+        `Duplicate context source IDs: ${duplicateIds.join(", ")}`,
       );
     }
 
@@ -55,7 +55,7 @@ export class ContextCompiler {
       const included = materialize(source, remaining, true);
       if (!included) {
         throw new ContextBudgetError(
-          `必需上下文“${source.label}”超出预算；需要 ${estimateTokens(source.content)}，剩余 ${remaining}`,
+          `Required context "${source.label}" exceeds the budget; needs ${estimateTokens(source.content)}, ${remaining} remaining`,
           available,
           remaining,
           source.id,
@@ -81,7 +81,8 @@ export class ContextCompiler {
           status: "excluded",
           originalTokens: estimateTokens(source.content),
           finalTokens: 0,
-          reason: "预算不足；低于已纳入来源的权威/优先级",
+          reason:
+            "Insufficient budget; lower authority/priority than included sources",
           sourceType: source.sourceType,
           ...(source.sourceId === undefined
             ? {}
@@ -176,10 +177,10 @@ function materialize(
       originalTokens,
       finalTokens: tokenEstimate,
       reason: compressed
-        ? "原文超出剩余预算，使用已有确定性摘要"
+        ? "Full text exceeded the remaining budget; using the existing deterministic summary"
         : required
-          ? "必需来源"
-          : "按权威与优先级纳入",
+          ? "Required source"
+          : "Included by authority and priority",
       sourceType: source.sourceType,
       ...(source.sourceId === undefined
         ? {}
@@ -206,7 +207,7 @@ function validateBudget(request: ContextCompileRequest): void {
     if (!Number.isInteger(value) || value < 0) {
       throw new ContextCompileError(
         "context.budget.invalid",
-        `预算 ${name} 必须是非负整数`,
+        `Budget ${name} must be a non-negative integer`,
       );
     }
   }
@@ -216,7 +217,7 @@ function validateBudget(request: ContextCompileRequest): void {
   ) {
     throw new ContextCompileError(
       "context.budget.no_capacity",
-      "预留预算后没有可用上下文空间",
+      "No context space remains after reserved budgets",
     );
   }
 }

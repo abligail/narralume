@@ -40,6 +40,7 @@ import { Empty } from "../components/empty";
 import { ErrorNote } from "../components/error-note";
 import { IconButton } from "../components/icon-button";
 import { Skeleton } from "../components/skeleton";
+import { getLocale, translate, useI18n } from "../i18n";
 import {
   applyStoryImport,
   createProject,
@@ -88,6 +89,7 @@ export function ShelfWorkspace() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const reduceMotion = useReducedMotion();
+  const { t } = useI18n();
 
   /* Lenis 只上书架；reduced-motion 时不启。层内滚动由 data-lenis-prevent 豁免。 */
   const lenisReady = reduceMotion !== true;
@@ -204,14 +206,14 @@ export function ShelfWorkspace() {
 
   return (
     <div className="shelf">
-      <div className="shelf__cta" role="group" aria-label="建书入口">
+      <div className="shelf__cta" role="group" aria-label={t("shelf.create.ariaLabel")}>
         <button
           type="button"
           className="btn btn--outline"
           onClick={() => setCreateMode("blank")}
         >
           <Plus size={14} strokeWidth={1.5} aria-hidden="true" />
-          空白建书
+          {t("shelf.create.blank")}
         </button>
         <button
           type="button"
@@ -219,7 +221,7 @@ export function ShelfWorkspace() {
           onClick={() => setCreateMode("ai")}
         >
           <Sparkles size={14} strokeWidth={1.5} aria-hidden="true" />
-          AI 引导建书
+          {t("shelf.create.ai")}
         </button>
         <button
           type="button"
@@ -228,7 +230,7 @@ export function ShelfWorkspace() {
           disabled={uploadMutation.isPending}
         >
           <Upload size={14} strokeWidth={1.5} aria-hidden="true" />
-          {uploadMutation.isPending ? "正在传稿…" : "导入旧稿"}
+          {uploadMutation.isPending ? t("shelf.upload.importing") : t("shelf.upload.import")}
         </button>
         <input
           ref={fileInputRef}
@@ -245,14 +247,13 @@ export function ShelfWorkspace() {
 
       <header className="shelf__masthead">
         <p className="shelf__ghost" aria-hidden="true">
-          藏书 · STACKS
+          {t("shelf.ghost")}
         </p>
-        <h1 className="shelf__title">藏书室</h1>
+        <h1 className="shelf__title">{t("shelf.title")}</h1>
         <p className="shelf__kicker mono">01 · Stacks</p>
         {trialMode ? (
           <p className="shelf__kicker" role="note">
-            在线体验：数据仅存本设备浏览器，清站点数据即清空；请勿放置真实作品。
-            内置模型每次最多连续创作 3 章；也可以在设置中连接自己的模型服务；需要备份时，可在「运行驱动」中下载作品库。
+            {t("shelf.trialNote")}
           </p>
         ) : null}
       </header>
@@ -262,8 +263,8 @@ export function ShelfWorkspace() {
           <Search size={14} strokeWidth={1.5} aria-hidden="true" />
           <input
             type="search"
-            aria-label="检索书目"
-            placeholder="检索书名、卷首语或编号…"
+            aria-label={t("shelf.toolbar.searchLabel")}
+            placeholder={t("shelf.toolbar.searchPlaceholder")}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
@@ -275,7 +276,7 @@ export function ShelfWorkspace() {
           onClick={() => setIncludeArchived((value) => !value)}
         >
           <Archive size={13} strokeWidth={1.5} aria-hidden="true" />
-          含归档
+          {t("shelf.toolbar.includeArchived")}
         </button>
         <button
           type="button"
@@ -283,16 +284,16 @@ export function ShelfWorkspace() {
           onClick={() => setRecycleOpen(true)}
         >
           <Trash2 size={13} strokeWidth={1.5} aria-hidden="true" />
-          回收站
+          {t("shelf.recycle.title")}
         </button>
-        <div className="shelf__view-switch" role="group" aria-label="书目视图">
+        <div className="shelf__view-switch" role="group" aria-label={t("shelf.toolbar.viewLabel")}>
           <button
             type="button"
             aria-pressed={view === "covers"}
             onClick={() => selectView("covers")}
           >
             <LayoutGrid size={13} strokeWidth={1.5} aria-hidden="true" />
-            封面
+            {t("shelf.toolbar.viewCovers")}
           </button>
           <button
             type="button"
@@ -300,14 +301,14 @@ export function ShelfWorkspace() {
             onClick={() => selectView("list")}
           >
             <Rows3 size={13} strokeWidth={1.5} aria-hidden="true" />
-            列表
+            {t("shelf.toolbar.viewList")}
           </button>
         </div>
       </div>
 
       {actionError !== null ? (
         <div style={{ marginTop: "1rem" }}>
-          <ErrorNote error={actionError} title="操作没有写成" />
+          <ErrorNote error={actionError} title={t("shelf.error.action")} />
         </div>
       ) : null}
 
@@ -317,13 +318,13 @@ export function ShelfWorkspace() {
         </div>
       ) : projectsQuery.isError ? (
         <div style={{ marginTop: "2rem" }}>
-          <ErrorNote error={projectsQuery.error} title="书架暂时无法加载" />
+          <ErrorNote error={projectsQuery.error} title={t("shelf.error.load")} />
         </div>
       ) : isEmpty ? (
         <div className="shelf__empty">
-          <p className="shelf__empty-line">架上尚无一册</p>
+          <p className="shelf__empty-line">{t("shelf.empty.title")}</p>
           <p className="shelf__empty-sub">
-            从一张白纸开始，或把旧稿交给 AI 拆解入藏。
+            {t("shelf.empty.sub")}
           </p>
           <button
             type="button"
@@ -331,22 +332,22 @@ export function ShelfWorkspace() {
             onClick={() => setCreateMode("blank")}
           >
             <Plus size={14} strokeWidth={1.5} aria-hidden="true" />
-            建一本书
+            {t("shelf.empty.cta")}
           </button>
         </div>
       ) : rows.length === 0 ? (
         <div className="shelf__catalog">
           <Empty
-            title="没有相符的书目"
-            description="换个关键词，或关闭「含归档」再试。"
+            title={t("shelf.noMatch.title")}
+            description={t("shelf.noMatch.description")}
           />
         </div>
       ) : (
         <div className="shelf__catalog">
           <div className="shelf__catalog-head">
-            <span className="mono">{rows.length} 部作品</span>
+            <span className="mono">{t("shelf.catalog.worksCount", { count: rows.length })}</span>
             <span className="shelf__catalog-rule" aria-hidden="true" />
-            <span className="mono">最近更新 · {formatRelativeDate(rows[0]!.updatedAt)}</span>
+            <span className="mono">{t("shelf.catalog.latestUpdate", { date: formatRelativeDate(rows[0]!.updatedAt) })}</span>
           </div>
           {view === "covers" ? <div className="shelf__bookshelf">
           {rows.map((project) => (
@@ -367,7 +368,7 @@ export function ShelfWorkspace() {
               <button
                 type="button"
                 className="shelf-book__open"
-                aria-label={`打开《${project.title}》`}
+                aria-label={t("shelf.book.open", { name: project.title })}
                 onClick={() => openProject(project)}
               />
               <div className="shelf-book__cover-wrap">
@@ -376,15 +377,15 @@ export function ShelfWorkspace() {
               <div className="shelf-book__info">
                 <div className="shelf-book__title-row">
                   <h2 className="shelf-book__title">{project.title}</h2>
-                  {project.archivedAt ? <span className="shelf-book__archived-tag mono">归档</span> : null}
+                  {project.archivedAt ? <span className="shelf-book__archived-tag mono">{t("shelf.book.archived")}</span> : null}
                 </div>
                 <p className="shelf-book__subtitle">{project.subtitle ?? projectPhaseLabel(project.phase)}</p>
                 <p className="shelf-book__premise" data-empty={project.premise ? "false" : "true"}>
-                  {project.premise ?? "卷首尚待题写。"}
+                  {project.premise ?? t("shelf.book.noPremise")}
                 </p>
                 <div className="shelf-book__meta mono">
-                  <span>{chapterCount(project)} 章</span>
-                  <span>{project.wordCount ?? 0} 字</span>
+                  <span>{t("shelf.book.chapters", { count: chapterCount(project) })}</span>
+                  <span>{t("common.state.characters", { count: project.wordCount ?? 0 })}</span>
                   <span>{formatRelativeDate(project.updatedAt)}</span>
                 </div>
               </div>
@@ -405,9 +406,9 @@ export function ShelfWorkspace() {
           </div> : (
             <div className="shelf__list">
               <div className="shelf-list__head" aria-hidden="true">
-                <span className="mono">编号</span>
-                <span className="mono">书名 · 卷首语</span>
-                <span className="mono">章 · 阶段 · 更新</span>
+                <span className="mono">{t("shelf.catalog.headNo")}</span>
+                <span className="mono">{t("shelf.catalog.headTitle")}</span>
+                <span className="mono">{t("shelf.catalog.headMeta")}</span>
                 <span />
                 <span />
               </div>
@@ -424,18 +425,18 @@ export function ShelfWorkspace() {
                   })}
                   style={{ transformStyle: "preserve-3d" }}
                 >
-                  <button type="button" className="shelf-row__open" aria-label={`打开《${project.title}》`} onClick={() => openProject(project)} />
+                  <button type="button" className="shelf-row__open" aria-label={t("shelf.book.open", { name: project.title })} onClick={() => openProject(project)} />
                   <span className="shelf-row__no">
                     <span className="mono">NO.{String(index + 1).padStart(2, "0")}</span>
                     <span className="shelf-row__id mono">{shortId(project.id)}</span>
                   </span>
                   <span className="shelf-row__body">
                     <span className="shelf-row__title">{project.title}</span>
-                    <span className="shelf-row__premise" data-empty={project.premise ? "false" : "true"}>{project.premise ?? "——卷首待题"}</span>
+                    <span className="shelf-row__premise" data-empty={project.premise ? "false" : "true"}>{project.premise ?? t("shelf.book.noPremiseRow")}</span>
                   </span>
                   <span className="shelf-row__meta mono">
-                    {project.archivedAt ? <span className="shelf-row__archived-tag mono">归档</span> : null}
-                    <span>{chapterCount(project)} 章</span>
+                    {project.archivedAt ? <span className="shelf-row__archived-tag mono">{t("shelf.book.archived")}</span> : null}
+                    <span>{t("shelf.book.chapters", { count: chapterCount(project) })}</span>
                     <span className="shelf-row__phase">{projectPhaseLabel(project.phase)}</span>
                     <span>{formatRelativeDate(project.updatedAt)}</span>
                   </span>
@@ -550,6 +551,7 @@ function ProjectActions({
   onArchive: () => void;
   onDelete: () => void;
 }) {
+  const { t } = useI18n();
   const rootRef = useRef<HTMLSpanElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
@@ -588,7 +590,7 @@ function ProjectActions({
     >
       <IconButton
         icon={Ellipsis}
-        label={`《${project.title}》的更多操作`}
+        label={t("shelf.book.moreActions", { name: project.title })}
         className={`${className}__menu-btn`}
         aria-expanded={open}
         onClick={onToggle}
@@ -598,21 +600,21 @@ function ProjectActions({
           <div className="shelf-menu-backdrop" onMouseDown={onClose} />
           <div ref={menuRef} className="shelf-menu" role="menu" data-lenis-prevent onKeyDown={handleMenuKeyDown}>
             <button type="button" role="menuitem" className="shelf-menu__item" onClick={() => { onClose(); onAutopilot(); }}>
-              <Radar size={13} strokeWidth={1.5} aria-hidden="true" /> AI 快速创作
+              <Radar size={13} strokeWidth={1.5} aria-hidden="true" /> {t("shelf.menu.autopilot")}
             </button>
             <button type="button" role="menuitem" className="shelf-menu__item" onClick={() => { onClose(); onEdit(); }}>
-              <PenLine size={13} strokeWidth={1.5} aria-hidden="true" /> 编辑书籍与封面
+              <PenLine size={13} strokeWidth={1.5} aria-hidden="true" /> {t("shelf.menu.edit")}
             </button>
             <button type="button" role="menuitem" className="shelf-menu__item" onClick={() => { onClose(); onDuplicate(); }}>
-              <Copy size={13} strokeWidth={1.5} aria-hidden="true" /> 复制
+              <Copy size={13} strokeWidth={1.5} aria-hidden="true" /> {t("common.action.copy")}
             </button>
             <button type="button" role="menuitem" className="shelf-menu__item" onClick={() => { onClose(); onArchive(); }}>
               {project.archivedAt ? <ArchiveRestore size={13} strokeWidth={1.5} aria-hidden="true" /> : <Archive size={13} strokeWidth={1.5} aria-hidden="true" />}
-              {project.archivedAt ? "恢复" : "归档"}
+              {project.archivedAt ? t("shelf.menu.restore") : t("shelf.menu.archive")}
             </button>
             <div className="shelf-menu__divider" />
             <button type="button" role="menuitem" className="shelf-menu__item shelf-menu__item--danger" onClick={() => { onClose(); onDelete(); }}>
-              <Trash2 size={13} strokeWidth={1.5} aria-hidden="true" /> 移入回收站
+              <Trash2 size={13} strokeWidth={1.5} aria-hidden="true" /> {t("shelf.menu.recycle")}
             </button>
           </div>
         </>
@@ -677,6 +679,7 @@ function CreateDialog({
   onClose: () => void;
   onCreated: (project: Project) => void;
 }) {
+  const { t } = useI18n();
   const [title, setTitle] = useState("");
   const [premise, setPremise] = useState("");
   const aiRequestRef = useRef<{ identity: string; requestId: string } | null>(null);
@@ -713,7 +716,7 @@ function CreateDialog({
           projectId: created.project.id,
           kind: "foundation",
           taskId: created.task.run.id,
-          label: `AI 建书《${created.project.title}》`,
+          label: t("shelf.create.taskLabel", { name: created.project.title }),
           createdAt: new Date().toISOString(),
           origin: { surface: "autopilot" },
         });
@@ -751,23 +754,23 @@ function CreateDialog({
   return (
     <ShelfDialog
       eyebrow="NEW VOLUME"
-      title={mode === "blank" ? "空白建书" : "AI 引导建书"}
+      title={mode === "blank" ? t("shelf.create.blank") : t("shelf.create.ai")}
       note={
         mode === "blank"
-          ? "先立一个书名，卷首语可以后补。"
-          : "写下命题或脑暴，建书后由 AI 帮你整理创作方向。"
+          ? t("shelf.create.noteBlank")
+          : t("shelf.create.noteAi")
       }
       onClose={onClose}
     >
       <form onSubmit={submit}>
         <div className="shelf-dialog__field">
           <label className="shelf-dialog__label mono" htmlFor="create-title">
-            书名
+            {t("shelf.create.titleLabel")}
           </label>
           <input
             id="create-title"
             className="shelf-dialog__input"
-            placeholder="《潮汐灯塔》"
+            placeholder={t("shelf.create.titlePlaceholder")}
             value={title}
             onChange={(event) => setTitle(event.target.value)}
             autoFocus
@@ -778,13 +781,13 @@ function CreateDialog({
             className="shelf-dialog__label mono"
             htmlFor="create-premise"
           >
-            {mode === "blank" ? "卷首语（一句话命题，可留空）" : "命题与脑暴"}
+            {mode === "blank" ? t("shelf.create.premiseLabelBlank") : t("shelf.create.premiseLabelAi")}
           </label>
           {mode === "blank" ? (
             <input
               id="create-premise"
               className="shelf-dialog__input"
-              placeholder="港口每年都会遗忘一个人。"
+              placeholder={t("shelf.create.premisePlaceholderBlank")}
               value={premise}
               onChange={(event) => setPremise(event.target.value)}
             />
@@ -793,7 +796,7 @@ function CreateDialog({
               id="create-premise"
               className="shelf-dialog__textarea"
               rows={4}
-              placeholder="想到什么写什么：题材、人物、想去的方向……"
+              placeholder={t("shelf.create.premisePlaceholderAi")}
               value={premise}
               onChange={(event) => setPremise(event.target.value)}
             />
@@ -801,12 +804,12 @@ function CreateDialog({
         </div>
         {mutation.isError ? (
           <div className="shelf-dialog__error">
-            <ErrorNote error={mutation.error} title="这本书没有立起来" />
+            <ErrorNote error={mutation.error} title={t("shelf.create.error")} />
           </div>
         ) : null}
         <div className="shelf-dialog__actions">
           <button type="button" className="btn btn--outline" onClick={onClose}>
-            取消
+            {t("common.action.cancel")}
           </button>
           <button
             type="submit"
@@ -818,10 +821,10 @@ function CreateDialog({
             }
           >
             {mutation.isPending
-              ? "正在登记…"
+              ? t("shelf.create.submitting")
               : mode === "blank"
-                ? "创建并入藏"
-                : "创建并生成候选"}
+                ? t("shelf.create.submitBlank")
+                : t("shelf.create.submitAi")}
           </button>
         </div>
       </form>
@@ -845,6 +848,7 @@ function CoverCropDialog({
   onConfirm: (cropped: PreparedCover) => void;
   onClose: () => void;
 }) {
+  const { t } = useI18n();
   const trapRef = useFocusTrap<HTMLDivElement>(onClose);
   const [point, setPoint] = useState<Point>({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -861,7 +865,7 @@ function CoverCropDialog({
       const cropped = await cropPreparedCover(prepared, area);
       onConfirm(cropped);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "取景裁切失败，请重试。");
+      setError(cause instanceof Error ? cause.message : t("shelf.crop.fallback"));
       setCutting(false);
     }
   };
@@ -879,13 +883,13 @@ function CoverCropDialog({
         className="shelf-dialog shelf-dialog--crop"
         role="dialog"
         aria-modal="true"
-        aria-label="调整封面取景"
+        aria-label={t("shelf.crop.title")}
         data-lenis-prevent
       >
         <p className="shelf-dialog__eyebrow mono">COVER CROP</p>
-        <h2 className="shelf-dialog__title">调整封面取景</h2>
+        <h2 className="shelf-dialog__title">{t("shelf.crop.title")}</h2>
         <p className="shelf-dialog__note">
-          拖动底图对位，滚轮或双指缩放；3:4 竖版框内即最终封面。
+          {t("shelf.crop.note")}
         </p>
         <div className="cover-cropper__stage cover-cropper__stage--dialog">
           <Cropper
@@ -904,12 +908,12 @@ function CoverCropDialog({
         </div>
         {error ? (
           <div className="shelf-dialog__error">
-            <ErrorNote error={error} title="没有裁出封面" />
+            <ErrorNote error={error} title={t("shelf.crop.error")} />
           </div>
         ) : null}
         <div className="shelf-dialog__actions">
           <button type="button" className="btn btn--outline" onClick={onClose}>
-            取消
+            {t("common.action.cancel")}
           </button>
           <button
             type="button"
@@ -917,7 +921,7 @@ function CoverCropDialog({
             disabled={!area || cutting}
             onClick={() => void confirm()}
           >
-            {cutting ? "正在裁切…" : "确认取景"}
+            {cutting ? t("shelf.crop.cutting") : t("shelf.crop.confirm")}
           </button>
         </div>
       </div>
@@ -932,14 +936,14 @@ function cropPreparedCover(
 ): Promise<PreparedCover> {
   return new Promise((resolve, reject) => {
     const image = new Image();
-    image.onerror = () => reject(new Error("封面读取失败，请重试。"));
+    image.onerror = () => reject(new Error(translate(getLocale(), "shelf.coverFile.cropRead")));
     image.onload = () => {
       const canvas = document.createElement("canvas");
       canvas.width = Math.max(1, Math.round(area.width));
       canvas.height = Math.max(1, Math.round(area.height));
       const context = canvas.getContext("2d");
       if (!context) {
-        reject(new Error("当前浏览器无法处理封面图片。"));
+        reject(new Error(translate(getLocale(), "shelf.coverFile.unsupported")));
         return;
       }
       context.drawImage(
@@ -956,16 +960,16 @@ function cropPreparedCover(
       canvas.toBlob(
         (blob) => {
           if (!blob) {
-            reject(new Error("封面裁切失败，请重试。"));
+            reject(new Error(translate(getLocale(), "shelf.coverFile.cropFail")));
             return;
           }
           const reader = new FileReader();
-          reader.onerror = () => reject(new Error("封面编码失败，请重试。"));
+          reader.onerror = () => reject(new Error(translate(getLocale(), "shelf.coverFile.encode")));
           reader.onload = () => {
             const dataUrl = String(reader.result ?? "");
             const comma = dataUrl.indexOf(",");
             if (comma < 0) {
-              reject(new Error("封面编码无效。"));
+              reject(new Error(translate(getLocale(), "shelf.coverFile.encodeInvalid")));
               return;
             }
             resolve({
@@ -987,6 +991,7 @@ function cropPreparedCover(
 }
 
 function BookCover({ project }: { project: Project }) {
+  const { t } = useI18n();
   const imageUrl = projectCoverUrl(project);
   const [localUrl, setLocalUrl] = useState<string | null>(
     imageUrl && imageUrl.startsWith("blob:") ? imageUrl : null,
@@ -1015,7 +1020,7 @@ function BookCover({ project }: { project: Project }) {
         <img
           className="book-cover__image"
           src={src}
-          alt={`《${project.title}》自定义封面`}
+          alt={t("shelf.book.customCover", { name: project.title })}
           style={{
             objectPosition: `${(crop?.x ?? 0.5) * 100}% ${(crop?.y ?? 0.5) * 100}%`,
             transform: `scale(${crop?.zoom ?? 1})`,
@@ -1023,10 +1028,10 @@ function BookCover({ project }: { project: Project }) {
           }}
         />
       ) : (
-        <div className="book-cover__default" role="img" aria-label={`《${project.title}》默认封面`}>
+        <div className="book-cover__default" role="img" aria-label={t("shelf.book.defaultCover", { name: project.title })}>
           <span className="book-cover__mark mono">NL · {project.phase.slice(0, 1).toUpperCase()}</span>
           <strong>{project.title}</strong>
-          <span>{project.subtitle ?? "未完稿"}</span>
+          <span>{project.subtitle ?? t("shelf.book.unfinished")}</span>
           <i aria-hidden="true" />
         </div>
       )}
@@ -1046,15 +1051,15 @@ interface PreparedCover {
 function readCoverFile(file: File): Promise<PreparedCover> {
   const mediaType = file.type as PreparedCover["mediaType"];
   if (!["image/jpeg", "image/png", "image/webp"].includes(mediaType)) {
-    return Promise.reject(new Error("请选择 JPG、PNG 或 WebP 封面。"));
+    return Promise.reject(new Error(translate(getLocale(), "shelf.coverFile.type")));
   }
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onerror = () => reject(new Error("封面读取失败，请换一张图片。"));
+    reader.onerror = () => reject(new Error(translate(getLocale(), "shelf.coverFile.read")));
     reader.onload = () => {
       const dataUrl = String(reader.result ?? "");
       const image = new Image();
-      image.onerror = () => reject(new Error("无法识别这张封面图片。"));
+      image.onerror = () => reject(new Error(translate(getLocale(), "shelf.coverFile.identify")));
       image.onload = () => {
         const maxEdge = 2400;
         const scale = Math.min(1, maxEdge / Math.max(image.naturalWidth, image.naturalHeight));
@@ -1065,27 +1070,27 @@ function readCoverFile(file: File): Promise<PreparedCover> {
         canvas.height = height;
         const context = canvas.getContext("2d");
         if (!context) {
-          reject(new Error("当前浏览器无法处理封面图片。"));
+          reject(new Error(translate(getLocale(), "shelf.coverFile.unsupported")));
           return;
         }
         context.drawImage(image, 0, 0, width, height);
         canvas.toBlob(
           (blob) => {
             if (!blob) {
-              reject(new Error("封面压缩失败，请换一张图片。"));
+              reject(new Error(translate(getLocale(), "shelf.coverFile.compress")));
               return;
             }
             if (blob.size > 8 * 1024 * 1024) {
-              reject(new Error("封面处理后仍超过 8 MB，请换一张较小的图片。"));
+              reject(new Error(translate(getLocale(), "shelf.coverFile.tooLarge")));
               return;
             }
             const outputReader = new FileReader();
-            outputReader.onerror = () => reject(new Error("封面处理失败，请重试。"));
+            outputReader.onerror = () => reject(new Error(translate(getLocale(), "shelf.coverFile.process")));
             outputReader.onload = () => {
               const outputUrl = String(outputReader.result ?? "");
               const comma = outputUrl.indexOf(",");
               if (comma < 0) {
-                reject(new Error("封面编码无效。"));
+                reject(new Error(translate(getLocale(), "shelf.coverFile.encodeInvalid")));
                 return;
               }
               resolve({
@@ -1117,6 +1122,7 @@ function BookEditDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { t } = useI18n();
   const [title, setTitle] = useState(project.title);
   const [subtitle, setSubtitle] = useState(project.subtitle ?? "");
   const [premise, setPremise] = useState(project.premise ?? "");
@@ -1163,8 +1169,8 @@ function BookEditDialog({
   return (
     <ShelfDialog
       eyebrow="EDIT BOOK"
-      title="编辑书籍与封面"
-      note="书架上的封面只是识别入口；正文、圣经与版本仍在作品内部维护。"
+      title={t("shelf.edit.title")}
+      note={t("shelf.edit.note")}
       className="shelf-dialog--book-edit"
       onClose={onClose}
     >
@@ -1176,17 +1182,17 @@ function BookEditDialog({
                 <img
                   className="book-cover__image"
                   src={prepared.dataUrl}
-                  alt="待保存的封面预览"
+                  alt={t("shelf.edit.previewAlt")}
                 />
               </div>
             ) : removeCover ? (
-              <div className="book-cover book-cover--editing"><div className="book-cover__default"><strong>{title}</strong><span>将恢复默认封面</span><i aria-hidden="true" /></div></div>
+              <div className="book-cover book-cover--editing"><div className="book-cover__default"><strong>{title}</strong><span>{t("shelf.edit.restoreDefault")}</span><i aria-hidden="true" /></div></div>
             ) : (
               <BookCover project={{ ...project, title, subtitle: subtitle || null }} />
             )}
             <label className="btn btn--outline book-edit__upload">
               <ImageIcon size={14} strokeWidth={1.5} aria-hidden="true" />
-              {readingFile ? "读取中…" : "选择封面"}
+              {readingFile ? t("shelf.edit.reading") : t("shelf.edit.choose")}
               <input
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
@@ -1203,48 +1209,48 @@ function BookEditDialog({
                       /* 读入后立刻弹取景窗：裁好的图才进 prepared。 */
                       setCropSource(value);
                     })
-                    .catch((error: unknown) => setFileError(error instanceof Error ? error.message : "封面读取失败。"))
+                    .catch((error: unknown) => setFileError(error instanceof Error ? error.message : t("shelf.edit.readError")))
                     .finally(() => setReadingFile(false));
                 }}
               />
             </label>
             <button type="button" className="book-edit__reset" onClick={() => { setPrepared(null); setRemoveCover(true); }}>
               <RotateCcw size={13} strokeWidth={1.5} aria-hidden="true" />
-              恢复默认
+              {t("shelf.edit.reset")}
             </button>
           </div>
           <div className="book-edit__fields">
             <div className="shelf-dialog__field">
-              <label className="shelf-dialog__label mono" htmlFor="edit-title">书名</label>
+              <label className="shelf-dialog__label mono" htmlFor="edit-title">{t("shelf.edit.titleLabel")}</label>
               <input id="edit-title" className="shelf-dialog__input" value={title} onChange={(event) => setTitle(event.target.value)} autoFocus />
             </div>
             <div className="shelf-dialog__field">
-              <label className="shelf-dialog__label mono" htmlFor="edit-subtitle">副题</label>
-              <input id="edit-subtitle" className="shelf-dialog__input" value={subtitle} onChange={(event) => setSubtitle(event.target.value)} placeholder="可留空" />
+              <label className="shelf-dialog__label mono" htmlFor="edit-subtitle">{t("shelf.edit.subtitleLabel")}</label>
+              <input id="edit-subtitle" className="shelf-dialog__input" value={subtitle} onChange={(event) => setSubtitle(event.target.value)} placeholder={t("shelf.edit.subtitlePlaceholder")} />
             </div>
             <div className="shelf-dialog__field">
-              <label className="shelf-dialog__label mono" htmlFor="edit-premise">卷首语</label>
-              <textarea id="edit-premise" className="shelf-dialog__textarea" rows={4} value={premise} onChange={(event) => setPremise(event.target.value)} placeholder="一句话说明这部作品从哪里开始。" />
+              <label className="shelf-dialog__label mono" htmlFor="edit-premise">{t("shelf.edit.premiseLabel")}</label>
+              <textarea id="edit-premise" className="shelf-dialog__textarea" rows={4} value={premise} onChange={(event) => setPremise(event.target.value)} placeholder={t("shelf.edit.premisePlaceholder")} />
             </div>
-            <p className="book-edit__hint">选择封面后会弹出取景窗，拖成想要的 3:4 竖版画面再确认。</p>
+            <p className="book-edit__hint">{t("shelf.edit.hint")}</p>
           </div>
         </div>
-        {fileError ? <div className="shelf-dialog__error"><ErrorNote error={fileError} title="封面没有读入" /></div> : null}
+        {fileError ? <div className="shelf-dialog__error"><ErrorNote error={fileError} title={t("shelf.edit.fileError")} /></div> : null}
         {mutation.isError ? (
           <div className="shelf-dialog__error">
-            <ErrorNote error={mutation.error} title="书籍没有保存" />
+            <ErrorNote error={mutation.error} title={t("shelf.edit.saveError")} />
           </div>
         ) : null}
         <div className="shelf-dialog__actions">
           <button type="button" className="btn btn--outline" onClick={onClose}>
-            取消
+            {t("common.action.cancel")}
           </button>
           <button
             type="submit"
             className="btn btn--primary"
             disabled={mutation.isPending || readingFile || !title.trim()}
           >
-            {mutation.isPending ? "正在保存…" : "保存书籍"}
+            {mutation.isPending ? t("shelf.edit.saving") : t("shelf.edit.submit")}
           </button>
         </div>
       </form>
@@ -1273,6 +1279,7 @@ function DeleteDialog({
   onClose: () => void;
   onDeleted: () => void;
 }) {
+  const { t } = useI18n();
   const [confirmation, setConfirmation] = useState("");
   const mutation = useMutation({
     mutationFn: () =>
@@ -1287,8 +1294,8 @@ function DeleteDialog({
   return (
     <ShelfDialog
       eyebrow="DESTROY"
-      title="移入回收站"
-      note={`《${project.title}》会离开书架并保留 30 天，期间可从回收站恢复。输入书名以确认。`}
+      title={t("shelf.deleteBook.title")}
+      note={t("shelf.deleteBook.note", { name: project.title })}
       onClose={onClose}
     >
       <form
@@ -1299,7 +1306,7 @@ function DeleteDialog({
       >
         <div className="shelf-dialog__field">
           <label className="shelf-dialog__label mono" htmlFor="delete-confirm">
-            书名确认
+            {t("shelf.deleteBook.confirmLabel")}
           </label>
           <input
             id="delete-confirm"
@@ -1312,19 +1319,19 @@ function DeleteDialog({
         </div>
         {mutation.isError ? (
           <div className="shelf-dialog__error">
-            <ErrorNote error={mutation.error} title="没有删除" />
+            <ErrorNote error={mutation.error} title={t("shelf.deleteBook.error")} />
           </div>
         ) : null}
         <div className="shelf-dialog__actions">
           <button type="button" className="btn btn--outline" onClick={onClose}>
-            再想想
+            {t("shelf.deleteBook.cancel")}
           </button>
           <button
             type="submit"
             className="btn btn--primary"
             disabled={mutation.isPending || confirmation !== project.title}
           >
-            {mutation.isPending ? "正在移入…" : "移入回收站"}
+            {mutation.isPending ? t("shelf.deleteBook.submitting") : t("shelf.deleteBook.submit")}
           </button>
         </div>
       </form>
@@ -1339,6 +1346,7 @@ function RecycleBinDialog({
   onClose: () => void;
   onChanged: () => void;
 }) {
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const [purgeTarget, setPurgeTarget] = useState<RecycledProject | null>(null);
   const [confirmation, setConfirmation] = useState("");
@@ -1365,35 +1373,35 @@ function RecycleBinDialog({
   return (
     <ShelfDialog
       eyebrow="RECYCLE"
-      title="回收站"
-      note="作品保留 30 天；恢复后仍保持归档状态。永久删除不可撤销。"
+      title={t("shelf.recycle.title")}
+      note={t("shelf.recycle.note")}
       onClose={onClose}
     >
-      {projectsQuery.isPending ? <Skeleton lines={4} /> : projectsQuery.isError ? <ErrorNote error={projectsQuery.error} title="回收站暂时无法加载" /> : projectsQuery.data?.length ? (
+      {projectsQuery.isPending ? <Skeleton lines={4} /> : projectsQuery.isError ? <ErrorNote error={projectsQuery.error} title={t("shelf.recycle.loadError")} /> : projectsQuery.data?.length ? (
         <div className="shelf-recycle">
           {projectsQuery.data.map((project) => (
             <article key={project.id} className="shelf-recycle__item">
-              <div><strong>{project.title}</strong><p>将在 {new Date(project.deleteAfter).toLocaleDateString("zh-CN")} 后自动清理</p></div>
+              <div><strong>{project.title}</strong><p>{t("shelf.recycle.autoClean", { date: new Date(project.deleteAfter).toLocaleDateString(getLocale()) })}</p></div>
               <div className="shelf-recycle__actions">
-                <button type="button" className="btn btn--outline" disabled={restoreMutation.isPending || purgeMutation.isPending} onClick={() => restoreMutation.mutate(project)}>恢复</button>
-                <button type="button" className="btn btn--outline" disabled={restoreMutation.isPending || purgeMutation.isPending} onClick={() => { setPurgeTarget(project); setConfirmation(""); }}>永久删除</button>
+                <button type="button" className="btn btn--outline" disabled={restoreMutation.isPending || purgeMutation.isPending} onClick={() => restoreMutation.mutate(project)}>{t("shelf.recycle.restore")}</button>
+                <button type="button" className="btn btn--outline" disabled={restoreMutation.isPending || purgeMutation.isPending} onClick={() => { setPurgeTarget(project); setConfirmation(""); }}>{t("shelf.recycle.purge")}</button>
               </div>
             </article>
           ))}
         </div>
-      ) : <Empty title="回收站为空" description="移入回收站的作品会在这里保留 30 天。" />}
+      ) : <Empty title={t("shelf.recycle.empty")} description={t("shelf.recycle.emptyHint")} />}
       {purgeTarget ? (
         <div className="shelf-recycle__confirm">
-          <p>永久删除《{purgeTarget.title}》不可撤销。输入书名确认。</p>
-          <input aria-label="永久删除书名确认" value={confirmation} onChange={(event) => setConfirmation(event.target.value)} />
+          <p>{t("shelf.recycle.purgeNote", { name: purgeTarget.title })}</p>
+          <input aria-label={t("shelf.recycle.purgeConfirmLabel")} value={confirmation} onChange={(event) => setConfirmation(event.target.value)} />
           <div className="shelf-dialog__actions">
-            <button type="button" className="btn btn--outline" onClick={() => setPurgeTarget(null)}>取消</button>
-            <button type="button" className="btn btn--primary" disabled={confirmation !== purgeTarget.title || purgeMutation.isPending} onClick={() => purgeMutation.mutate(purgeTarget)}>永久删除</button>
+            <button type="button" className="btn btn--outline" onClick={() => setPurgeTarget(null)}>{t("common.action.cancel")}</button>
+            <button type="button" className="btn btn--primary" disabled={confirmation !== purgeTarget.title || purgeMutation.isPending} onClick={() => purgeMutation.mutate(purgeTarget)}>{t("shelf.recycle.purge")}</button>
           </div>
         </div>
       ) : null}
-      {restoreMutation.isError ? <ErrorNote error={restoreMutation.error} title="作品未恢复" /> : null}
-      {purgeMutation.isError ? <ErrorNote error={purgeMutation.error} title="作品未永久删除" /> : null}
+      {restoreMutation.isError ? <ErrorNote error={restoreMutation.error} title={t("shelf.recycle.restoreError")} /> : null}
+      {purgeMutation.isError ? <ErrorNote error={purgeMutation.error} title={t("shelf.recycle.purgeError")} /> : null}
     </ShelfDialog>
   );
 }
@@ -1409,6 +1417,7 @@ function ImportDialog({
   onClose: () => void;
   onApplied: (projectId: string) => void;
 }) {
+  const { t } = useI18n();
   const [selected, setSelected] = useState<string[]>(() =>
     detail.candidates.map((candidate) => candidate.id),
   );
@@ -1427,8 +1436,8 @@ function ImportDialog({
   return (
     <ShelfDialog
       eyebrow="FICHE"
-      title={`盘点《${detail.batch.filename}》`}
-      note={`支持 Markdown、纯文本、Word、HTML、EPUB 与本项目 JSON；盘点只预览，不改动作品。已拆出 ${detail.candidates.length} 项候选，勾选要入藏的部分。`}
+      title={t("shelf.import.title", { name: detail.batch.filename })}
+      note={t("shelf.import.note", { count: detail.candidates.length })}
       onClose={onClose}
     >
       <div className="shelf-dialog__candidates">
@@ -1448,12 +1457,12 @@ function ImportDialog({
       </div>
       {mutation.isError ? (
         <div className="shelf-dialog__error">
-          <ErrorNote error={mutation.error} title="这一次没有入藏" />
+          <ErrorNote error={mutation.error} title={t("shelf.import.error")} />
         </div>
       ) : null}
       <div className="shelf-dialog__actions">
         <button type="button" className="btn btn--outline" onClick={onClose}>
-          先不导
+          {t("shelf.import.cancel")}
         </button>
         <button
           type="button"
@@ -1461,7 +1470,7 @@ function ImportDialog({
           disabled={mutation.isPending || selected.length === 0}
           onClick={() => mutation.mutate(selected)}
         >
-          {mutation.isPending ? "正在入藏…" : `入藏 ${selected.length} 项`}
+          {mutation.isPending ? t("shelf.import.submitting") : t("shelf.import.submit", { count: selected.length })}
         </button>
       </div>
     </ShelfDialog>

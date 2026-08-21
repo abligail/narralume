@@ -271,7 +271,7 @@ describe("story kernel API", () => {
     expect(response.json()).toMatchObject({
       error: {
         code: "timeline.cause.not_found",
-        message: "因果前件 missing-cause 不存在",
+        message: "Causal antecedent missing-cause does not exist",
         requestId: expect.any(String),
       },
     });

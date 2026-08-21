@@ -30,7 +30,7 @@ export class SqliteCreativeRepository {
       const name = requireCreativeText(
         persona.name,
         "persona.name.empty",
-        "Persona 名称",
+        "Persona name",
       );
       this.assertEntityProject(persona.projectId, persona.entityId);
       const inserted = this.database.raw
@@ -58,7 +58,7 @@ export class SqliteCreativeRepository {
       if (inserted.changes !== 1) {
         throw new CreativePersistenceError(
           "persona.name.conflict",
-          "当前作品已有同名 Persona，请使用其他名称",
+          "A persona with this name already exists in this project; please choose another name",
         );
       }
       return this.requirePersona(persona.id);
@@ -85,12 +85,12 @@ export class SqliteCreativeRepository {
         current.version,
         input.expectedVersion,
         "persona.version.conflict",
-        "Persona 已在其他页面更新，请刷新后重试",
+        "The persona was updated elsewhere; refresh and try again",
       );
       const name = requireCreativeText(
         input.name,
         "persona.name.empty",
-        "Persona 名称",
+        "Persona name",
       );
       this.assertEntityProject(current.projectId, input.entityId);
       const duplicate = this.database.raw
@@ -101,7 +101,7 @@ export class SqliteCreativeRepository {
       if (duplicate) {
         throw new CreativePersistenceError(
           "persona.name.conflict",
-          "当前作品已有同名 Persona，请使用其他名称",
+          "A persona with this name already exists in this project; please choose another name",
         );
       }
       const result = this.database.raw
@@ -125,7 +125,7 @@ export class SqliteCreativeRepository {
       if (result.changes !== 1) {
         throw new CreativePersistenceError(
           "persona.version.conflict",
-          "Persona 已在其他页面更新，请刷新后重试",
+          "The persona was updated elsewhere; refresh and try again",
         );
       }
       return this.requirePersona(id);
@@ -173,7 +173,7 @@ export class SqliteCreativeRepository {
       const title = requireCreativeText(
         input.title,
         "cocreate.title.empty",
-        "会话标题",
+        "Session title",
       );
       if (input.authorPersonaId) {
         this.assertPersonaProject(input.projectId, input.authorPersonaId);
@@ -271,7 +271,11 @@ export class SqliteCreativeRepository {
            WHERE id = ? AND version = ?`,
         )
         .run(
-          requireCreativeText(next.title, "cocreate.title.empty", "会话标题"),
+          requireCreativeText(
+            next.title,
+            "cocreate.title.empty",
+            "Session title",
+          ),
           next.status,
           next.speakerPolicy,
           next.targetOutlineNodeId,
@@ -316,7 +320,7 @@ export class SqliteCreativeRepository {
         if (unique.has(participant.personaId)) {
           throw new CreativePersistenceError(
             "cocreate.participant.duplicate",
-            "同一 Persona 不能重复加入会话",
+            "The same persona cannot join the session more than once",
           );
         }
         unique.add(participant.personaId);
@@ -324,7 +328,7 @@ export class SqliteCreativeRepository {
         if (participant.talkativeness < 0 || participant.talkativeness > 1) {
           throw new CreativePersistenceError(
             "cocreate.talkativeness.invalid",
-            "发言倾向必须在 0 到 1 之间",
+            "Speaking tendency must be between 0 and 1",
           );
         }
       }
@@ -386,7 +390,7 @@ export class SqliteCreativeRepository {
       ) {
         throw new CreativePersistenceError(
           "branch.fork.invalid_turn",
-          "分叉点不属于当前会话可见历史",
+          "The fork point is not part of the visible history of this session",
         );
       }
       this.database.raw
@@ -401,7 +405,7 @@ export class SqliteCreativeRepository {
           session.id,
           source.branchId,
           source.id,
-          requireCreativeText(input.name, "branch.name.empty", "分支名称"),
+          requireCreativeText(input.name, "branch.name.empty", "Branch name"),
           source.id,
           input.now,
           input.now,
@@ -450,7 +454,7 @@ export class SqliteCreativeRepository {
     if (branch.sessionId !== sessionId || branch.status !== "active") {
       throw new CreativePersistenceError(
         "branch.session.mismatch",
-        "分支不属于当前会话或已经归档",
+        "The branch does not belong to this session or is already archived",
       );
     }
     const result = this.database.raw
@@ -480,7 +484,7 @@ export class SqliteCreativeRepository {
       if (branch.sessionId !== session.id || branch.status !== "active") {
         throw new CreativePersistenceError(
           "turn.branch.invalid",
-          "不能向该分支追加回合",
+          "Cannot append turns to this branch",
         );
       }
       if (input.personaId) {
@@ -489,7 +493,7 @@ export class SqliteCreativeRepository {
       const content = requireCreativeText(
         input.content,
         "turn.content.empty",
-        "回合内容",
+        "Turn content",
       );
       const ordinal = this.nextTurnOrdinal(branch.id);
       const parentTurnId = branch.headTurnId;
@@ -570,7 +574,7 @@ export class SqliteCreativeRepository {
       ) {
         throw new CreativePersistenceError(
           "swipe.turn.invalid",
-          "Swipe 只能附加到当前分支的 AI 回合",
+          "A swipe can only be attached to an AI turn of the current branch",
         );
       }
       const existing = this.listSwipes(turn.id);
@@ -590,7 +594,11 @@ export class SqliteCreativeRepository {
           input.swipeId,
           turn.id,
           existing.length,
-          requireCreativeText(input.content, "swipe.content.empty", "AI 候选"),
+          requireCreativeText(
+            input.content,
+            "swipe.content.empty",
+            "AI candidate",
+          ),
           input.speakerPersonaId,
           input.sourceRunId,
           JSON.stringify(input.metadata ?? {}),
@@ -623,7 +631,7 @@ export class SqliteCreativeRepository {
       if (swipe.turnId !== turn.id) {
         throw new CreativePersistenceError(
           "swipe.turn.mismatch",
-          "候选不属于该回合",
+          "The candidate does not belong to this turn",
         );
       }
       this.database.raw
@@ -792,10 +800,10 @@ export class SqliteCreativeRepository {
     if (quote !== comment.quote) {
       throw new CreativePersistenceError(
         "comment.quote.mismatch",
-        "评论锚点与版本原文不一致",
+        "The comment anchor does not match the version text",
       );
     }
-    requireCreativeText(comment.body, "comment.body.empty", "评论");
+    requireCreativeText(comment.body, "comment.body.empty", "Comment");
     this.database.raw
       .prepare(
         `INSERT INTO document_comments(
@@ -954,7 +962,7 @@ export class SqliteCreativeRepository {
     if (persona.projectId !== projectId || persona.status !== "active") {
       throw new CreativePersistenceError(
         "persona.project.mismatch",
-        "Persona 不属于当前作品或已经停用",
+        "The persona does not belong to this project or has been disabled",
       );
     }
   }
@@ -970,7 +978,7 @@ export class SqliteCreativeRepository {
     if (!row || row.project_id !== projectId) {
       throw new CreativePersistenceError(
         "cocreate.target.mismatch",
-        "共创目标大纲节点不属于当前作品",
+        "The co-create target outline node does not belong to this project",
       );
     }
   }
@@ -986,7 +994,7 @@ export class SqliteCreativeRepository {
     if (!row || row.project_id !== projectId) {
       throw new CreativePersistenceError(
         "persona.entity.mismatch",
-        "Persona 绑定实体不属于当前作品",
+        "The persona-bound entity does not belong to this project",
       );
     }
   }
@@ -999,7 +1007,7 @@ export class SqliteCreativeRepository {
       session.version,
       expectedVersion,
       "cocreate.session.version.conflict",
-      "故事房已在其他页面更新，请刷新后重试",
+      "The story room was updated elsewhere; refresh and try again",
     );
   }
 
@@ -1017,7 +1025,7 @@ export class SqliteCreativeRepository {
   private throwSessionVersionConflict(): never {
     throw new CreativePersistenceError(
       "cocreate.session.version.conflict",
-      "故事房已在其他页面更新，请刷新后重试",
+      "The story room was updated elsewhere; refresh and try again",
     );
   }
 }

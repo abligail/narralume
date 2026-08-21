@@ -35,7 +35,7 @@ export class ConfigurationVersionConflictError extends Error {
     readonly entity: "provider" | "model",
     readonly id: string,
   ) {
-    super(`${entity} ${id} 已在其他页面更新，请刷新后重试`);
+    super(`${entity} ${id} was updated elsewhere; refresh and try again`);
     this.name = "ConfigurationVersionConflictError";
   }
 }

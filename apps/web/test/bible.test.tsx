@@ -13,6 +13,7 @@ import {
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { setLocale } from "../src/i18n";
 import { BibleWorkspace } from "../src/workspaces/bible";
 
 /* 故事圣经摊开的整本 spread：intent 首语、大纲、实体、事实、关系、时间线、伏笔七大板块。 */
@@ -208,6 +209,7 @@ function renderBible(entry = "/projects/p-1-tides/bible") {
 }
 
 beforeEach(() => {
+  setLocale("zh-CN");
   Object.defineProperty(window, "matchMedia", {
     configurable: true,
     writable: true,

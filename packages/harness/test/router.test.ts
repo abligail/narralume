@@ -384,7 +384,7 @@ describe("routeRun failed-step classification", () => {
     const snapshot = makeSnapshot(1);
     failFirstStep(snapshot, {
       code: "model.cancelled",
-      message: "已取消",
+      message: "Cancelled",
       retryable: true,
     });
     expect(routeRun(snapshot)).toEqual({

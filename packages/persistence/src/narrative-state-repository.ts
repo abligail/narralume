@@ -31,7 +31,7 @@ export class SqliteNarrativeStateRepository {
       if (!previous) {
         throw new NarrativeStateError(
           "relationship.supersedes.not_found",
-          `被替代的关系事件 ${event.supersedesEventId} 不存在`,
+          `The superseded relationship event ${event.supersedesEventId} does not exist`,
         );
       }
       if (
@@ -40,7 +40,7 @@ export class SqliteNarrativeStateRepository {
       ) {
         throw new NarrativeStateError(
           "relationship.supersedes.pair_mismatch",
-          "关系更新不能改变关系双方",
+          "A relationship update must not change either party",
         );
       }
     }
@@ -109,7 +109,7 @@ export class SqliteNarrativeStateRepository {
     if (!current)
       throw new NarrativeStateError(
         "relationship.not_found",
-        `关系事件 ${id} 不存在`,
+        `Relationship event ${id} does not exist`,
       );
     const references = totalReferenceCount(
       this.database,
@@ -186,7 +186,7 @@ export class SqliteNarrativeStateRepository {
         if (causeId === event.id)
           throw new NarrativeStateError(
             "timeline.cause.cycle",
-            "时间线事件不能形成因果环路",
+            "Timeline events must not form a causal cycle",
           );
         const cause = this.database.raw
           .prepare(
@@ -196,7 +196,7 @@ export class SqliteNarrativeStateRepository {
         if (!cause)
           throw new NarrativeStateError(
             "timeline.cause.not_found",
-            `因果前件 ${causeId} 不存在`,
+            `Causal antecedent ${causeId} does not exist`,
           );
         causal.run(causeId, event.id);
       }
@@ -255,7 +255,7 @@ export class SqliteNarrativeStateRepository {
     if (!current)
       throw new NarrativeStateError(
         "timeline.not_found",
-        `时间线事件 ${id} 不存在`,
+        `Timeline event ${id} does not exist`,
       );
     const references = totalReferenceCount(
       this.database,
@@ -300,7 +300,7 @@ export class SqliteNarrativeStateRepository {
       if (!before)
         throw new NarrativeStateError(
           "timeline.not_found",
-          `时间线事件 ${event.id} 不存在`,
+          `Timeline event ${event.id} does not exist`,
         );
       for (const causeId of new Set(event.causes)) {
         if (
@@ -309,7 +309,7 @@ export class SqliteNarrativeStateRepository {
         )
           throw new NarrativeStateError(
             "timeline.cause.cycle",
-            `因果关系 ${causeId} -> ${event.id} 会形成环路`,
+            `Causal edge ${causeId} -> ${event.id} would form a cycle`,
           );
       }
       const result = this.database.raw
@@ -334,7 +334,7 @@ export class SqliteNarrativeStateRepository {
       if (result.changes !== 1)
         throw new NarrativeStateError(
           "timeline.not_found",
-          `时间线事件 ${event.id} 不存在`,
+          `Timeline event ${event.id} does not exist`,
         );
       this.database.raw
         .prepare("DELETE FROM timeline_participants WHERE event_id = ?")
@@ -354,7 +354,7 @@ export class SqliteNarrativeStateRepository {
         if (causeId === event.id)
           throw new NarrativeStateError(
             "timeline.cause.self",
-            "时间线事件不能以自身为原因",
+            "A timeline event cannot cause itself",
           );
         this.requireTimelineEvent(event.projectId, causeId);
         causal.run(causeId, event.id);
@@ -410,7 +410,10 @@ export class SqliteNarrativeStateRepository {
       for (const dependencyId of new Set(foreshadow.dependencies)) {
         this.requireForeshadow(foreshadow.projectId, dependencyId);
         if (dependencyId === foreshadow.id) {
-          throw new NarrativeStateError("foreshadow.cycle", "伏笔不能依赖自身");
+          throw new NarrativeStateError(
+            "foreshadow.cycle",
+            "A foreshadow cannot depend on itself",
+          );
         }
         dependency.run(foreshadow.id, dependencyId);
       }
@@ -483,7 +486,7 @@ export class SqliteNarrativeStateRepository {
       if (!before)
         throw new NarrativeStateError(
           "foreshadow.not_found",
-          `伏笔 ${foreshadow.id} 不存在`,
+          `Foreshadow ${foreshadow.id} does not exist`,
         );
       for (const dependencyId of new Set(foreshadow.dependencies)) {
         if (
@@ -496,7 +499,7 @@ export class SqliteNarrativeStateRepository {
         )
           throw new NarrativeStateError(
             "foreshadow.cycle",
-            `伏笔依赖 ${foreshadow.id} -> ${dependencyId} 会形成环路`,
+            `Foreshadow dependency ${foreshadow.id} -> ${dependencyId} would form a cycle`,
           );
       }
       const result = this.database.raw
@@ -520,7 +523,7 @@ export class SqliteNarrativeStateRepository {
       if (result.changes !== 1)
         throw new NarrativeStateError(
           "foreshadow.not_found",
-          `伏笔 ${foreshadow.id} 不存在`,
+          `Foreshadow ${foreshadow.id} does not exist`,
         );
       this.database.raw
         .prepare("DELETE FROM foreshadow_dependencies WHERE foreshadow_id = ?")
@@ -534,7 +537,10 @@ export class SqliteNarrativeStateRepository {
       for (const dependencyId of new Set(foreshadow.dependencies)) {
         this.requireForeshadow(foreshadow.projectId, dependencyId);
         if (dependencyId === foreshadow.id)
-          throw new NarrativeStateError("foreshadow.cycle", "伏笔不能依赖自身");
+          throw new NarrativeStateError(
+            "foreshadow.cycle",
+            "A foreshadow cannot depend on itself",
+          );
         dependency.run(foreshadow.id, dependencyId);
       }
       const evidence = this.database.raw.prepare(
@@ -567,7 +573,7 @@ export class SqliteNarrativeStateRepository {
     if (!current)
       throw new NarrativeStateError(
         "foreshadow.not_found",
-        `伏笔 ${id} 不存在`,
+        `Foreshadow ${id} does not exist`,
       );
     const references = totalReferenceCount(
       this.database,
@@ -855,7 +861,7 @@ export class SqliteNarrativeStateRepository {
     if (!found)
       throw new NarrativeStateError(
         "foreshadow.not_found",
-        `伏笔 ${id} 不存在`,
+        `Foreshadow ${id} does not exist`,
       );
   }
 
@@ -868,7 +874,7 @@ export class SqliteNarrativeStateRepository {
     if (!found)
       throw new NarrativeStateError(
         "timeline.not_found",
-        `时间线事件 ${id} 不存在`,
+        `Timeline event ${id} does not exist`,
       );
   }
 }

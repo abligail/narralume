@@ -6,6 +6,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { setLocale } from "../src/i18n";
 import { OverviewWorkspace } from "../src/workspaces/overview";
 
 /* 项目概览：刊头（书名 / 卷首语 / 进度注记）+ 当前章节卡 + 下一步入口。
@@ -86,7 +87,7 @@ beforeEach(() => {
       dispatchEvent: vi.fn(),
     })),
   });
-  window.localStorage.clear();
+  window.localStorage.clear();setLocale("zh-CN");
 });
 
 afterEach(() => {

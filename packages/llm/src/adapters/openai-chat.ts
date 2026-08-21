@@ -66,7 +66,8 @@ export class OpenAIChatAdapter implements ModelAdapter {
       );
       return;
     }
-    if (!response.body) throw protocolError("Chat Completions 流没有响应体");
+    if (!response.body)
+      throw protocolError("Chat Completions stream has no response body");
 
     const tools = new Map<number, PendingChatTool>();
     let started = false;

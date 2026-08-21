@@ -185,7 +185,9 @@ export class ProjectOverviewService {
     const isChapterTask = snapshot.run.recipe === "chapter-production";
     const isFoundationTask = snapshot.run.recipe === "book-foundation";
     if (!isChapterTask && !isFoundationTask) {
-      throw new Error(`主任务投影不支持 recipe ${snapshot.run.recipe}`);
+      throw new Error(
+        `Task projection does not support recipe ${snapshot.run.recipe}`,
+      );
     }
     return {
       // foundation 也会把书级大纲根节点记在 targetOutlineNodeId 上；

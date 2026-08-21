@@ -132,19 +132,28 @@ export class CollaborationWorkerSuite {
     const sessionId = policyString(snapshot.run.policy, "sessionId");
     const session = this.creative.requireSession(sessionId);
     if (session.status !== "active") {
-      throw permanent("cocreate.session.inactive", "共创会话当前不可生成");
+      throw permanent(
+        "cocreate.session.inactive",
+        "The co-create session cannot generate right now",
+      );
     }
     const branchId =
       policyOptionalString(snapshot.run.policy, "branchId") ??
       session.activeBranchId;
     if (!branchId)
-      throw permanent("cocreate.branch.missing", "会话没有活动分支");
+      throw permanent(
+        "cocreate.branch.missing",
+        "The session has no active branch",
+      );
     const branch = this.creative.requireBranch(branchId);
     if (branch.sessionId !== session.id) {
-      throw permanent("cocreate.branch.mismatch", "活动分支不属于当前会话");
+      throw permanent(
+        "cocreate.branch.mismatch",
+        "The active branch does not belong to the current session",
+      );
     }
     const project = this.projects.get(session.projectId);
-    if (!project) throw permanent("project.not_found", "作品不存在");
+    if (!project) throw permanent("project.not_found", "Project not found");
     const participants = this.creative
       .requireSessionDetail(session.id)
       .participants.filter(
@@ -152,7 +161,10 @@ export class CollaborationWorkerSuite {
           participant.enabled && participant.persona.status === "active",
       );
     if (participants.length === 0) {
-      throw permanent("cocreate.participants.empty", "至少启用一个 AI 参与者");
+      throw permanent(
+        "cocreate.participants.empty",
+        "At least one AI participant must be enabled",
+      );
     }
     const allowedSpeakerIds = participants.map(
       (participant) => participant.personaId,
@@ -564,7 +576,7 @@ export class CollaborationWorkerSuite {
     if (branch.sessionId !== session.id) {
       throw permanent(
         "adoption.scope.mismatch",
-        "采纳范围的分支不属于当前会话",
+        "The branch of the adoption range does not belong to the current session",
       );
     }
     const turns = this.creative.listBranchTurns(branchId);
@@ -573,7 +585,7 @@ export class CollaborationWorkerSuite {
     if (fromIndex < 0 || toIndex < fromIndex) {
       throw permanent(
         "adoption.range.invalid",
-        "采纳范围不在当前分支或顺序无效",
+        "The adoption range is outside the current branch or in an invalid order",
       );
     }
     const selected = turns.slice(fromIndex, toIndex + 1);
@@ -716,7 +728,11 @@ export class CollaborationWorkerSuite {
       this.requireActiveAdoptionSource(session.id, source);
       const outline = this.story.listOutline(session.projectId);
       const root = outline.find((node) => node.kind === "book");
-      if (!root) throw permanent("outline.root.missing", "作品缺少全书根节点");
+      if (!root)
+        throw permanent(
+          "outline.root.missing",
+          "Project is missing the book root node",
+        );
       // 采纳目标以 Run 创建时的快照为准（CR-59）：会话的 targetOutlineNodeId
       // 是可变字段，执行期间被改动不应改变本次采纳的落点。
       const target = snapshot.run.targetOutlineNodeId
@@ -902,7 +918,7 @@ export class CollaborationWorkerSuite {
     if (branch.sessionId !== sessionId) {
       throw permanent(
         "adoption.scope.mismatch",
-        "采纳范围的分支不属于当前会话",
+        "The branch of the adoption range does not belong to the current session",
       );
     }
     const visibleTurnIds = new Set(
@@ -919,7 +935,7 @@ export class CollaborationWorkerSuite {
     ) {
       throw permanent(
         "adoption.turns.stale",
-        "采纳范围内的回合已被撤回，请重新发起采纳",
+        "Turns in the adoption range have been withdrawn; start the adoption again",
       );
     }
     return branchId;
@@ -938,7 +954,7 @@ export class CollaborationWorkerSuite {
       baseVersionId,
     );
     if (!version)
-      throw permanent("document.version.not_found", "基础版本不存在");
+      throw permanent("document.version.not_found", "Base version not found");
     const start = policyNumber(snapshot.run.policy, "selectionStart", -1);
     const end = policyNumber(snapshot.run.policy, "selectionEnd", -1);
     validateTextRange(version.content, start, end);
@@ -1022,13 +1038,16 @@ export class CollaborationWorkerSuite {
       baseVersionId,
     );
     if (!version)
-      throw permanent("document.version.not_found", "基础版本不存在");
+      throw permanent("document.version.not_found", "Base version not found");
     const start = numberField(transform, "selectionStart");
     const end = numberField(transform, "selectionEnd");
     validateTextRange(version.content, start, end);
     const originalText = version.content.slice(start, end);
     if (originalText !== stringField(transform, "originalText")) {
-      throw permanent("edit.selection.changed", "选区与基础版本不一致");
+      throw permanent(
+        "edit.selection.changed",
+        "The selection does not match the base version",
+      );
     }
     const proposedContent =
       version.content.slice(0, start) +
@@ -1079,14 +1098,17 @@ function chooseSpeaker(
     if (!requested || !allowed.includes(requested)) {
       throw permanent(
         "cocreate.speaker.required",
-        "手动 speaker policy 必须指定已启用 Persona",
+        "A manual speaker policy must specify an enabled Persona",
       );
     }
     return requested;
   }
   if (requested) {
     if (!allowed.includes(requested)) {
-      throw permanent("cocreate.speaker.invalid", "指定 Persona 未启用");
+      throw permanent(
+        "cocreate.speaker.invalid",
+        "The specified Persona is not enabled",
+      );
     }
     return requested;
   }
@@ -1107,7 +1129,8 @@ function requiredArtifact(
     .find(
       (step) => step.kind === kind && step.status === "succeeded",
     )?.outputArtifact;
-  if (!artifact) throw permanent("artifact.missing", `缺少步骤 ${kind} 的工件`);
+  if (!artifact)
+    throw permanent("artifact.missing", `Missing artifact for step ${kind}`);
   return { ...artifact };
 }
 
@@ -1144,7 +1167,7 @@ function policyString(
 ): string {
   const value = policy[key];
   if (typeof value !== "string" || !value.trim()) {
-    throw permanent("run.policy.invalid", `运行策略缺少 ${key}`);
+    throw permanent("run.policy.invalid", `Run policy is missing ${key}`);
   }
   return value;
 }
@@ -1169,7 +1192,7 @@ function policyNumber(
 function stringField(value: Record<string, unknown>, key: string): string {
   const field = value[key];
   if (typeof field !== "string" || !field.trim()) {
-    throw permanent("artifact.invalid", `工件字段 ${key} 无效`);
+    throw permanent("artifact.invalid", `Artifact field ${key} is invalid`);
   }
   return field;
 }
@@ -1177,7 +1200,7 @@ function stringField(value: Record<string, unknown>, key: string): string {
 function numberField(value: Record<string, unknown>, key: string): number {
   const field = value[key];
   if (typeof field !== "number" || !Number.isFinite(field)) {
-    throw permanent("artifact.invalid", `工件字段 ${key} 无效`);
+    throw permanent("artifact.invalid", `Artifact field ${key} is invalid`);
   }
   return field;
 }
@@ -1197,7 +1220,7 @@ function stringArray(value: unknown): string[] {
     !Array.isArray(value) ||
     !value.every((item) => typeof item === "string")
   ) {
-    throw permanent("artifact.invalid", "工件字符串数组无效");
+    throw permanent("artifact.invalid", "Artifact string array is invalid");
   }
   return [...value];
 }

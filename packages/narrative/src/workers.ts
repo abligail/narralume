@@ -165,16 +165,22 @@ export class ChapterWorkerSuite {
   ): Promise<StepExecutionResult> {
     const run = snapshot.run;
     const project = this.projects.get(run.projectId);
-    if (!project) throw permanent("project.not_found", "作品不存在");
+    if (!project) throw permanent("project.not_found", "Project not found");
     if (!run.targetOutlineNodeId) {
-      throw permanent("run.target.missing", "章节运行没有目标大纲节点");
+      throw permanent(
+        "run.target.missing",
+        "The chapter run has no target outline node",
+      );
     }
     const target = this.story.requireOutlineNode(
       run.projectId,
       run.targetOutlineNodeId,
     );
     if (target.kind !== "chapter") {
-      throw permanent("run.target.not_chapter", "章节生产目标必须是 chapter");
+      throw permanent(
+        "run.target.not_chapter",
+        "The chapter production target must be a chapter",
+      );
     }
     const compass = this.automation.getCompass(run.projectId);
     const chapterWritingReference = compass
@@ -558,7 +564,7 @@ export class ChapterWorkerSuite {
           typeof contextError.code === "string"
             ? contextError.code
             : "context.compile.failed",
-          `${purpose} 上下文编译失败：${error instanceof Error ? error.message : String(error)}；预算 ${JSON.stringify(budget)}`,
+          `${purpose} context compilation failed: ${error instanceof Error ? error.message : String(error)}; budget ${JSON.stringify(budget)}`,
         );
       }
       const receipt = {
@@ -741,7 +747,8 @@ export class ChapterWorkerSuite {
     if (isOutputLimitFinish(result.finishReason)) {
       throw <RunStepError>{
         code: "draft.output_limit",
-        message: "章节正文达到模型输出/上下文上限，可从已保存的部分继续生成",
+        message:
+          "The chapter manuscript hit the model output/context limit; generation can continue from the saved partial",
         retryable: true,
         details: {
           finishReason: result.finishReason,
@@ -755,7 +762,7 @@ export class ChapterWorkerSuite {
     }
     if (!generated) {
       throw {
-        ...retryable("draft.empty", "模型没有返回章节正文"),
+        ...retryable("draft.empty", "The model returned no chapter manuscript"),
         usage: result.usage,
       };
     }
@@ -1022,7 +1029,7 @@ export class ChapterWorkerSuite {
     if (!baseContent.trim()) {
       throw permanent(
         "revision.base_manuscript.missing",
-        "修订任务没有可用的完整源正文",
+        "The revision run has no complete source manuscript available",
       );
     }
     const revisionInstruction = isRequestedRevision
@@ -1080,7 +1087,8 @@ export class ChapterWorkerSuite {
     if (isOutputLimitFinish(result.finishReason)) {
       throw <RunStepError>{
         code: "revision.output_limit",
-        message: "完整修订达到模型输出/上下文上限，不能把截断文本提升为新正文",
+        message:
+          "The full revision hit the model output/context limit; truncated text cannot be promoted to a new manuscript",
         retryable: true,
         details: {
           finishReason: result.finishReason,
@@ -1097,7 +1105,8 @@ export class ChapterWorkerSuite {
       if (isRequestedRevision) {
         throw <RunStepError>{
           code: "revision.requested_noop",
-          message: "AI 没有按作者要求产出有实际变化的新版本",
+          message:
+            "AI did not produce a materially changed version as requested",
           retryable: true,
           details: { reason, baseHash: sha256(baseContent) },
           usage: result.usage,
@@ -1125,7 +1134,7 @@ export class ChapterWorkerSuite {
     if (characters < minimumCharacters) {
       throw <RunStepError>{
         code: "revision.incomplete",
-        message: `修订只返回 ${characters} 字，低于完整正文下限 ${minimumCharacters} 字`,
+        message: `The revision returned only ${characters} characters, below the full manuscript minimum of ${minimumCharacters}`,
         retryable: true,
         details: {
           characters,
@@ -1178,7 +1187,7 @@ export class ChapterWorkerSuite {
     ) {
       throw permanent(
         "revision.source.scope_mismatch",
-        "修订源正文不属于当前作品和章节",
+        "The revision source manuscript does not belong to the current project and chapter",
       );
     }
     return source;
@@ -1573,12 +1582,15 @@ export class ChapterWorkerSuite {
     if (!documentId || !versionId) {
       throw permanent(
         "manual_settlement.target.missing",
-        "手动结算任务缺少正文版本目标",
+        "The manual settlement run is missing a manuscript version target",
       );
     }
     const document = this.documents.get(snapshot.run.projectId, documentId);
     if (!document) {
-      throw permanent("document.not_found", "手动结算目标文档不存在");
+      throw permanent(
+        "document.not_found",
+        "The manual settlement target document does not exist",
+      );
     }
     const version = this.documents.getVersion(
       snapshot.run.projectId,
@@ -1586,12 +1598,15 @@ export class ChapterWorkerSuite {
       versionId,
     );
     if (!version) {
-      throw permanent("document.version.not_found", "手动结算目标版本不存在");
+      throw permanent(
+        "document.version.not_found",
+        "The manual settlement target version does not exist",
+      );
     }
     if (!document.outlineNodeId) {
       throw permanent(
         "document.outline_node.missing",
-        "手动结算目标没有绑定大纲节点",
+        "The manual settlement target is not bound to an outline node",
       );
     }
     return {
@@ -1618,12 +1633,15 @@ export class ChapterWorkerSuite {
     if (!documentId || !versionId) {
       throw permanent(
         "document_review.target.missing",
-        "审稿任务缺少正文版本目标",
+        "The review run is missing a manuscript version target",
       );
     }
     const document = this.documents.get(snapshot.run.projectId, documentId);
     if (!document) {
-      throw permanent("document.not_found", "审稿目标文档不存在");
+      throw permanent(
+        "document.not_found",
+        "The review target document does not exist",
+      );
     }
     const version = this.documents.getVersion(
       snapshot.run.projectId,
@@ -1631,18 +1649,21 @@ export class ChapterWorkerSuite {
       versionId,
     );
     if (!version) {
-      throw permanent("document.version.not_found", "审稿目标版本不存在");
+      throw permanent(
+        "document.version.not_found",
+        "The review target version does not exist",
+      );
     }
     if (!document.outlineNodeId) {
       throw permanent(
         "document.outline_node.missing",
-        "审稿目标没有绑定章节大纲",
+        "The review target is not bound to a chapter outline",
       );
     }
     if (document.outlineNodeId !== snapshot.run.targetOutlineNodeId) {
       throw permanent(
         "document_review.target.conflict",
-        "审稿目标与运行章节不一致",
+        "The review target does not match the run chapter",
       );
     }
     return {
@@ -1811,7 +1832,10 @@ function requiredArtifact(
       (step) => step.kind === kind && step.status === "succeeded",
     )?.outputArtifact;
   if (!output) {
-    throw permanent("artifact.missing", `步骤 ${kind} 的已确认工件不存在`);
+    throw permanent(
+      "artifact.missing",
+      `Missing confirmed artifact for step ${kind}`,
+    );
   }
   return { ...output };
 }
@@ -1825,7 +1849,11 @@ function latestGateArtifact(snapshot: RunSnapshot): Record<string, unknown> {
         (step.kind === "semantic.review" ||
           step.kind === "deterministic.check"),
     )?.outputArtifact;
-  if (!output) throw permanent("review.missing", "修订前没有质量门禁工件");
+  if (!output)
+    throw permanent(
+      "review.missing",
+      "No quality gate artifact exists before revision",
+    );
   return { ...output };
 }
 
@@ -2314,7 +2342,10 @@ function continuationPrefixOf(
 function stringField(value: Record<string, unknown>, key: string): string {
   const field = value[key];
   if (typeof field !== "string") {
-    throw permanent("artifact.field.invalid", `工件字段 ${key} 不是字符串`);
+    throw permanent(
+      "artifact.field.invalid",
+      `Artifact field ${key} is not a string`,
+    );
   }
   return field;
 }
@@ -2327,7 +2358,7 @@ function purposeContextText(
   if (!isRecord(contexts) || !isRecord(contexts[purpose])) {
     throw permanent(
       "context.purpose.missing",
-      `缺少用途 ${purpose} 的独立上下文`,
+      `Missing the dedicated context for purpose ${purpose}`,
     );
   }
   return stringField(contexts[purpose], "text");

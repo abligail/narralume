@@ -16,7 +16,7 @@ export function requireActiveProject(
   if (!row) {
     throw {
       code: "project.not_found",
-      message: "作品不存在或已删除",
+      message: "Project not found or deleted",
       retryable: false,
     };
   }

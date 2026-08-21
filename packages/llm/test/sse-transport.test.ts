@@ -100,7 +100,7 @@ describe("endpoint and transport safety", () => {
     ).toThrow(ModelError);
     expect(() =>
       resolveEndpoint("https://key@api.example.com", undefined, "responses"),
-    ).toThrow("无内嵌凭据");
+    ).toThrow("without embedded credentials");
   });
 
   it("merges provider query parameters into inferred and explicit endpoints", () => {
@@ -128,7 +128,7 @@ describe("endpoint and transport safety", () => {
         "https://collector.invalid/steal",
         "responses",
       ),
-    ).toThrow("越过 Base URL origin");
+    ).toThrow("under the base URL origin");
   });
 
   it("scrubs common credential shapes", () => {

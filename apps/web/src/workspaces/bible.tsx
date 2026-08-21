@@ -11,6 +11,7 @@ import { ErrorNote } from "../components/error-note";
 import { PageBand } from "../components/page-band";
 import { ProjectRequiredState } from "../components/project-required-state";
 import { Skeleton } from "../components/skeleton";
+import { useI18n } from "../i18n";
 import { getStoryBible, type StoryBible } from "../lib/api";
 import {
   entityTypeLabel,
@@ -26,17 +27,18 @@ import { CanonCandidatePanel } from "./bible/candidate-panel";
 
 export type BibleSectionId = BibleEditorSection;
 
-const SECTION_TABS: { id: BibleSectionId; name: string; en: string }[] = [
-  { id: "intent", name: "意图", en: "INTENT" },
-  { id: "outline", name: "大纲", en: "OUTLINE" },
-  { id: "entities", name: "实体", en: "CANON" },
-  { id: "facts", name: "正典", en: "FACTS" },
-  { id: "relations", name: "关系", en: "LINKS" },
-  { id: "timeline", name: "时间线", en: "TIMELINE" },
-  { id: "foreshadows", name: "伏笔", en: "FORESHADOW" },
+const SECTION_TABS: { id: BibleSectionId; en: string }[] = [
+  { id: "intent", en: "INTENT" },
+  { id: "outline", en: "OUTLINE" },
+  { id: "entities", en: "CANON" },
+  { id: "facts", en: "FACTS" },
+  { id: "relations", en: "LINKS" },
+  { id: "timeline", en: "TIMELINE" },
+  { id: "foreshadows", en: "FORESHADOW" },
 ];
 
 export function BibleWorkspace() {
+  const { t } = useI18n();
   const projectId = useProjectId();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedSection = searchParams.get("spread");
@@ -66,9 +68,9 @@ export function BibleWorkspace() {
     return (
       <div className="bible">
         <ProjectRequiredState
-          seal="典"
-          title="故事"
-          description="选定作品后，在这里整理创作意图、人物、大纲和长期有效的故事事实。"
+          seal={t("bible.missing.seal")}
+          title={t("bible.missing.title")}
+          description={t("bible.missing.description")}
         />
       </div>
     );
@@ -78,7 +80,7 @@ export function BibleWorkspace() {
     <div className="bible">
       <PageBand
         index="CANON · 03"
-        title="故事圣经"
+        title={t("bible.title")}
         meta={
           bible ? (
             <>
@@ -86,9 +88,13 @@ export function BibleWorkspace() {
                 {bible.project.title} · {projectPhaseLabel(bible.project.phase)} ·{" "}
                 {bible.project.language}
               </span>
-              <span className="mono" aria-label="编目数">
-                {bible.outline.length} 节 · {bible.entities.length} 体 ·{" "}
-                {bible.facts.length} 事 · {bible.foreshadows.length} 伏
+              <span className="mono" aria-label={t("bible.catalogAriaLabel")}>
+                {t("bible.catalogCounts", {
+                  outline: bible.outline.length,
+                  entities: bible.entities.length,
+                  facts: bible.facts.length,
+                  foreshadows: bible.foreshadows.length,
+                })}
               </span>
             </>
           ) : null
@@ -97,7 +103,7 @@ export function BibleWorkspace() {
 
       {query.isError ? (
         <div className="bible__error">
-        <ErrorNote error={query.error} title="故事设定暂时无法加载" />
+        <ErrorNote error={query.error} title={t("bible.loadError")} />
         </div>
       ) : query.isPending ? (
         <div className="bible__loading">
@@ -107,10 +113,11 @@ export function BibleWorkspace() {
         </div>
       ) : bible ? (
         <div className="bible__spread">
-          <aside className="bible__rail" aria-label="板块辑签">
+          <aside className="bible__rail" aria-label={t("bible.railLabel")}>
             <p className="bible__rail-title">CANON SPREAD</p>
             {SECTION_TABS.map((tab, index) => {
               const count = countForSection(bible, tab.id);
+              const name = t(`bible.tabs.${tab.id}`);
               return (
                 <button
                   key={tab.id}
@@ -118,13 +125,13 @@ export function BibleWorkspace() {
                   className="bible__tab"
                   data-active={activeSection === tab.id ? "true" : undefined}
                   aria-pressed={activeSection === tab.id}
-                  aria-label={`查看${tab.name}`}
+                  aria-label={t("bible.tabs.view", { name })}
                   onClick={() => setActiveSection(tab.id)}
                 >
                   <span className="bible__tab-short" aria-hidden="true">
                     {String(index + 1).padStart(2, "0")}
                   </span>
-                  <span className="bible__tab-name">{tab.name}</span>
+                  <span className="bible__tab-name">{name}</span>
                   <span className="bible__tab-count">{count}</span>
                 </button>
               );
@@ -134,7 +141,11 @@ export function BibleWorkspace() {
           <div className="bible__main">
             <article
               className="bible__active-spread"
-              aria-label={`${SECTION_TABS.find((tab) => tab.id === activeSection)?.name ?? "正典"}阅读与编辑`}
+              aria-label={t("bible.spreadAriaLabel", {
+                name: SECTION_TABS.some((tab) => tab.id === activeSection)
+                  ? t(`bible.tabs.${activeSection}`)
+                  : t("bible.fallbackSpreadName"),
+              })}
             >
               <div className="bible__reader">
                 <ActiveSection id={activeSection} bible={bible} />
@@ -214,22 +225,23 @@ function ActiveSection({
 /* ---- 意图：首语 + 主题带 + 锁栏 ------------------------------------------ */
 
 function IntentSection({ bible }: { bible: StoryBible }) {
+  const { t } = useI18n();
   const intent = bible.intent;
   return (
     <section
       className="bible__section"
       id="bible-intent"
-      aria-label="作者意图"
+      aria-label={t("bible.intent.ariaLabel")}
     >
       <header className="bible__section-head">
         <span className="bible__section-no mono" aria-hidden="true">
           § 01
         </span>
-        <h2 className="bible__section-title">作者意图</h2>
+        <h2 className="bible__section-title">{t("bible.intent.title")}</h2>
         <span className="bible__section-en">INTENT</span>
         {intent?.currentFocus ? (
           <span className="bible__section-sub">
-            当前焦点：{intent.currentFocus}
+            {t("bible.intent.currentFocus", { value: intent.currentFocus })}
           </span>
         ) : null}
       </header>
@@ -237,26 +249,26 @@ function IntentSection({ bible }: { bible: StoryBible }) {
         {intent?.promise ? (
           <p className="bible__intent-promise">{intent.promise}</p>
         ) : (
-          <p className="bible__hint">尚未落笔首语。意图是这部书最远的一盏灯。</p>
+          <p className="bible__hint">{t("bible.intent.empty")}</p>
         )}
         {intent ? (
           <>
             <div className="bible__intent-grid">
               {intent.tone ? (
                 <div className="bible__intent-kv">
-                  <span className="bible__intent-key">TONE 语气</span>
+                  <span className="bible__intent-key">{t("bible.intent.tone")}</span>
                   <span className="bible__intent-val">{intent.tone}</span>
                 </div>
               ) : null}
               {intent.audience ? (
                 <div className="bible__intent-kv">
-                  <span className="bible__intent-key">AUDIENCE 面向</span>
+                  <span className="bible__intent-key">{t("bible.intent.audience")}</span>
                   <span className="bible__intent-val">{intent.audience}</span>
                 </div>
               ) : null}
               {intent.endingDirection ? (
                 <div className="bible__intent-kv">
-                  <span className="bible__intent-key">ENDING 终向</span>
+                  <span className="bible__intent-key">{t("bible.intent.ending")}</span>
                   <span className="bible__intent-val">
                     {intent.endingDirection}
                   </span>
@@ -265,7 +277,7 @@ function IntentSection({ bible }: { bible: StoryBible }) {
             </div>
             {intent.themes.length ? (
               <div className="bible__intent-kv">
-                <span className="bible__intent-key">THEMES 主题</span>
+                <span className="bible__intent-key">{t("bible.intent.themes")}</span>
                 <div className="bible__intent-bands">
                   {intent.themes.map((theme) => (
                     <span key={theme} className="bible__band">
@@ -277,7 +289,7 @@ function IntentSection({ bible }: { bible: StoryBible }) {
             ) : null}
             {intent.boundaries.length ? (
               <div className="bible__intent-kv">
-                <span className="bible__intent-key">BOUNDARIES 不写边界</span>
+                <span className="bible__intent-key">{t("bible.intent.boundaries")}</span>
                 <div className="bible__intent-bands">
                   {intent.boundaries.map((boundary) => (
                     <span key={boundary} className="bible__band">
@@ -291,7 +303,7 @@ function IntentSection({ bible }: { bible: StoryBible }) {
               <div className="bible__intent-locked">
                 {intent.lockedFields.map((field) => (
                   <span key={field} className="bible__lock">
-                    已锁 · {field}
+                    {t("bible.intent.locked", { field })}
                   </span>
                 ))}
               </div>
@@ -300,8 +312,8 @@ function IntentSection({ bible }: { bible: StoryBible }) {
         ) : null}
       </div>
       <footer className="bible__foot">
-        <span>意图是最高不可違的正典，先意图、后修订。</span>
-        <span aria-hidden="true">——叙事回归线</span>
+        <span>{t("bible.intent.footer")}</span>
+        <span aria-hidden="true">{t("bible.intent.footerMark")}</span>
       </footer>
     </section>
   );
@@ -310,24 +322,25 @@ function IntentSection({ bible }: { bible: StoryBible }) {
 /* ---- 大纲 ---------------------------------------------------------------- */
 
 function OutlineSection({ bible }: { bible: StoryBible }) {
+  const { t } = useI18n();
   const nodes = useMemo(
     () => [...bible.outline].sort((a, b) => (a.path < b.path ? -1 : 1)),
     [bible.outline],
   );
   return (
-    <section className="bible__section" id="bible-outline" aria-label="大纲纲目">
+    <section className="bible__section" id="bible-outline" aria-label={t("bible.outline.ariaLabel")}>
       <header className="bible__section-head">
         <span className="bible__section-no mono" aria-hidden="true">
           § 02
         </span>
-        <h2 className="bible__section-title">大纲纲目</h2>
+        <h2 className="bible__section-title">{t("bible.outline.title")}</h2>
         <span className="bible__section-en">OUTLINE</span>
-        <span className="bible__section-sub">{nodes.length} 节</span>
+        <span className="bible__section-sub">{t("bible.outline.count", { count: nodes.length })}</span>
       </header>
       <div className="bible__section-body bible__section-body--fill">
         {nodes.length === 0 ? (
           <p className="bible__hint bible__hint--inset">
-            还没有节点；书脊从第一章开始长出。
+            {t("bible.outline.empty")}
           </p>
         ) : (
           <div className="bible__outline">
@@ -352,19 +365,19 @@ function OutlineSection({ bible }: { bible: StoryBible }) {
                     <span className="bible__outline-shows-kicker">
                       {node.goal ? (
                         <span className="bible__outline-mini">
-                          目标：{node.goal}
+                          {t("bible.outline.goal", { value: node.goal })}
                         </span>
                       ) : null}
                       {node.conflict ? (
                         <span className="bible__outline-mini">
-                          冲突：{node.conflict}
+                          {t("bible.outline.conflict", { value: node.conflict })}
                         </span>
                       ) : null}
                     </span>
                   ) : null}
                 </div>
                 {node.status === "committed" ? (
-                  <span className="bible__outline-tag">已定稿</span>
+                  <span className="bible__outline-tag">{t("bible.outline.committed")}</span>
                 ) : (
                   <span
                     className="bible__outline-status"
@@ -385,19 +398,20 @@ function OutlineSection({ bible }: { bible: StoryBible }) {
 /* ---- 实体 ---------------------------------------------------------------- */
 
 function EntitySection({ bible }: { bible: StoryBible }) {
+  const { t } = useI18n();
   return (
-    <section className="bible__section" id="bible-entities" aria-label="实体册">
+    <section className="bible__section" id="bible-entities" aria-label={t("bible.entities.ariaLabel")}>
       <header className="bible__section-head">
         <span className="bible__section-no mono" aria-hidden="true">
           § 03
         </span>
-        <h2 className="bible__section-title">实体册</h2>
+        <h2 className="bible__section-title">{t("bible.entities.title")}</h2>
         <span className="bible__section-en">CANON ENTITIES</span>
-        <span className="bible__section-sub">{bible.entities.length} 体</span>
+        <span className="bible__section-sub">{t("bible.entities.count", { count: bible.entities.length })}</span>
       </header>
       <div className="bible__section-body">
         {bible.entities.length === 0 ? (
-          <p className="bible__hint">还没有实体登场。</p>
+          <p className="bible__hint">{t("bible.entities.empty")}</p>
         ) : (
           <div className="bible__cards">
             {bible.entities.map((entity) => (
@@ -430,6 +444,7 @@ function EntitySection({ bible }: { bible: StoryBible }) {
 /* ---- 正典：事实清单 ------------------------------------------------------- */
 
 function FactSection({ bible }: { bible: StoryBible }) {
+  const { t } = useI18n();
   const facts = useMemo(() => {
     const byId = new Map(bible.entities.map((entity) => [entity.id, entity]));
     return bible.facts.map((fact) => ({
@@ -439,19 +454,19 @@ function FactSection({ bible }: { bible: StoryBible }) {
     }));
   }, [bible.entities, bible.facts]);
   return (
-    <section className="bible__section" id="bible-facts" aria-label="正典事实">
+    <section className="bible__section" id="bible-facts" aria-label={t("bible.facts.ariaLabel")}>
       <header className="bible__section-head">
         <span className="bible__section-no mono" aria-hidden="true">
           § 04
         </span>
-        <h2 className="bible__section-title">正典事实</h2>
+        <h2 className="bible__section-title">{t("bible.facts.title")}</h2>
         <span className="bible__section-en">FACTS</span>
-        <span className="bible__section-sub">{facts.length} 事</span>
+        <span className="bible__section-sub">{t("bible.facts.count", { count: facts.length })}</span>
       </header>
       <div className="bible__section-body bible__section-body--fill">
         {facts.length === 0 ? (
           <p className="bible__hint bible__hint--inset">
-            尚无事实签订；一切照旧尚未成为事实。
+            {t("bible.facts.empty")}
           </p>
         ) : (
           <div className="bible__facts">
@@ -495,26 +510,27 @@ function jsonValueOf(value: unknown): string {
 /* ---- 关系 ---------------------------------------------------------------- */
 
 function RelationSection({ bible }: { bible: StoryBible }) {
+  const { t } = useI18n();
   const entities = useMemo(
     () => new Map(bible.entities.map((entity) => [entity.id, entity.name])),
     [bible.entities],
   );
   return (
-    <section className="bible__section" id="bible-relations" aria-label="关系谱">
+    <section className="bible__section" id="bible-relations" aria-label={t("bible.relations.ariaLabel")}>
       <header className="bible__section-head">
         <span className="bible__section-no mono" aria-hidden="true">
           § 05
         </span>
-        <h2 className="bible__section-title">关系谱</h2>
+        <h2 className="bible__section-title">{t("bible.relations.title")}</h2>
         <span className="bible__section-en">RELATIONS</span>
         <span className="bible__section-sub">
-          {bible.relationships.length} 条
+          {t("bible.relations.count", { count: bible.relationships.length })}
         </span>
       </header>
       <div className="bible__section-body bible__section-body--fill">
         {bible.relationships.length === 0 ? (
           <p className="bible__hint bible__hint--inset">
-            还没有关系事件被写入。
+            {t("bible.relations.empty")}
           </p>
         ) : (
           <div className="bible__ledger">
@@ -542,19 +558,20 @@ function RelationSection({ bible }: { bible: StoryBible }) {
 /* ---- 时间线 -------------------------------------------------------------- */
 
 function TimelineSection({ bible }: { bible: StoryBible }) {
+  const { t } = useI18n();
   return (
-    <section className="bible__section" id="bible-timeline" aria-label="时间线">
+    <section className="bible__section" id="bible-timeline" aria-label={t("bible.timeline.ariaLabel")}>
       <header className="bible__section-head">
         <span className="bible__section-no mono" aria-hidden="true">
           § 06
         </span>
-        <h2 className="bible__section-title">时间线</h2>
+        <h2 className="bible__section-title">{t("bible.timeline.title")}</h2>
         <span className="bible__section-en">TIMELINE</span>
-        <span className="bible__section-sub">{bible.timeline.length} 条</span>
+        <span className="bible__section-sub">{t("bible.timeline.count", { count: bible.timeline.length })}</span>
       </header>
       <div className="bible__section-body">
         {bible.timeline.length === 0 ? (
-          <p className="bible__hint">故事还没有落笔到时间的刻度上。</p>
+          <p className="bible__hint">{t("bible.timeline.empty")}</p>
         ) : (
           bible.timeline.map((event) => (
             <div key={event.id}>
@@ -576,21 +593,22 @@ function TimelineSection({ bible }: { bible: StoryBible }) {
 /* ---- 伏笔 ---------------------------------------------------------------- */
 
 function ForeshadowSection({ bible }: { bible: StoryBible }) {
+  const { t } = useI18n();
   return (
-    <section className="bible__section" id="bible-foreshadows" aria-label="伏笔谱">
+    <section className="bible__section" id="bible-foreshadows" aria-label={t("bible.foreshadows.ariaLabel")}>
       <header className="bible__section-head">
         <span className="bible__section-no mono" aria-hidden="true">
           § 07
         </span>
-        <h2 className="bible__section-title">伏笔谱</h2>
+        <h2 className="bible__section-title">{t("bible.foreshadows.title")}</h2>
         <span className="bible__section-en">FORESHADOW</span>
         <span className="bible__section-sub">
-          {bible.foreshadows.length} 伏
+          {t("bible.foreshadows.count", { count: bible.foreshadows.length })}
         </span>
       </header>
       <div className="bible__section-body">
         {bible.foreshadows.length === 0 ? (
-          <p className="bible__hint">尚未在章节里落埋。</p>
+          <p className="bible__hint">{t("bible.foreshadows.empty")}</p>
         ) : (
           <div className="bible__foreshadows">
             {bible.foreshadows.map((foreshadow) => (
@@ -612,8 +630,10 @@ function ForeshadowSection({ bible }: { bible: StoryBible }) {
                   {foreshadow.description}
                 </p>
                 <p className="bible__foreshadow-meta">
-                  证据 {foreshadow.evidenceNodeIds.length} 踏 · 更新于{" "}
-                  {foreshadow.updatedAt.slice(0, 10)}
+                  {t("bible.foreshadows.meta", {
+                    count: foreshadow.evidenceNodeIds.length,
+                    date: foreshadow.updatedAt.slice(0, 10),
+                  })}
                 </p>
               </article>
             ))}

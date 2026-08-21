@@ -63,14 +63,14 @@ export class CanonCandidateService {
     if (!changeSet)
       throw new CanonCandidateError(
         "canon_candidate.not_found",
-        "Canon Spread 候选不存在",
+        "Canon Spread candidate set not found",
         404,
       );
     const changes = CanonCandidateChangesSchema.safeParse(changeSet.changes);
     if (!changes.success)
       throw new CanonCandidateError(
         "canon_candidate.not_found",
-        "该变化集不是 Canon Spread 候选",
+        "This change set is not a Canon Spread candidate set",
         404,
       );
     return this.view(changeSet, changes.data);
@@ -90,14 +90,14 @@ export class CanonCandidateService {
     if (!changeSet)
       throw new CanonCandidateError(
         "canon_candidate.not_found",
-        "Canon Spread 候选不存在",
+        "Canon Spread candidate set not found",
         404,
       );
     const changes = CanonCandidateChangesSchema.safeParse(changeSet.changes);
     if (!changes.success)
       throw new CanonCandidateError(
         "canon_candidate.not_found",
-        "该变化集不是 Canon Spread 候选",
+        "This change set is not a Canon Spread candidate set",
         404,
       );
     const item = changes.data.items.find(
@@ -106,7 +106,7 @@ export class CanonCandidateService {
     if (!item)
       throw new CanonCandidateError(
         "canon_candidate.item.not_found",
-        "候选修改不存在",
+        "Candidate item not found",
         404,
       );
     const prior = this.reviews.getCanonItemDecision(changeSet.id, item.id);
@@ -114,7 +114,7 @@ export class CanonCandidateService {
       if (prior.action !== input.action)
         throw new CanonCandidateError(
           "canon_candidate.item.decision_conflict",
-          "该候选已经做出不同裁定",
+          "This candidate already has a different decision",
           409,
         );
       return this.resultFor(input.projectId, changeSet.id, item.id);
@@ -126,7 +126,7 @@ export class CanonCandidateService {
     ) {
       throw new CanonCandidateError(
         "canon_candidate.locked_confirmation_required",
-        "该候选会修改锁定内容，需要再次明确确认",
+        "This candidate modifies locked content and requires explicit confirmation again",
         409,
       );
     }
@@ -201,7 +201,7 @@ export class CanonCandidateService {
     if (!item)
       throw new CanonCandidateError(
         "canon_candidate.item.not_found",
-        "候选修改不存在",
+        "Candidate item not found",
         404,
       );
     return { candidateSet, item };
@@ -252,7 +252,7 @@ export class CanonCandidateService {
     ) {
       throw new CanonCandidateError(
         "canon_candidate.item.version_conflict",
-        "正典内容已在候选生成后变化，请保留当前内容并重新生成候选",
+        "The canon content has changed since the candidates were generated; keep the current content and regenerate candidates",
         409,
       );
     }
@@ -278,7 +278,9 @@ export class CanonCandidateService {
   ) {
     const current = this.story.getAuthorIntent(projectId);
     if (!current || !item.after)
-      throw invalidItem("作者意图候选缺少当前值或修改内容");
+      throw invalidItem(
+        "Intent candidate is missing the current value or modified content",
+      );
     const updated = this.story.upsertAuthorIntent({
       ...current,
       ...item.after,
@@ -295,7 +297,8 @@ export class CanonCandidateService {
     item: CanonCandidateChanges["items"][number],
     now: string,
   ) {
-    if (!item.after) throw invalidItem("大纲候选缺少修改内容");
+    if (!item.after)
+      throw invalidItem("Outline candidate is missing modified content");
     if (item.operation === "create") {
       const parentId = nullableString(item.after.parentId);
       const parent = parentId
@@ -310,7 +313,7 @@ export class CanonCandidateService {
       if (siblings.some((node) => node.ordinal === ordinal)) {
         throw new CanonCandidateError(
           "canon_candidate.item.conflict",
-          "候选生成后大纲已变化（同层已有相同序号的节点），请保留现有内容并重新生成候选",
+          "The outline has changed since the candidates were generated (a sibling with the same ordinal already exists); keep the current content and regenerate candidates",
           409,
         );
       }
@@ -363,7 +366,9 @@ export class CanonCandidateService {
         immutable in item.after &&
         item.after[immutable] !== current[immutable]
       )
-        throw invalidItem(`现有大纲节点不能通过候选修改 ${immutable}`);
+        throw invalidItem(
+          `An existing outline node cannot change ${immutable} through a candidate`,
+        );
     }
     let stored = this.story.updateOutlineDetails(
       projectId,
@@ -419,7 +424,8 @@ export class CanonCandidateService {
     item: CanonCandidateChanges["items"][number],
     now: string,
   ) {
-    if (!item.after) throw invalidItem("实体候选缺少修改内容");
+    if (!item.after)
+      throw invalidItem("Entity candidate is missing modified content");
     if (item.operation === "create") {
       const type = enumValue(item.after.type, [
         "character",
@@ -439,7 +445,7 @@ export class CanonCandidateService {
       ) {
         throw new CanonCandidateError(
           "canon_candidate.item.conflict",
-          "候选生成后正典已变化（已存在同类型同名实体），请保留现有内容并重新生成候选",
+          "The canon has changed since the candidates were generated (an entity with the same type and name already exists); keep the current content and regenerate candidates",
           409,
         );
       }
@@ -464,7 +470,7 @@ export class CanonCandidateService {
     }
     const current = this.canon.requireEntity(projectId, requiredTarget(item));
     if (item.after.type !== undefined && item.after.type !== current.type)
-      throw invalidItem("现有实体不能改变类型");
+      throw invalidItem("An existing entity cannot change its type");
     const updated: CanonEntity = {
       ...current,
       name: optionalString(item.after.name) ?? current.name,
@@ -504,7 +510,8 @@ export class CanonCandidateService {
       });
       return { spread: "facts", value: withdrawal };
     }
-    if (!item.after) throw invalidItem("事实候选缺少修改内容");
+    if (!item.after)
+      throw invalidItem("Fact candidate is missing modified content");
     const current =
       item.operation === "update"
         ? this.canon.requireFact(projectId, requiredTarget(item))
@@ -544,7 +551,8 @@ export class CanonCandidateService {
     item: CanonCandidateChanges["items"][number],
     now: string,
   ) {
-    if (!item.after) throw invalidItem("关系候选缺少修改内容");
+    if (!item.after)
+      throw invalidItem("Relationship candidate is missing modified content");
     const current =
       item.operation === "update"
         ? this.state.getRelationship(projectId, requiredTarget(item))
@@ -552,7 +560,7 @@ export class CanonCandidateService {
     if (item.operation === "update" && !current)
       throw new CanonCandidateError(
         "canon_candidate.item.version_conflict",
-        "关系已经变化",
+        "The relationship has changed",
         409,
       );
     const desired = { ...(current ?? {}), ...item.after };
@@ -579,7 +587,8 @@ export class CanonCandidateService {
     item: CanonCandidateChanges["items"][number],
     now: string,
   ) {
-    if (!item.after) throw invalidItem("时间线候选缺少修改内容");
+    if (!item.after)
+      throw invalidItem("Timeline candidate is missing modified content");
     const current =
       item.operation === "update"
         ? (this.state
@@ -589,7 +598,7 @@ export class CanonCandidateService {
     if (item.operation === "update" && !current)
       throw new CanonCandidateError(
         "canon_candidate.item.version_conflict",
-        "时间线事件已经变化",
+        "The timeline event has changed",
         409,
       );
     const desired = { ...(current ?? {}), ...item.after };
@@ -628,7 +637,8 @@ export class CanonCandidateService {
     item: CanonCandidateChanges["items"][number],
     now: string,
   ) {
-    if (!item.after) throw invalidItem("伏笔候选缺少修改内容");
+    if (!item.after)
+      throw invalidItem("Foreshadow candidate is missing modified content");
     const current =
       item.operation === "update"
         ? (this.state
@@ -638,7 +648,7 @@ export class CanonCandidateService {
     if (item.operation === "update" && !current)
       throw new CanonCandidateError(
         "canon_candidate.item.version_conflict",
-        "伏笔已经变化",
+        "The foreshadow has changed",
         409,
       );
     const desired = { ...(current ?? {}), ...item.after };
@@ -702,7 +712,7 @@ function mergeFact(current: CanonFact | null, patch: Record<string, unknown>) {
 }
 
 function requiredTarget(item: { targetId: string | null }): string {
-  if (!item.targetId) throw invalidItem("候选缺少目标 ID");
+  if (!item.targetId) throw invalidItem("Candidate is missing a target ID");
   return item.targetId;
 }
 
@@ -712,7 +722,7 @@ function invalidItem(message: string): CanonCandidateError {
 
 function stringValue(value: unknown): string {
   if (typeof value !== "string" || !value.trim())
-    throw invalidItem("候选缺少必填文本");
+    throw invalidItem("Candidate is missing required text");
   return value.trim();
 }
 
@@ -726,7 +736,7 @@ function nullableString(value: unknown): string | null {
 
 function integerValue(value: unknown): number {
   if (typeof value !== "number" || !Number.isInteger(value))
-    throw invalidItem("候选缺少有效整数");
+    throw invalidItem("Candidate is missing a valid integer");
   return value;
 }
 
@@ -737,14 +747,14 @@ function numberValue(value: unknown, fallback: number): number {
 function nullableNumber(value: unknown): number | null {
   if (value === null || value === undefined) return null;
   if (typeof value !== "number" || !Number.isFinite(value))
-    throw invalidItem("候选数值无效");
+    throw invalidItem("Candidate number is invalid");
   return value;
 }
 
 function stringArray(value: unknown): string[] {
   if (value === undefined || value === null) return [];
   if (!Array.isArray(value) || value.some((entry) => typeof entry !== "string"))
-    throw invalidItem("候选列表必须只包含文本");
+    throw invalidItem("Candidate list must contain text only");
   return [...new Set(value.map((entry) => entry.trim()).filter(Boolean))];
 }
 
@@ -761,7 +771,8 @@ function enumValue<T extends string | number>(
   value: unknown,
   values: readonly T[],
 ): T {
-  if (!values.includes(value as T)) throw invalidItem("候选枚举值无效");
+  if (!values.includes(value as T))
+    throw invalidItem("Candidate enum value is invalid");
   return value as T;
 }
 

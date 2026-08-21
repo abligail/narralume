@@ -953,7 +953,7 @@ function resultingIssueStatus(
 
 export class ReviewIssueNotFoundError extends Error {
   constructor(readonly issueId: string) {
-    super(`审稿问题不存在：${issueId}`);
+    super(`Review issue not found: ${issueId}`);
     this.name = "ReviewIssueNotFoundError";
   }
 }
@@ -964,7 +964,9 @@ export class ReviewIssueDecisionConflictError extends Error {
     readonly expected: ReviewIssueStatus,
     readonly actual: ReviewIssueStatus,
   ) {
-    super(`审稿问题状态已变化：期望 ${expected}，实际 ${actual}`);
+    super(
+      `Review issue status changed: expected ${expected}, actual ${actual}`,
+    );
     this.name = "ReviewIssueDecisionConflictError";
   }
 }

@@ -11,6 +11,7 @@ import { ErrorNote } from "../components/error-note";
 import { PageBand } from "../components/page-band";
 import { ProjectRequiredState } from "../components/project-required-state";
 import { Skeleton } from "../components/skeleton";
+import { getLocale, translate, useI18n, type MessageKey } from "../i18n";
 import {
   consolidateNarrativeMemory,
   decidePlotPrediction,
@@ -25,23 +26,34 @@ import {
 } from "../lib/api";
 import { useProjectId } from "../lib/project-route";
 
-const AUTHORITY_LABEL: Record<string, string> = {
-  reference: "参照",
-  draft: "草稿",
-  candidate: "候选",
-  confirmed: "确认",
-  locked: "锁定",
+const AUTHORITY_KEYS: Record<string, MessageKey> = {
+  reference: "lab.authority.reference",
+  draft: "lab.authority.draft",
+  candidate: "lab.authority.candidate",
+  confirmed: "lab.authority.confirmed",
+  locked: "lab.authority.locked",
 };
 
-const PREDICTION_STATUS_LABEL: Record<string, string> = {
-  candidate: "待掂",
-  adopted: "已采纳",
-  dismissed: "已搁置",
+const PREDICTION_STATUS_KEYS: Record<string, MessageKey> = {
+  candidate: "lab.predictions.status.candidate",
+  adopted: "lab.predictions.status.adopted",
+  dismissed: "lab.predictions.status.dismissed",
 };
+
+function authorityLabel(authority: string): string | undefined {
+  const key = AUTHORITY_KEYS[authority];
+  return key ? translate(getLocale(), key) : undefined;
+}
+
+function predictionStatusLabel(status: string): string | undefined {
+  const key = PREDICTION_STATUS_KEYS[status];
+  return key ? translate(getLocale(), key) : undefined;
+}
 
 export function LabWorkspace() {
   const projectId = useProjectId();
   const queryClient = useQueryClient();
+  const { t } = useI18n();
 
   const [searchInput, setSearchInput] = useState("");
   const [dryrunInput, setDryrunInput] = useState("");
@@ -80,7 +92,10 @@ export function LabWorkspace() {
     onSuccess: (prediction, input) => {
       void queryClient.invalidateQueries({ queryKey: ["project", projectId, "lab", "predictions"] });
       setFlashPrediction(
-        `${input.adopted ? "已采纳" : "已搁置"} · 《${prediction.title}》`,
+        translate(getLocale(), "lab.predictions.flash", {
+          status: predictionStatusLabel(input.adopted ? "adopted" : "dismissed") ?? "",
+          title: prediction.title,
+        }),
       );
       window.setTimeout(() => setFlashPrediction(null), 2000);
     },
@@ -109,9 +124,9 @@ export function LabWorkspace() {
     return (
       <div className="lab">
         <ProjectRequiredState
-          seal="演"
-          title="长篇推演"
-          description="选定作品后，在这里推演剧情走向、故事记忆和设定变更可能产生的影响。"
+          seal={t("lab.missing.seal")}
+          title={t("lab.title")}
+          description={t("lab.missing.description")}
         />
       </div>
     );
@@ -119,7 +134,7 @@ export function LabWorkspace() {
 
   return (
     <div className="lab">
-      <PageBand index="LOOM · L2" title="长篇推演" meta={<span>语义检索 · 剧情预测 · 影响预演 · 故事记忆</span>} />
+      <PageBand index="LOOM · L2" title={t("lab.title")} meta={<span>{t("lab.meta")}</span>} />
 
       <div className="lab__layout">
         <div className="lab__column">
@@ -188,17 +203,18 @@ function LabActions({
   }) => void;
   onMemory: (action: "rebuild" | "consolidate") => void;
 }) {
+  const { t } = useI18n();
   const [direction, setDirection] = useState("");
   const [horizon, setHorizon] = useState(3);
   const [count, setCount] = useState(3);
   return (
     <section className="lab__actions">
       <header>
-        <p className="lab__search-eyebrow">显式维护 · ACTIONS</p>
-        <h2 className="lab__search-title">生成预测与整理记忆</h2>
+        <p className="lab__search-eyebrow">{t("lab.actions.eyebrow")}</p>
+        <h2 className="lab__search-title">{t("lab.actions.title")}</h2>
       </header>
       <label className="lab__field">
-        <span>希望推演的方向</span>
+        <span>{t("lab.actions.directionLabel")}</span>
         <textarea
           value={direction}
           onChange={(event) => setDirection(event.target.value)}
@@ -206,7 +222,7 @@ function LabActions({
       </label>
       <div className="lab__actions-row">
         <label className="lab__field">
-          <span>视野章数</span>
+          <span>{t("lab.actions.horizonLabel")}</span>
           <input
             type="number"
             min="1"
@@ -216,7 +232,7 @@ function LabActions({
           />
         </label>
         <label className="lab__field">
-          <span>候选数量</span>
+          <span>{t("lab.actions.countLabel")}</span>
           <input
             type="number"
             min="1"
@@ -233,7 +249,7 @@ function LabActions({
             onGenerate({ direction: direction.trim(), horizon, count })
           }
         >
-          {generationPending ? "生成中…" : "生成预测"}
+          {generationPending ? t("lab.actions.generating") : t("lab.actions.generate")}
         </button>
       </div>
       <div className="lab__actions-row">
@@ -243,7 +259,7 @@ function LabActions({
           disabled={memoryPending}
           onClick={() => onMemory("rebuild")}
         >
-          重建全部记忆
+          {t("lab.actions.rebuild")}
         </button>
         <button
           type="button"
@@ -251,14 +267,14 @@ function LabActions({
           disabled={memoryPending}
           onClick={() => onMemory("consolidate")}
         >
-          整理工作记忆
+          {t("lab.actions.consolidate")}
         </button>
       </div>
       {generationError ? (
-        <ErrorNote error={generationError} title="预测未生成" />
+        <ErrorNote error={generationError} title={t("lab.actions.generateError")} />
       ) : null}
       {memoryError ? (
-        <ErrorNote error={memoryError} title="记忆维护未完成" />
+        <ErrorNote error={memoryError} title={t("lab.actions.memoryError")} />
       ) : null}
     </section>
   );
@@ -290,11 +306,12 @@ function SearchChamber({
       | undefined;
   };
 }) {
+  const { t } = useI18n();
   return (
     <div className="lab__search">
       <header>
-        <p className="lab__search-eyebrow">语义检索 · SEARCH-01</p>
-        <h2 className="lab__search-title">检索相关故事记忆</h2>
+        <p className="lab__search-eyebrow">{t("lab.search.eyebrow")}</p>
+        <h2 className="lab__search-title">{t("lab.search.title")}</h2>
       </header>
       <div className="lab__search-form">
         <input
@@ -302,8 +319,8 @@ function SearchChamber({
           className="lab__search-input"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
-          placeholder="例如：姐姐在第 3 章消失前出现过哪些征兆？"
-          aria-label="检索问题"
+          placeholder={t("lab.search.placeholder")}
+          aria-label={t("lab.search.inputLabel")}
         />
         <button
           type="button"
@@ -314,20 +331,20 @@ function SearchChamber({
           onClick={() => searchMutation.mutate(searchInput.trim())}
         >
           <Search size={14} strokeWidth={1.5} aria-hidden="true" />
-          检索
+          {t("lab.search.button")}
         </button>
       </div>
-      <div className="lab__hits" aria-label="检索结果">
+      <div className="lab__hits" aria-label={t("lab.search.resultsLabel")}>
         {searchMutation.isPending ? (
           <Skeleton lines={3} />
         ) : searchMutation.isError ? (
-          <ErrorNote error={searchMutation.error} title="检索失败" />
+          <ErrorNote error={searchMutation.error} title={t("lab.search.error")} />
         ) : searchMutation.data && searchMutation.data.length > 0 ? (
           searchMutation.data.map((hit) => (
             <article key={hit.id} className="lab__hit" data-a={hit.authority}>
               <div className="lab__hit-head">
                 <span className="lab__hit-auth" data-a={hit.authority}>
-                  {AUTHORITY_LABEL[hit.authority]}
+                  {authorityLabel(hit.authority)}
                 </span>
                 <span className="lab__hit-title">{hit.title}</span>
                 <span className="lab__hit-score mono">
@@ -350,11 +367,11 @@ function SearchChamber({
           ))
         ) : searchMutation.data ? (
           <p className="lab__note">
-            没有找到相关的故事记忆。
+            {t("lab.search.empty")}
           </p>
         ) : (
           <p className="lab__note">
-            输入问题后，相关设定、正文和记忆会显示在这里。
+            {t("lab.search.hint")}
           </p>
         )}
       </div>
@@ -389,36 +406,37 @@ function Predictions({
   memoriesPending: boolean;
   memoriesError: unknown;
 }) {
+  const { t } = useI18n();
   return (
     <div className="lab__panel">
       <header className="lab__panel-head">
-        <p className="lab__panel-title">剧情预测</p>
+        <p className="lab__panel-title">{t("lab.predictions.title")}</p>
         <span className="lab__panel-count mono">
-          {predictions?.length ?? 0} 条
+          {t("lab.predictions.count", { count: predictions?.length ?? 0 })}
         </span>
       </header>
       <div className="lab__panel-body">
         {isPending ? (
           <Skeleton lines={2} />
         ) : isError ? (
-          <ErrorNote error={error} title="预测内容暂时无法加载" />
+          <ErrorNote error={error} title={t("lab.predictions.loadError")} />
         ) : predictions?.length === 0 ? (
-          <p className="lab__note">还没有推演落成预测。</p>
+          <p className="lab__note">{t("lab.predictions.empty")}</p>
         ) : (
           <div className="lab__predictions">
             {predictions?.map((prediction) => (
               <article key={prediction.id} className="lab__prediction">
                 <div className="lab__prediction-head">
                   <span className="lab__prediction-horizon">
-                    +{prediction.horizon} 章后
+                    {t("lab.predictions.horizon", { horizon: prediction.horizon })}
                   </span>
                   <span className="lab__prediction-title">
                     {prediction.title}
                   </span>
                   <span className="lab__prediction-status">
                     {prediction.stale
-                      ? "已失效"
-                      : PREDICTION_STATUS_LABEL[prediction.status]}
+                      ? t("lab.predictions.stale")
+                      : predictionStatusLabel(prediction.status)}
                   </span>
                 </div>
                 <p className="lab__prediction-summary">{prediction.summary}</p>
@@ -430,7 +448,7 @@ function Predictions({
                       disabled={pending}
                       onClick={() => onAdopt(prediction)}
                     >
-                      采纳
+                      {t("lab.predictions.adopt")}
                     </button>
                     <button
                       type="button"
@@ -438,7 +456,7 @@ function Predictions({
                       disabled={pending}
                       onClick={() => onDismiss(prediction)}
                     >
-                      搁置
+                      {t("lab.predictions.dismiss")}
                     </button>
                   </div>
                 ) : null}
@@ -453,15 +471,15 @@ function Predictions({
         ) : null}
 
         <div className="lab__memories">
-          <p className="lab__memories-head">故事记忆 · {memories.length}</p>
+          <p className="lab__memories-head">{t("lab.memories.title", { count: memories.length })}</p>
           {memoriesPending ? (
             <Skeleton lines={2} />
           ) : memoriesError ? (
-            <ErrorNote error={memoriesError} title="记忆内容暂时无法加载" />
+            <ErrorNote error={memoriesError} title={t("lab.memories.loadError")} />
           ) : (
             <div className="lab__memory-list">
               {memories.length === 0 ? (
-                <p className="lab__note">还没有记忆进仓</p>
+                <p className="lab__note">{t("lab.memories.empty")}</p>
               ) : (
                 memories.slice(0, 5).map((memory, index) => (
                   <div key={index} className="lab__memory">
@@ -502,23 +520,24 @@ function DryRun({
   isError: boolean;
   error: unknown;
 }) {
+  const { t } = useI18n();
   return (
     <div className="lab__panel">
       <header className="lab__panel-head">
-        <p className="lab__panel-title">影响预演</p>
+        <p className="lab__panel-title">{t("lab.dryRun.title")}</p>
         <span className="lab__panel-count mono">PREVIEW-01</span>
       </header>
       <div className="lab__panel-body">
         <p className="lab__note">
-          在正式修改前，检查这项变更会影响哪些设定、章节和故事状态。
+          {t("lab.dryRun.intro")}
         </p>
         <div className="lab__dryrun">
           <textarea
             className="lab__dryrun-input"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="例如：把林昭改成从未真实存在的人。"
-            aria-label="待预演的变更"
+            placeholder={t("lab.dryRun.placeholder")}
+            aria-label={t("lab.dryRun.inputLabel")}
           />
           <button
             type="button"
@@ -527,19 +546,19 @@ function DryRun({
             onClick={() => onSubmit(input.trim())}
           >
             <Send size={13} strokeWidth={1.5} aria-hidden="true" />
-            预演影响
+            {t("lab.dryRun.submit")}
           </button>
           {isError ? (
-            <ErrorNote error={error} title="影响预演失败" />
+            <ErrorNote error={error} title={t("lab.dryRun.error")} />
           ) : result ? (
-            <div className="lab__dryrun-result" aria-label="影响预演结果">
+            <div className="lab__dryrun-result" aria-label={t("lab.dryRun.resultLabel")}>
               <span
                 className="lab__dryrun-safe"
                 data-safe={result.safeToProceed}
               >
                 {result.safeToProceed
-                  ? "继续安全，没有发现相冲链路"
-                  : "不建议继续；下面这些不是孤立的"}
+                  ? t("lab.dryRun.safe")
+                  : t("lab.dryRun.unsafe")}
               </span>
               {result.findings.map((finding) => (
                 <div
@@ -559,7 +578,7 @@ function DryRun({
             </div>
           ) : (
             <p className="lab__note">
-              还没有进行影响预演。
+              {t("lab.dryRun.empty")}
             </p>
           )}
         </div>

@@ -154,7 +154,7 @@ export function resolveSessionFailure(
     ) {
       throw new AutomationServiceError(
         "autopilot.resolution.unsafe",
-        "只能在失败、暂停或等待作者时选择出路",
+        "A resolution is only allowed when the chapter has failed, is paused, or is waiting for the author",
         409,
       );
     }
@@ -211,7 +211,7 @@ export function adoptCandidate(
       ) {
         throw new AutomationServiceError(
           "foundation_candidate.intent.stale",
-          "作者意图已在候选生成后变化，请保留当前内容并重新生成候选",
+          "The author intent changed after the candidate was generated; keep the current content and regenerate the candidate",
           409,
         );
       }
@@ -250,7 +250,7 @@ export function adoptCandidate(
       ) {
         throw new AutomationServiceError(
           "foundation_candidate.compass.stale",
-          "故事指南针已在候选生成后变化，请保留当前内容并重新生成候选",
+          "The story compass changed after the candidate was generated; keep the current content and regenerate the candidate",
           409,
         );
       }
@@ -288,7 +288,11 @@ export function adoptCandidate(
     }
     const project = projects.get(candidate.projectId);
     if (!project) {
-      throw new AutomationServiceError("project.not_found", "作品不存在", 404);
+      throw new AutomationServiceError(
+        "project.not_found",
+        "Project not found",
+        404,
+      );
     }
     if (project.phase === "idea") {
       projects.update({ ...project, phase: "foundation", updatedAt: now });

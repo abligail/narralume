@@ -1,6 +1,6 @@
 {
   "name": "@narralume/web",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -13,11 +13,11 @@
     "typecheck": "tsc -b --pretty false"
   },
   "dependencies": {
-    "@narralume/contracts": "^0.1.0",
-    "@narralume/harness": "^0.1.0",
-    "@narralume/narrative": "^0.1.0",
-    "@narralume/persistence": "0.1.0",
-    "@narralume/services": "^0.1.0",
+    "@narralume/contracts": "^0.2.0",
+    "@narralume/harness": "^0.2.0",
+    "@narralume/narrative": "^0.2.0",
+    "@narralume/persistence": "0.2.0",
+    "@narralume/services": "^0.2.0",
     "@tanstack/react-query": "^5.101.4",
     "dompurify": "^3.4.13",
     "lenis": "^1.3.26",

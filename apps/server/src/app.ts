@@ -243,7 +243,10 @@ export async function buildApp(
     if (!authToken || request.url === "/api/health") return;
     if (request.headers.authorization !== `Bearer ${authToken}`)
       return reply.code(401).send({
-        error: { code: "auth.required", message: "需要有效的本地服务令牌" },
+        error: {
+          code: "auth.required",
+          message: "A valid local service token is required",
+        },
       });
   });
 
@@ -398,16 +401,16 @@ export async function buildApp(
     app.setNotFoundHandler(async (request, reply) => {
       if (request.url.startsWith("/api/")) {
         return reply.code(404).send({
-          error: { code: "route.not_found", message: "接口不存在" },
+          error: { code: "route.not_found", message: "Route not found" },
         });
       }
       return reply.sendFile("index.html");
     });
   } else {
     app.setNotFoundHandler(async (_request, reply) =>
-      reply
-        .code(404)
-        .send({ error: { code: "route.not_found", message: "接口不存在" } }),
+      reply.code(404).send({
+        error: { code: "route.not_found", message: "Route not found" },
+      }),
     );
   }
 
@@ -456,6 +459,6 @@ function assertExposureBoundary(config: ServerConfig) {
   )
     return;
   throw new Error(
-    "远程监听默认关闭；生产环境必须同时设置 NARRATIVE_ALLOW_REMOTE=true 和 NARRATIVE_AUTH_TOKEN",
+    "Remote listening is disabled by default; production requires both NARRATIVE_ALLOW_REMOTE=true and NARRATIVE_AUTH_TOKEN",
   );
 }

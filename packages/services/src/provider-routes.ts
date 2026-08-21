@@ -72,7 +72,7 @@ export function registerProviderRoutes(
     if (!input.credentialRef) {
       throw new ProviderRouteError(
         "provider.credential.required",
-        "创建 Provider 需要提供 credentialRef（原始密钥或 env:NAME 引用）",
+        "Creating a provider requires a credentialRef (a raw key or an env:NAME reference)",
         422,
       );
     }
@@ -254,7 +254,7 @@ export function registerProviderRoutes(
     ) {
       throw new ProviderRouteError(
         "model.identity_in_use",
-        "模型已有运行历史，不能修改 Provider、上游模型名或任务类型；请新建模型",
+        "The model has run history, so its Provider, upstream model name, or task type cannot be changed; create a new model instead",
         409,
       );
     }
@@ -282,7 +282,7 @@ export function registerProviderRoutes(
     if (modelId.startsWith(ENVIRONMENT_MANAGED_PREFIX)) {
       throw new ProviderRouteError(
         "model.environment_managed",
-        "环境模型不能删除，可以将其停用",
+        "Environment-managed models cannot be deleted; you can disable them instead",
         409,
       );
     }
@@ -293,14 +293,14 @@ export function registerProviderRoutes(
     ) {
       throw new ProviderRouteError(
         "model.assignment_in_use",
-        "模型仍被模型分配引用，请先调整分配",
+        "The model is still referenced by a model assignment; adjust the assignment first",
         409,
       );
     }
     if (modelHasRuntimeHistory(database, modelId)) {
       throw new ProviderRouteError(
         "model.history_in_use",
-        "模型已有运行历史，不能删除；可以将其停用",
+        "The model has run history and cannot be deleted; you can disable it instead",
         409,
       );
     }
@@ -389,19 +389,19 @@ function assertAssignmentTarget(
   if (!model.enabled)
     throw new ProviderRouteError(
       "assignment.model.disabled",
-      "已分配模型不能被停用",
+      "An assigned model cannot be disabled",
       409,
     );
   if (!provider?.enabled)
     throw new ProviderRouteError(
       "assignment.provider.disabled",
-      "已分配模型的 Provider 不可用",
+      "The assigned model's Provider is disabled",
       409,
     );
   if (!assignmentCompatible(role, model.taskType))
     throw new ProviderRouteError(
       "assignment.task_type.mismatch",
-      `模型任务类型 ${model.taskType} 不能用于 ${role}`,
+      `A model with task type ${model.taskType} cannot be used for ${role}`,
       422,
     );
 }
@@ -466,15 +466,18 @@ function resolveCredentialFromEnvironment(
     const name = credentialRef.slice("env:".length);
     const value = environment[name];
     if (value === undefined) {
-      return { ok: false, reason: `未配置环境变量 ${name}` };
+      return {
+        ok: false,
+        reason: `Environment variable ${name} is not configured`,
+      };
     }
     if (value.trim().length === 0) {
-      return { ok: false, reason: `环境变量 ${name} 为空` };
+      return { ok: false, reason: `Environment variable ${name} is empty` };
     }
     return { ok: true, apiKey: value };
   }
   if (credentialRef.trim().length === 0) {
-    return { ok: false, reason: "credentialRef 为空" };
+    return { ok: false, reason: "credentialRef is empty" };
   }
   return { ok: true, apiKey: credentialRef };
 }
@@ -495,7 +498,7 @@ function ensureUniqueModel(
   if (duplicate) {
     throw new ProviderRouteError(
       "model.duplicate",
-      "同一 Provider 下相同 modelId 与 taskType 的模型已存在",
+      "A model with the same modelId and taskType already exists under this provider",
       409,
     );
   }

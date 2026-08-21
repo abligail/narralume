@@ -1,4 +1,10 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { setLocale } from "../src/i18n";
+
+beforeEach(() => {
+  setLocale("zh-CN");
+});
 
 class FakeWorker {
   static instances: FakeWorker[] = [];

@@ -41,7 +41,7 @@ export function requestManuscriptRevision(
     ) {
       throw new RunServiceError(
         "revision.idempotency_conflict",
-        "同一个 requestId 已用于不同的修订要求",
+        "The same requestId was already used for a different revision request",
         409,
       );
     }
@@ -66,14 +66,14 @@ export function requestManuscriptRevision(
   ) {
     throw new RunServiceError(
       "revision.source.not_awaiting_manuscript",
-      "只有等待作者处理的章节正文可以要求 AI 再改一版",
+      "Only a chapter manuscript waiting for the author can be sent for another AI revision",
       409,
     );
   }
   if (!source.run.targetOutlineNodeId || !manuscriptContent(source)) {
     throw new RunServiceError(
       "revision.source.manuscript_missing",
-      "源运行没有可供修订的完整正文",
+      "The source run has no complete manuscript to revise",
       409,
     );
   }
@@ -113,7 +113,7 @@ export function requestManuscriptRevision(
       if (session.currentRunId !== source.run.id) {
         throw new RunServiceError(
           "revision.session.source_not_current",
-          "源正文已经不是连续创作会话的当前章节",
+          "The source manuscript is no longer the current chapter of the writing session",
           409,
         );
       }

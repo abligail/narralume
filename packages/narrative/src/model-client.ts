@@ -305,7 +305,7 @@ export class GatewayNarrativeModelClient implements NarrativeModelClient {
     if (!resolved)
       throw <RunStepError>{
         code: "model.embedding_assignment.unavailable",
-        message: "未配置可用的 embedding 模型分配",
+        message: "No usable embedding model assignment is configured",
         retryable: false,
       };
     return this.embedViaAssignment(
@@ -332,7 +332,7 @@ export class GatewayNarrativeModelClient implements NarrativeModelClient {
     if (provider.wireApi === "anthropic-messages") {
       throw <RunStepError>{
         code: "model.embedding_profile.unavailable",
-        message: `Provider「${provider.name}」的 ${provider.wireApi} 协议不支持 embeddings`,
+        message: `Provider "${provider.name}" with the ${provider.wireApi} wire API does not support embeddings`,
         retryable: false,
       };
     }
@@ -652,7 +652,7 @@ export class GatewayNarrativeModelClient implements NarrativeModelClient {
     }
     throw <RunStepError>{
       code: "model.assignment.unavailable",
-      message: `没有可用于 ${role} 的模型分配`,
+      message: `No model assignment is available for ${role}`,
       retryable: false,
       details: {
         purpose,
@@ -727,7 +727,7 @@ export class GatewayNarrativeModelClient implements NarrativeModelClient {
     if (!model?.enabled || !provider?.enabled) {
       throw <RunStepError>{
         code: "model.override.unavailable",
-        message: `对话指定的模型不可用（${modelId}），请在协作侧栏重新选择`,
+        message: `The model selected for this conversation is unavailable (${modelId}); pick another one in the assistant sidebar`,
         retryable: false,
       };
     }
@@ -1224,7 +1224,7 @@ function applyRuntimeRequest(
   if (remainingContextTokens < 1) {
     throw <RunStepError>{
       code: "model.context_length",
-      message: `请求保守输入预算 ${estimate.conservative + estimate.safety} token，超过有效上下文 ${contextWindow}`,
+      message: `The conservative input budget of ${estimate.conservative + estimate.safety} tokens exceeds the effective context window ${contextWindow}`,
       retryable: false,
       details: {
         purpose,
@@ -1510,7 +1510,7 @@ function createLogicalCallScope(
       expired && !externalSignal.aborted
         ? <RunStepError>{
             code: "model.logical_call_timeout",
-            message: `模型逻辑调用超过 ${deadlineMs}ms 总期限`,
+            message: `The logical model call exceeded the overall deadline of ${deadlineMs}ms`,
             retryable: true,
             details: {
               scope: "logical-call",
@@ -1533,13 +1533,13 @@ function credentialStepError(
   if (credential.reason === "missing_env") {
     return {
       code: "model.credential.missing_env",
-      message: `Provider「${provider.name}」的凭据引用了未设置的环境变量 ${credential.name}`,
+      message: `The credential of provider "${provider.name}" references the unset environment variable ${credential.name}`,
       retryable: false,
     };
   }
   return {
     code: "model.credential.empty",
-    message: `Provider「${provider.name}」的凭据为空`,
+    message: `The credential of provider "${provider.name}" is empty`,
     retryable: false,
   };
 }
@@ -1647,7 +1647,7 @@ function modelStepError(error: unknown, cancelled: boolean): RunStepError {
       error instanceof ModelError ? error.partialText : undefined;
     return {
       code: "model.cancelled",
-      message: "模型调用已取消",
+      message: "The model call was cancelled",
       retryable: true,
       ...(partialText
         ? { details: { partialText: redactDiagnostic(partialText) } }
@@ -1679,7 +1679,7 @@ function modelStepError(error: unknown, cancelled: boolean): RunStepError {
         ? "model.structured_output_limit"
         : "model.structured_output",
       message: outputLimited
-        ? "结构化输出在修复后仍达到模型输出/上下文上限，请提高有效限制或缩小输入"
+        ? "Structured output still hit the model output/context limit after repair; raise the effective limit or shrink the input"
         : error.message,
       // 校验失败是随机采样问题：随 StructuredOutputError 的可重试语义
       // 走 step 级退避重试；只有输出/上下文上限例外——重掷同样会撞上限。

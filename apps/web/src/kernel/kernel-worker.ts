@@ -60,6 +60,8 @@ import {
 } from "@narralume/narrative";
 import { HarnessSupervisor } from "@narralume/harness";
 
+import { getLocale, translate } from "../i18n";
+
 import { createRelayFetch } from "./relay-fetch";
 import { exceedsTrialRelayAutopilotLimit } from "../lib/trial-policy";
 
@@ -283,8 +285,10 @@ async function boot(): Promise<void> {
             throw {
               code: "trial.autopilot_chapter_limit",
               statusCode: 403,
-              message:
-                "内置体验模型每次最多连续创作 3 章；如需更多，请在设置中添加自己的模型渠道并设为默认生成模型。",
+              message: translate(
+                getLocale(),
+                "components.kernel.trialChapterLimit",
+              ),
             };
           }
           },
@@ -336,7 +340,12 @@ async function boot(): Promise<void> {
     if (!bytes) {
       return {
         status: 501,
-        body: { error: { code: "download.unsupported", message: "当前驱动不支持库导出" } },
+        body: {
+          error: {
+            code: "download.unsupported",
+            message: translate(getLocale(), "components.kernel.exportUnsupported"),
+          },
+        },
       };
     }
     const stamp = new Date().toISOString().replace(/[:.]/g, "-");

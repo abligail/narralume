@@ -168,7 +168,7 @@ export class NarrativeDatabase {
       if (applied) {
         if (applied.name !== migration.name) {
           throw new MigrationError(
-            `迁移 ${migration.version} (${migration.name}) 与已应用版本不一致`,
+            `Migration ${migration.version} (${migration.name}) differs from the applied name`,
           );
         }
         if (applied.checksum === checksum) continue;
@@ -178,7 +178,7 @@ export class NarrativeDatabase {
         );
         if (!repair) {
           throw new MigrationError(
-            `迁移 ${migration.version} (${migration.name}) 与已应用版本不一致`,
+            `Migration ${migration.version} (${migration.name}) does not match the applied checksum`,
           );
         }
 
@@ -223,7 +223,7 @@ export class NarrativeDatabase {
           const violations = this.raw.prepare("PRAGMA foreign_key_check").all();
           if (violations.length > 0) {
             throw new MigrationError(
-              `迁移 ${migration.version} (${migration.name}) 破坏了 ${violations.length} 行外键引用`,
+              `Migration ${migration.version} (${migration.name}) broke ${violations.length} foreign key references`,
             );
           }
         }

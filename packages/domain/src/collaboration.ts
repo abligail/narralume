@@ -147,7 +147,10 @@ export function validateTextRange(
     end <= start ||
     end > content.length
   ) {
-    throw new DomainError("text.range.invalid", "文本选区不在当前版本范围内");
+    throw new DomainError(
+      "text.range.invalid",
+      "Text selection is outside the current version range",
+    );
   }
 }
 
@@ -157,6 +160,6 @@ export function requireCreativeText(
   label: string,
 ): string {
   const text = value.trim();
-  if (!text) throw new DomainError(code, `${label}不能为空`);
+  if (!text) throw new DomainError(code, `${label} must not be empty`);
   return text;
 }

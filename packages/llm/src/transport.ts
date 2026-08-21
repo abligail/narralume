@@ -106,13 +106,16 @@ export async function postJson(
       if (startTimer !== undefined) clearTimeout(startTimer);
       if (startController.signal.aborted && !options.signal?.aborted) {
         // The dispatch→headers budget expired before the provider answered.
-        const startError = new ModelError("模型响应头等待超时", {
-          category: "timeout",
-          code: "request_start_timeout",
-          retryable: true,
-          timing: finalizeTiming(timing),
-          cause: error,
-        });
+        const startError = new ModelError(
+          "Timed out waiting for response headers",
+          {
+            category: "timeout",
+            code: "request_start_timeout",
+            retryable: true,
+            timing: finalizeTiming(timing),
+            cause: error,
+          },
+        );
         if (attempt >= maxRetries) throw startError;
         await abortableDelay(retryDelay(config, attempt), options.signal);
         attempt += 1;
@@ -120,14 +123,16 @@ export async function postJson(
       }
       if (error instanceof ModelError) throw error;
       if (options.signal?.aborted) {
-        throw new ModelError("请求已由用户取消", {
+        throw new ModelError("Request cancelled by user", {
           category: "cancelled",
+          code: "model.cancelled",
           cause: error,
         });
       }
       if (timeout.aborted) {
-        const timeoutError = new ModelError("模型请求超时", {
+        const timeoutError = new ModelError("Model request timed out", {
           category: "timeout",
+          code: "model.request_timeout",
           retryable: true,
           timing: finalizeTiming(timing),
           cause: error,
@@ -170,8 +175,9 @@ export function resolveEndpoint(
   try {
     base = new URL(baseUrl);
   } catch (error) {
-    throw new ModelError("模型 Base URL 无效", {
+    throw new ModelError("Invalid model base URL", {
       category: "invalid_request",
+      code: "model.base_url.invalid",
       cause: error,
     });
   }
@@ -180,17 +186,25 @@ export function resolveEndpoint(
     base.username ||
     base.password
   ) {
-    throw new ModelError("模型 Base URL 必须是无内嵌凭据的 HTTP(S) 地址", {
-      category: "invalid_request",
-    });
+    throw new ModelError(
+      "Model base URL must be an HTTP(S) address without embedded credentials",
+      {
+        category: "invalid_request",
+        code: "model.base_url.invalid",
+      },
+    );
   }
 
   if (explicitEndpoint) {
     const resolved = new URL(explicitEndpoint, ensureDirectoryUrl(base));
     if (resolved.origin !== base.origin) {
-      throw new ModelError("模型 endpoint 越过 Base URL origin", {
-        category: "invalid_request",
-      });
+      throw new ModelError(
+        "Model endpoint must stay under the base URL origin",
+        {
+          category: "invalid_request",
+          code: "model.endpoint.origin",
+        },
+      );
     }
     applyQueryParams(resolved, queryParams);
     return resolved.toString();
@@ -231,20 +245,22 @@ export async function readJsonObject(
   // For non-streaming calls the body arrival is the first (and last) event.
   if (timing) markTimingEvent(timing);
   if (text.trim().length === 0) {
-    throw new ModelError("模型返回了空响应", {
+    throw new ModelError("Model returned an empty response", {
       category: "protocol",
+      code: "model.empty_response",
       ...(timing === undefined ? {} : { timing: finalizeTiming(timing) }),
     });
   }
   try {
     const parsed = JSON.parse(text) as unknown;
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      throw new TypeError("响应不是 JSON 对象");
+      throw new TypeError("Response is not a JSON object");
     }
     return parsed as Record<string, unknown>;
   } catch (error) {
-    throw new ModelError("模型返回了无效 JSON", {
+    throw new ModelError("Model returned invalid JSON", {
       category: "protocol",
+      code: "model.invalid_json",
       ...(timing === undefined ? {} : { timing: finalizeTiming(timing) }),
       cause: error,
     });
@@ -267,7 +283,7 @@ export async function readResponseTextLimited(
       totalBytes += value.byteLength;
       if (totalBytes > maxBytes) {
         await reader.cancel();
-        throw new ModelError("模型响应超过大小限制", {
+        throw new ModelError("Model response exceeded the size limit", {
           category: "protocol",
           code: "model.response_too_large",
           retryable: false,
@@ -371,8 +387,9 @@ async function abortableDelay(ms: number, signal?: AbortSignal): Promise<void> {
     const abort = () => {
       clearTimeout(timeout);
       reject(
-        new ModelError("重试等待已取消", {
+        new ModelError("Retry wait cancelled", {
           category: "cancelled",
+          code: "model.cancelled",
         }),
       );
     };

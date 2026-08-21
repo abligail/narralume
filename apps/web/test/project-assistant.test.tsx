@@ -15,6 +15,7 @@ import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ProjectAssistant } from "../src/app/project-assistant";
+import { setLocale } from "../src/i18n";
 
 const CONVERSATION = {
   id: "assistant-conversation-1",
@@ -106,6 +107,7 @@ function renderAssistantHarness() {
 }
 
 beforeEach(() => {
+  setLocale("zh-CN");
   window.localStorage.clear();
   window.localStorage.setItem(
     "narralume:assistant-conversation:project-1",

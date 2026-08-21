@@ -350,7 +350,7 @@ export class SqliteAssistantRepository {
       const current = this.requireActivity(id);
       throw new AssistantPersistenceError(
         "assistant.activity.conflict",
-        `活动已从 ${expectedStatus} 变为 ${current.status}`,
+        `Activity status changed from ${expectedStatus} to ${current.status}`,
       );
     }
     this.touchConversation(activity.conversationId, next.now);

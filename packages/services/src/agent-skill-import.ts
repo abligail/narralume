@@ -79,7 +79,7 @@ export class AgentSkillImportService {
     ) {
       throw new AgentSkillImportError(
         "agent_skill.duplicate_label",
-        `项目已存在同名 Agent Skill：${label}`,
+        `An Agent Skill named "${label}" already exists in this project`,
       );
     }
     const skill: ImportedAgentSkill = {
@@ -120,7 +120,7 @@ export class AgentSkillImportService {
     if (!this.skills.delete(id)) {
       throw new AgentSkillImportError(
         "agent_skill.not_found",
-        "导入的 Agent Skill 不存在",
+        "Imported Agent Skill not found",
       );
     }
   }
@@ -155,7 +155,7 @@ async function parseAgentSkillPackage(
   if (bytes.length > 8 * 1024 * 1024) {
     throw new AgentSkillImportError(
       "agent_skill.package_too_large",
-      "Agent Skill 包不能超过 8 MB",
+      "The Agent Skill package must not exceed 8 MB",
     );
   }
   let zip: JSZip;
@@ -164,14 +164,14 @@ async function parseAgentSkillPackage(
   } catch {
     throw new AgentSkillImportError(
       "agent_skill.invalid_zip",
-      "Agent Skill 包不是有效的 ZIP",
+      "The Agent Skill package is not a valid ZIP archive",
     );
   }
   const entries = Object.values(zip.files).filter((entry) => !entry.dir);
   if (entries.length > 100) {
     throw new AgentSkillImportError(
       "agent_skill.too_many_entries",
-      "Agent Skill 包条目数超过安全上限",
+      "The Agent Skill package contains more entries than the safety limit",
     );
   }
   // 所有条目先做路径安全校验，拒绝绝对路径与目录穿越。
@@ -187,7 +187,7 @@ async function parseAgentSkillPackage(
   if (declaredBytes > 8 * 1024 * 1024) {
     throw new AgentSkillImportError(
       "agent_skill.package_too_large",
-      "Agent Skill 包声明的解压体积超过安全上限",
+      "The Agent Skill package declares an uncompressed size above the safety limit",
     );
   }
   const manifestEntry = safeEntries.find(
@@ -196,7 +196,7 @@ async function parseAgentSkillPackage(
   if (!manifestEntry) {
     throw new AgentSkillImportError(
       "agent_skill.missing_manifest",
-      "Agent Skill 包根目录缺少 agent-skill.json",
+      "The Agent Skill package is missing agent-skill.json at its root",
     );
   }
   if (
@@ -205,7 +205,7 @@ async function parseAgentSkillPackage(
   ) {
     throw new AgentSkillImportError(
       "agent_skill.package_too_large",
-      "agent-skill.json 声明的解压体积超过安全上限",
+      "agent-skill.json declares an uncompressed size above the safety limit",
     );
   }
   const manifestRaw = await manifestEntry.async("string");
@@ -217,14 +217,14 @@ async function parseAgentSkillPackage(
   } catch {
     throw new AgentSkillImportError(
       "agent_skill.invalid_manifest",
-      "agent-skill.json 不是有效的 Agent Skill 清单",
+      "agent-skill.json is not a valid Agent Skill manifest",
     );
   }
   for (const capability of manifest.allowedCapabilities) {
     if (!IMPORTABLE_CAPABILITY_SET.has(capability)) {
       throw new AgentSkillImportError(
         "agent_skill.capability_not_allowed",
-        `能力不在首期白名单内：${capability}`,
+        `Capability is not allowed in imported Agent Skills: ${capability}`,
       );
     }
   }
@@ -234,7 +234,7 @@ async function parseAgentSkillPackage(
   if (!instructionsEntry) {
     throw new AgentSkillImportError(
       "agent_skill.missing_instructions",
-      "Agent Skill 包缺少 INSTRUCTIONS.md",
+      "The Agent Skill package is missing INSTRUCTIONS.md",
     );
   }
   if (
@@ -243,20 +243,20 @@ async function parseAgentSkillPackage(
   ) {
     throw new AgentSkillImportError(
       "agent_skill.instructions_too_large",
-      "INSTRUCTIONS.md 声明的解压体积超过安全上限",
+      "INSTRUCTIONS.md declares an uncompressed size above the safety limit",
     );
   }
   const instructions = stripBom(await instructionsEntry.async("string")).trim();
   if (!instructions) {
     throw new AgentSkillImportError(
       "agent_skill.empty_instructions",
-      "INSTRUCTIONS.md 不能为空",
+      "INSTRUCTIONS.md must not be empty",
     );
   }
   if (instructions.length > 100_000) {
     throw new AgentSkillImportError(
       "agent_skill.instructions_too_large",
-      "INSTRUCTIONS.md 内容过大",
+      "INSTRUCTIONS.md is too large",
     );
   }
   const references: { path: string; content: string; contentHash: string }[] =
@@ -272,19 +272,19 @@ async function parseAgentSkillPackage(
     ) {
       throw new AgentSkillImportError(
         "agent_skill.package_too_large",
-        `引用文档声明的解压体积过大：${path}`,
+        `The reference declares an uncompressed size above the limit: ${path}`,
       );
     }
     if (seenPaths.has(path)) {
       throw new AgentSkillImportError(
         "agent_skill.duplicate_reference",
-        `重复引用路径：${path}`,
+        `Duplicate reference path: ${path}`,
       );
     }
     if (references.length >= 50) {
       throw new AgentSkillImportError(
         "agent_skill.too_many_references",
-        "引用文档不能超过 50 个",
+        "The package must not contain more than 50 reference documents",
       );
     }
     const content = await entry.async("string");
@@ -292,7 +292,7 @@ async function parseAgentSkillPackage(
     if (content.length > 500_000 || totalCharacters > 2_000_000) {
       throw new AgentSkillImportError(
         "agent_skill.package_too_large",
-        "Agent Skill 包解压后内容过大",
+        "The Agent Skill package is too large when uncompressed",
       );
     }
     seenPaths.add(path);
@@ -319,7 +319,7 @@ function safePath(input: string): string {
   ) {
     throw new AgentSkillImportError(
       "agent_skill.unsafe_path",
-      "Agent Skill 包包含不安全路径",
+      "The Agent Skill package contains an unsafe path",
     );
   }
   return path;

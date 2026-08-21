@@ -66,7 +66,7 @@ export class SqliteAssignmentRepository {
     if (!model) {
       throw new AssignmentPersistenceError(
         "assignment.model.not_found",
-        "模型分配引用了不存在的模型",
+        "The model assignment references a model that does not exist",
       );
     }
     const provider = new SqliteProviderRepository(this.database).get(
@@ -75,19 +75,19 @@ export class SqliteAssignmentRepository {
     if (!model.enabled) {
       throw new AssignmentPersistenceError(
         "assignment.model.disabled",
-        "不能分配已停用的模型",
+        "Cannot assign a disabled model",
       );
     }
     if (!provider?.enabled) {
       throw new AssignmentPersistenceError(
         "assignment.provider.disabled",
-        "不能分配 Provider 缺失或已停用的模型",
+        "Cannot assign a model whose provider is missing or disabled",
       );
     }
     if (!assignmentCompatible(role, model.taskType)) {
       throw new AssignmentPersistenceError(
         "assignment.task_type.mismatch",
-        `模型任务类型 ${model.taskType} 不能分配给 ${role}`,
+        `Model task type ${model.taskType} cannot be assigned to ${role}`,
       );
     }
     this.database.raw

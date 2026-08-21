@@ -73,7 +73,8 @@ export class AnthropicMessagesAdapter implements ModelAdapter {
       );
       return;
     }
-    if (!response.body) throw protocolError("Anthropic Messages 流没有响应体");
+    if (!response.body)
+      throw protocolError("Anthropic Messages stream has no response body");
 
     const tools = new Map<number, PendingAnthropicTool>();
     let started = false;
@@ -141,7 +142,7 @@ export class AnthropicMessagesAdapter implements ModelAdapter {
           const tool = tools.get(index);
           if (!tool)
             throw protocolError(
-              "Anthropic 工具参数增量缺少 content_block_start",
+              "Anthropic tool argument delta is missing content_block_start",
             );
           const json = asString(delta?.partial_json) ?? "";
           tool.arguments =
@@ -186,7 +187,7 @@ export class AnthropicMessagesAdapter implements ModelAdapter {
       } else if (eventType === "error") {
         const error = asRecord(value.error);
         throw new ModelError(
-          asString(error?.message) ?? "Anthropic 返回流错误",
+          asString(error?.message) ?? "Anthropic stream error event",
           {
             category: "server",
             retryable: true,

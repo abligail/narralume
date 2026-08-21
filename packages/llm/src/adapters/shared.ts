@@ -49,11 +49,13 @@ export function parseToolArguments(
   const normalized = rawArguments.trim() || "{}";
   try {
     const parsed = JSON.parse(normalized) as unknown;
-    if (!isJsonValue(parsed)) throw new TypeError("参数不是 JSON 值");
+    if (!isJsonValue(parsed))
+      throw new TypeError("Arguments are not a JSON value");
     return { callId, name, arguments: parsed, rawArguments: normalized };
   } catch (error) {
-    throw new ModelError(`工具 ${name} 的参数不是合法 JSON`, {
+    throw new ModelError(`Tool ${name} arguments are not valid JSON`, {
       category: "protocol",
+      code: "model.tool_arguments_invalid",
       cause: error,
     });
   }

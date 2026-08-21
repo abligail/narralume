@@ -225,7 +225,8 @@ describe("automation API", () => {
         id: steer.id,
         classification: null,
         status: "rejected",
-        rationale: "影响范围判断已取消，这条创作指示未应用",
+        rationale:
+          "Impact assessment was cancelled, so this steering instruction was not applied",
       }),
     ]);
   });

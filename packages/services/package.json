@@ -1,6 +1,6 @@
 {
   "name": "@narralume/services",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "exports": {
@@ -14,12 +14,12 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@narralume/context": "0.1.0",
-    "@narralume/contracts": "0.1.0",
-    "@narralume/domain": "0.1.0",
-    "@narralume/harness": "0.1.0",
-    "@narralume/llm": "0.1.0",
-    "@narralume/persistence": "0.1.0",
+    "@narralume/context": "0.2.0",
+    "@narralume/contracts": "0.2.0",
+    "@narralume/domain": "0.2.0",
+    "@narralume/harness": "0.2.0",
+    "@narralume/llm": "0.2.0",
+    "@narralume/persistence": "0.2.0",
     "jszip": "^3.10.1",
     "zod": "^4.4.3"
   }

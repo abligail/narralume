@@ -100,7 +100,7 @@ export default {
           403,
           {
             code: "origin_not_allowed",
-            message: "请求来源不在允许列表内。",
+            message: "The request origin is not allowed.",
           },
           null,
         );
@@ -112,7 +112,7 @@ export default {
         403,
         {
           code: "origin_not_allowed",
-          message: "请求来源不在允许列表内。",
+          message: "The request origin is not allowed.",
         },
         null,
       );
@@ -121,7 +121,10 @@ export default {
     if (!configured(env)) {
       return reject(
         503,
-        { code: "relay_not_configured", message: "中继尚未完成安全配置。" },
+        {
+          code: "relay_not_configured",
+          message: "The relay is not securely configured yet.",
+        },
         origin,
       );
     }
@@ -145,7 +148,10 @@ export default {
         ) {
           return reject(
             429,
-            { code: "rate_limited", message: "请求过于频繁，请稍后再试。" },
+            {
+              code: "rate_limited",
+              message: "Too many requests; please try again later.",
+            },
             origin,
           );
         }
@@ -164,7 +170,10 @@ export default {
       }
       return reject(
         401,
-        { code: "session_required", message: "需要完成人机验证。" },
+        {
+          code: "session_required",
+          message: "Human verification is required.",
+        },
         origin,
       );
     }
@@ -173,7 +182,10 @@ export default {
       if (!(await admitted(env, `challenge:${clientIp ?? "unknown-client"}`))) {
         return reject(
           429,
-          { code: "rate_limited", message: "请求过于频繁，请稍后再试。" },
+          {
+            code: "rate_limited",
+            message: "Too many requests; please try again later.",
+          },
           origin,
         );
       }
@@ -183,7 +195,10 @@ export default {
       } catch {
         return reject(
           400,
-          { code: "invalid_json", message: "请求体必须是 JSON。" },
+          {
+            code: "invalid_json",
+            message: "The request body must be valid JSON.",
+          },
           origin,
         );
       }
@@ -198,7 +213,10 @@ export default {
       ) {
         return reject(
           400,
-          { code: "invalid_turnstile_token", message: "人机验证令牌无效。" },
+          {
+            code: "invalid_turnstile_token",
+            message: "The human verification token is invalid.",
+          },
           origin,
         );
       }
@@ -214,7 +232,8 @@ export default {
           502,
           {
             code: "turnstile_unavailable",
-            message: "人机验证服务暂时不可用。",
+            message:
+              "The human verification service is temporarily unavailable.",
           },
           origin,
         );
@@ -222,7 +241,10 @@ export default {
       if (validation === "invalid") {
         return reject(
           401,
-          { code: "turnstile_rejected", message: "人机验证未通过，请重试。" },
+          {
+            code: "turnstile_rejected",
+            message: "Human verification failed; please try again.",
+          },
           origin,
         );
       }
@@ -243,7 +265,10 @@ export default {
     if (request.method !== "POST") {
       return reject(
         405,
-        { code: "method_not_allowed", message: "该接口只接受 POST 请求。" },
+        {
+          code: "method_not_allowed",
+          message: "This endpoint only accepts POST requests.",
+        },
         origin,
       );
     }
@@ -251,7 +276,10 @@ export default {
     if (url.pathname !== "/v1/chat/completions") {
       return reject(
         404,
-        { code: "path_not_allowed", message: "该接口不在公开白名单内。" },
+        {
+          code: "path_not_allowed",
+          message: "This endpoint is not in the public allowlist.",
+        },
         origin,
       );
     }
@@ -263,14 +291,20 @@ export default {
     if (!session) {
       return reject(
         401,
-        { code: "session_required", message: "需要完成人机验证。" },
+        {
+          code: "session_required",
+          message: "Human verification is required.",
+        },
         origin,
       );
     }
     if (!(await admitted(env, `model:${session.id}`))) {
       return reject(
         429,
-        { code: "rate_limited", message: "请求过于频繁，请稍后再试。" },
+        {
+          code: "rate_limited",
+          message: "Too many requests; please try again later.",
+        },
         origin,
       );
     }
@@ -281,7 +315,10 @@ export default {
     } catch {
       return reject(
         400,
-        { code: "invalid_json", message: "请求体必须是 JSON。" },
+        {
+          code: "invalid_json",
+          message: "The request body must be valid JSON.",
+        },
         origin,
       );
     }
@@ -311,7 +348,10 @@ export default {
     } catch {
       return reject(
         503,
-        { code: "quota_unavailable", message: "体验额度服务暂时不可用。" },
+        {
+          code: "quota_unavailable",
+          message: "The trial quota service is temporarily unavailable.",
+        },
         origin,
       );
     }
@@ -325,7 +365,7 @@ export default {
         429,
         {
           code: "session_quota_exhausted",
-          message: "本次体验会话的 60 次模型调用额度已用完。",
+          message: "This trial session has used up its 60 model calls.",
         },
         origin,
         {
@@ -360,8 +400,8 @@ export default {
               : "bridge_unavailable",
           message:
             error instanceof DOMException && error.name === "AbortError"
-              ? "模型服务响应超时。"
-              : "模型服务暂时不可用。",
+              ? "The model service timed out."
+              : "The model service is temporarily unavailable.",
         },
         origin,
         quotaHeaders,

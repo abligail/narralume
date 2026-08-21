@@ -283,7 +283,7 @@ describe("supervisor step deadlines", () => {
     expect(step.status).toBe("failed");
     expect(step.error).toEqual({
       code: "deadline_exceeded",
-      message: "步骤执行超过 stepDeadlineMs 期限",
+      message: "Step execution exceeded the stepDeadlineMs deadline",
       retryable: false,
       details: {
         deadlineScope: "step",
@@ -558,7 +558,7 @@ describe("deadline_exceeded classification", () => {
     expect(
       classifyStepError({
         code: "deadline_exceeded",
-        message: "步骤执行超过 stepDeadlineMs 期限",
+        message: "Step execution exceeded the stepDeadlineMs deadline",
         retryable: true,
       }),
     ).toEqual({ kind: "fatal", category: "deadline_exceeded" });
@@ -570,7 +570,7 @@ describe("deadline_exceeded classification", () => {
       maxAttempts: 3,
       error: {
         code: "deadline_exceeded",
-        message: "步骤执行超过 stepDeadlineMs 期限",
+        message: "Step execution exceeded the stepDeadlineMs deadline",
         retryable: true,
         details: { deadlineScope: "step", remainingBudgetMs: 60_000 },
       },
@@ -582,7 +582,7 @@ describe("deadline_exceeded classification", () => {
       fatalShortcut: {
         stepId: "run-1:context",
         category: "deadline_exceeded",
-        message: "步骤执行超过 stepDeadlineMs 期限",
+        message: "Step execution exceeded the stepDeadlineMs deadline",
       },
     });
   });

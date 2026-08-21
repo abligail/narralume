@@ -73,7 +73,7 @@ describe("canon invariants and visibility", () => {
         sourceType: "manual",
         now,
       }),
-    ).toThrow("必须且只能包含");
+    ).toThrow("exactly one of objectEntityId or value");
   });
 
   it("filters author secrets and character-specific knowledge", () => {

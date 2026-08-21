@@ -108,8 +108,8 @@ export function deadlineExceededError(
 }
 
 const DEADLINE_MESSAGES: Record<DeadlineScope, string> = {
-  step: "步骤执行超过 stepDeadlineMs 期限",
-  run: "运行超过 runDeadlineMs 期限",
+  step: "Step execution exceeded the stepDeadlineMs deadline",
+  run: "Run exceeded the runDeadlineMs deadline",
 };
 
 function intBetween(value: unknown, min: number, max: number): number | null {

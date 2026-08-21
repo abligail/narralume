@@ -6,6 +6,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
+import { setLocale } from "../src/i18n";
 import { StudioWorkspace } from "../src/workspaces/studio";
 
 /* CR-24：正式版本变化后，编辑器必须随新的 currentVersion 重新装载正文。 */
@@ -67,6 +68,7 @@ function json(value: unknown, status = 200) {
 }
 
 beforeEach(() => {
+  setLocale("zh-CN");
   Object.defineProperty(window, "matchMedia", {
     configurable: true,
     writable: true,

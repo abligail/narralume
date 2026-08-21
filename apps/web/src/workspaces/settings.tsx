@@ -21,6 +21,14 @@ import { ErrorNote } from "../components/error-note";
 import { PageBand } from "../components/page-band";
 import { Skeleton } from "../components/skeleton";
 import {
+  LOCALES,
+  LOCALE_LABELS,
+  getLocale,
+  translate,
+  useI18n,
+  type MessageKey,
+} from "../i18n";
+import {
   downloadLibraryDatabase,
   createModel,
   createProvider,
@@ -69,25 +77,21 @@ const TASK_TYPES: ModelTaskType[] = [...PRIMARY_ROLES, ...ADVANCED_ROLES];
 const WIRE_APIS: WireApi[] = ["openai-chat", "openai-responses", "anthropic-messages"];
 const trialMode = import.meta.env.VITE_TRIAL_MODE === "1";
 
-const ROLE_COPY: Record<AssignmentRole, { name: string; note: string }> = {
-  writing: {
-    name: "默认生成模型",
-    note: "写作、规划、审稿的共同基座。规划与审稿不单独指派时继承此项。没有它时，AI 链路不可用；手动创作仍然可用。",
-  },
-  planning: {
-    name: "规划模型（可覆盖）",
-    note: "不指派时继承默认生成模型；指派即覆盖规划链路。",
-  },
-  review: {
-    name: "审稿模型（可覆盖）",
-    note: "不指派时继承默认生成模型；指派即覆盖审稿链路。",
-  },
-  embedding: {
-    name: "嵌入模型",
-    note: "检索与上下文装配专用；不继承，缺省即退化提示。",
-  },
-  rerank: { name: "重排", note: "" },
+const ROLE_KEYS: Record<AssignmentRole, { name: MessageKey; note: MessageKey }> = {
+  writing: { name: "settings.roles.writing.name", note: "settings.roles.writing.note" },
+  planning: { name: "settings.roles.planning.name", note: "settings.roles.planning.note" },
+  review: { name: "settings.roles.review.name", note: "settings.roles.review.note" },
+  embedding: { name: "settings.roles.embedding.name", note: "settings.roles.embedding.note" },
+  rerank: { name: "settings.roles.rerank.name", note: "settings.roles.rerank.note" },
 };
+
+function roleCopy(role: AssignmentRole): { name: string; note: string } {
+  const locale = getLocale();
+  return {
+    name: translate(locale, ROLE_KEYS[role].name),
+    note: translate(locale, ROLE_KEYS[role].note),
+  };
+}
 
 type DeleteTarget =
   | { kind: "provider"; value: PublicProviderDto }
@@ -96,6 +100,7 @@ type DeleteTarget =
 
 export function SettingsWorkspace() {
   const queryClient = useQueryClient();
+  const { locale, setLocale, t } = useI18n();
   const [searchParams] = useSearchParams();
   const contextProjectId = searchParams.get("project");
   const requestedReturnPath = searchParams.get("return");
@@ -159,7 +164,7 @@ export function SettingsWorkspace() {
     onSuccess: (provider) => {
       setProviderEditor(null);
       setSelectedProviderId(provider.id);
-      setNotice("模型渠道已保存，刷新后仍会从服务端恢复。");
+      setNotice(t("settings.notices.providerSaved"));
       void queryClient.invalidateQueries({ queryKey: ["providers"] });
     },
     onError: () =>
@@ -175,7 +180,7 @@ export function SettingsWorkspace() {
         : createModel(input.value),
     onSuccess: () => {
       setModelEditor(null);
-      setNotice("模型规格已保存。");
+      setNotice(t("settings.notices.modelSaved"));
       void queryClient.invalidateQueries({ queryKey: ["models"] });
     },
     onError: () =>
@@ -185,7 +190,7 @@ export function SettingsWorkspace() {
     mutationFn: (input: { role: AssignmentRole; modelId: string }) =>
       setAssignment(input.role, input.modelId),
     onSuccess: () => {
-      setNotice("岗位分配已保存。");
+      setNotice(t("settings.notices.assignmentSaved"));
       void queryClient.invalidateQueries({ queryKey: ["assignments"] });
     },
   });
@@ -198,7 +203,7 @@ export function SettingsWorkspace() {
     },
     onSuccess: (target) => {
       setDeleteTarget(null);
-      setNotice(target.kind === "assignment" ? "岗位已解除。" : "记录已删除。");
+      setNotice(target.kind === "assignment" ? t("settings.notices.assignmentRemoved") : t("settings.notices.recordDeleted"));
       if (target.kind === "provider") {
         setSelectedProviderId(null);
         void queryClient.invalidateQueries({ queryKey: ["providers"] });
@@ -250,53 +255,82 @@ export function SettingsWorkspace() {
     <div className="settings">
       <PageBand
         index="SETTINGS · S1"
-        title="设置"
+        title={t("settings.title")}
         meta={
           <span className="settings__band-meta">
-            {contextProjectId ? <Link to={returnPath}><ArrowLeft size={12} aria-hidden="true" />返回项目</Link> : null}
-            <span className="mono">{providers.length} 个渠道 · {allModels.length} 个模型 · {writingAssignment ? "默认模型已设置" : "默认模型未设置"}</span>
+            {contextProjectId ? <Link to={returnPath}><ArrowLeft size={12} aria-hidden="true" />{t("settings.backToProject")}</Link> : null}
+            <span className="mono">
+              {t("settings.band.counts", {
+                providers: providers.length,
+                models: allModels.length,
+                status: writingAssignment ? t("settings.band.defaultSet") : t("settings.band.defaultUnset"),
+              })}
+            </span>
           </span>
         }
       />
       {notice ? <p className="settings__notice" role="status" aria-live="polite">{notice}</p> : null}
 
-      <section className="settings__section" aria-label="默认生成模型与岗位继承">
+      <section className="settings__section" aria-label={t("settings.uiLanguage.label")}>
         <header className="settings__section-head">
-          <div><p className="mono">GENERATION</p><h2>默认生成模型与岗位继承</h2></div>
-          <p className="settings__section-note">只需选择一个默认生成模型，写作、规划和审稿就会共同使用；嵌入模型独立配置。</p>
+          <div><p className="mono">LANGUAGE</p><h2>{t("settings.uiLanguage.label")}</h2></div>
+          <p className="settings__section-note">{t("settings.uiLanguage.hint")}</p>
+        </header>
+        <div className="settings__language">
+          {LOCALES.map((option) => (
+            <button
+              key={option}
+              type="button"
+              className="settings__language-option"
+              data-active={option === locale ? "true" : "false"}
+              aria-pressed={option === locale}
+              onClick={() => setLocale(option)}
+            >
+              {LOCALE_LABELS[option]}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="settings__section" aria-label={t("settings.generation.label")}>
+        <header className="settings__section-head">
+          <div><p className="mono">GENERATION</p><h2>{t("settings.generation.label")}</h2></div>
+          <p className="settings__section-note">{t("settings.generation.hint")}</p>
         </header>
         <div className="settings__roles">
           {assignmentSourcesPending ? <Skeleton lines={3} /> : assignmentSourcesError ? (
-            <ErrorNote error={assignmentSourcesError} title="默认模型配置暂时无法加载" />
+            <ErrorNote error={assignmentSourcesError} title={t("settings.generation.loadError")} />
           ) : PRIMARY_ROLES.map(renderRole)}
         </div>
         {!assignmentSourcesPending && !assignmentSourcesError ? (
           <details className="settings__advanced-roles">
-            <summary>高级覆盖 · 为规划或审稿单独指定模型</summary>
-            <p>通常无需设置。只有确实需要不同模型时再覆盖；解除覆盖后会立即恢复继承默认生成模型。</p>
+            <summary>{t("settings.generation.advancedSummary")}</summary>
+            <p>{t("settings.generation.advancedHint")}</p>
             <div className="settings__roles">{ADVANCED_ROLES.map(renderRole)}</div>
           </details>
         ) : null}
       </section>
 
-      <details className="settings__channel-management" aria-label="渠道与模型管理">
+      <details className="settings__channel-management" aria-label={t("settings.channels.label")}>
         <summary>
           <span className="settings__channel-summary-copy">
             <span className="mono">CHANNELS</span>
-            <strong>渠道与模型管理</strong>
-            <span>新增渠道、配置密钥、探测连接或维护模型规格</span>
+            <strong>{t("settings.channels.label")}</strong>
+            <span>{t("settings.channels.summaryHint")}</span>
           </span>
-          <span className="settings__channel-summary-meta mono">{providers.length} 渠道 · {allModels.length} 模型</span>
+          <span className="settings__channel-summary-meta mono">
+            {t("settings.channels.counts", { providers: providers.length, models: allModels.length })}
+          </span>
           <ChevronDown size={16} aria-hidden="true" />
         </summary>
-        <p className="settings__channel-note">普通创作无需进入这里。使用本地浏览器内核时，自带 Key 仅保存在当前浏览器的 OPFS 数据库中，请求会直接发往你填写的 Base URL，不经过内置 Relay；该服务必须允许浏览器跨域访问。</p>
+        <p className="settings__channel-note">{t("settings.channels.note")}</p>
         <div className="supply__layout">
-        <section className="supply__column" aria-label="模型渠道">
+        <section className="supply__column" aria-label={t("settings.channels.providersLabel")}>
           <header className="supply__column-head">
             <span className="supply__column-eyebrow">CHANNEL</span>
-            <p className="supply__column-title">模型渠道</p>
+            <p className="supply__column-title">{t("settings.channels.providersLabel")}</p>
             <button type="button" className="supply__mini-action" onClick={() => setProviderEditor("new")}>
-              <Plus size={12} aria-hidden="true" /> 新建
+              <Plus size={12} aria-hidden="true" /> {t("settings.channels.add")}
             </button>
           </header>
           <div className="supply__column-body">
@@ -311,9 +345,9 @@ export function SettingsWorkspace() {
               />
             ) : null}
             {providersQuery.isPending ? <Skeleton lines={4} /> : providersQuery.isError ? (
-              <ErrorNote error={providersQuery.error} title="模型服务暂时无法加载" />
+              <ErrorNote error={providersQuery.error} title={t("settings.channels.providersLoadError")} />
             ) : providers.length === 0 ? (
-              <p className="supply__empty">尚无模型渠道；先登记一个渠道。</p>
+              <p className="supply__empty">{t("settings.channels.emptyProviders")}</p>
             ) : providers.map((provider) => (
               <div key={provider.id} className="supply__provider-wrap" data-active={provider.id === selectedProviderId}>
                 <button type="button" className="supply__provider" onClick={() => setSelectedProviderId(provider.id)}>
@@ -321,25 +355,25 @@ export function SettingsWorkspace() {
                   <span className="supply__provider-kind">{wireApiLabel(provider.wireApi)}</span>
                   <span className="supply__provider-base mono">{provider.baseUrl}</span>
                   <span className="supply__provider-foot">
-                    <span className="supply__provider-status" data-on={provider.enabled}>{provider.enabled ? "启用" : "停用"}</span>
-                    <span>{allModels.filter((model) => model.providerId === provider.id).length} 模</span>
+                    <span className="supply__provider-status" data-on={provider.enabled}>{provider.enabled ? t("settings.state.enabled") : t("settings.state.disabled")}</span>
+                    <span>{t("settings.channels.modelCount", { count: allModels.filter((model) => model.providerId === provider.id).length })}</span>
                   </span>
                 </button>
                 <div className="supply__item-actions">
-                  <button type="button" className="supply__icon-action" aria-label={`编辑模型渠道 ${provider.name}`} onClick={() => setProviderEditor(provider)}><Edit3 size={13} /></button>
-                  <button type="button" className="supply__icon-action" aria-label={`删除模型渠道 ${provider.name}`} onClick={() => setDeleteTarget({ kind: "provider", value: provider })}><Trash2 size={13} /></button>
+                  <button type="button" className="supply__icon-action" aria-label={t("settings.channels.editProviderAria", { name: provider.name })} onClick={() => setProviderEditor(provider)}><Edit3 size={13} /></button>
+                  <button type="button" className="supply__icon-action" aria-label={t("settings.channels.deleteProviderAria", { name: provider.name })} onClick={() => setDeleteTarget({ kind: "provider", value: provider })}><Trash2 size={13} /></button>
                 </div>
               </div>
             ))}
           </div>
         </section>
 
-        <section className="supply__column" aria-label="模型">
+        <section className="supply__column" aria-label={t("settings.channels.modelsLabel")}>
           <header className="supply__column-head">
             <span className="supply__column-eyebrow">Model</span>
-            <p className="supply__column-title">{selectedProvider ? `${selectedProvider.name} 的模型` : "先选模型渠道"}</p>
+            <p className="supply__column-title">{selectedProvider ? t("settings.channels.modelsTitle", { name: selectedProvider.name }) : t("settings.channels.modelsTitleEmpty")}</p>
             <button type="button" className="supply__mini-action" disabled={!selectedProvider} onClick={() => setModelEditor("new")}>
-              <Plus size={12} aria-hidden="true" /> 新建
+              <Plus size={12} aria-hidden="true" /> {t("settings.channels.add")}
             </button>
           </header>
           <div className="supply__column-body">
@@ -354,10 +388,10 @@ export function SettingsWorkspace() {
                 onSubmit={(value) => modelMutation.mutate({ current: currentModelEditor === "new" ? null : currentModelEditor, value })}
               />
             ) : null}
-            {!selectedProvider ? <p className="supply__empty">从左侧选一个模型渠道。</p> : modelsQuery.isPending ? (
+            {!selectedProvider ? <p className="supply__empty">{t("settings.channels.emptyPickProvider")}</p> : modelsQuery.isPending ? (
               <Skeleton lines={4} />
-            ) : modelsQuery.isError ? <ErrorNote error={modelsQuery.error} title="模型列表暂时无法加载" /> : models.length === 0 ? (
-              <p className="supply__empty">尚无模型；先登记上游模型。上下文与输出上限未知时可以留空。</p>
+            ) : modelsQuery.isError ? <ErrorNote error={modelsQuery.error} title={t("settings.channels.modelsLoadError")} /> : models.length === 0 ? (
+              <p className="supply__empty">{t("settings.channels.emptyModels")}</p>
             ) : models.map((model) => (
               <ModelCard
                 key={model.id}
@@ -375,31 +409,29 @@ export function SettingsWorkspace() {
         </div>
       </details>
 
-      <section className="settings__section" aria-label="高级工具">
+      <section className="settings__section" aria-label={t("settings.tools.label")}>
         <header className="settings__section-head">
-          <div><p className="mono">ADVANCED</p><h2>高级工具</h2></div>
+          <div><p className="mono">ADVANCED</p><h2>{t("settings.tools.label")}</h2></div>
           <p className="settings__section-note">
-            {trialMode
-              ? "运行账本、长篇推演与生产资产（风格 / Writing Skill / 导入管理）。"
-              : "运行账本、长篇推演、生产资产（风格 / Writing Skill / 导入管理）与系统备份档。"}
+            {trialMode ? t("settings.tools.hintTrial") : t("settings.tools.hintFull")}
           </p>
         </header>
         <div className="settings__tools-links">
           {projectsQuery.isPending ? (
             <Skeleton lines={2} />
           ) : projectsQuery.isError ? (
-            <ErrorNote error={projectsQuery.error} title="项目清单暂时无法加载" />
+            <ErrorNote error={projectsQuery.error} title={t("settings.tools.projectsLoadError")} />
           ) : toolsProject ? (
             <>
-              <Link className="settings__tool-link" to={projectWorkspacePath(toolsProject.id, "runs")}>运行中心 · {toolsProject.title}</Link>
-              <Link className="settings__tool-link" to={projectWorkspacePath(toolsProject.id, "lab")}>长篇推演 · {toolsProject.title}</Link>
+              <Link className="settings__tool-link" to={projectWorkspacePath(toolsProject.id, "runs")}>{t("settings.tools.runsLink", { title: toolsProject.title })}</Link>
+              <Link className="settings__tool-link" to={projectWorkspacePath(toolsProject.id, "lab")}>{t("settings.tools.labLink", { title: toolsProject.title })}</Link>
             </>
           ) : (
-            <p className="supply__empty">尚无项目；高级工具的项目页链接将在有项目时出现。</p>
+            <p className="supply__empty">{t("settings.tools.emptyProjects")}</p>
           )}
           {!projectsQuery.isPending && !projectsQuery.isError && projects.length > 0 ? (
             <label className="settings__project-pick">
-              生产资产所属项目
+              {t("settings.tools.assetProjectLabel")}
               <select value={toolsProject?.id ?? ""} onChange={(event) => setToolsProjectId(event.target.value || null)}>
                 {projects.map((project) => (
                   <option key={project.id} value={project.id}>{project.title}{project.subtitle ? ` · ${project.subtitle}` : ""} · {shortId(project.id)}</option>
@@ -413,10 +445,18 @@ export function SettingsWorkspace() {
         ) : null}
       </section>
 
-      <section className="settings__section" aria-label="运行驱动">
+      <section className="settings__section" aria-label={t("settings.driver.label")}>
         <header className="settings__section-head">
-          <div><p className="mono">DRIVER</p><h2>运行驱动</h2></div>
-          <p className="settings__section-note">当前 {driverMode === "local" ? "本地内核（数据保存在此浏览器的 OPFS 中）" : driverMode === "server" ? "本地服务（Node API）" : "探测中"}；切换后刷新页面生效，清除选择则恢复自动探测。</p>
+          <div><p className="mono">DRIVER</p><h2>{t("settings.driver.label")}</h2></div>
+          <p className="settings__section-note">
+            {t("settings.driver.note", {
+              mode: driverMode === "local"
+                ? t("settings.driver.modeLocal")
+                : driverMode === "server"
+                  ? t("settings.driver.modeServer")
+                  : t("settings.driver.modeProbing"),
+            })}
+          </p>
         </header>
         <DriverSwitch />
       </section>
@@ -425,15 +465,15 @@ export function SettingsWorkspace() {
 
       {deleteTarget ? (
         <ConfirmDialog
-          title={deleteTarget.kind === "assignment" ? "解除岗位分配" : "删除供给记录"}
-          confirmLabel={deleteTarget.kind === "assignment" ? "解除" : "删除"}
+          title={deleteTarget.kind === "assignment" ? t("settings.confirm.unassignTitle") : t("settings.confirm.deleteTitle")}
+          confirmLabel={deleteTarget.kind === "assignment" ? t("settings.confirm.unassignAction") : t("common.action.delete")}
           danger
           pending={removeMutation.isPending}
           onCancel={() => setDeleteTarget(null)}
           onConfirm={() => removeMutation.mutate(deleteTarget)}
         >
           <p>{deleteDescription(deleteTarget)}</p>
-          {removeMutation.isError ? <ErrorNote error={removeMutation.error} title="操作未完成" /> : null}
+          {removeMutation.isError ? <ErrorNote error={removeMutation.error} title={t("settings.confirm.errorTitle")} /> : null}
         </ConfirmDialog>
       ) : null}
     </div>
@@ -452,6 +492,7 @@ function useDriverMode(): DriverMode {
 }
 
 function DriverSwitch() {
+  const { t } = useI18n();
   const mode = useDriverMode();
   const override = readDriverOverride();
   const [pendingReload, setPendingReload] = useState(false);
@@ -505,7 +546,7 @@ function DriverSwitch() {
   return (
     <div className="settings__tools-links">
       <label className="settings__project-pick">
-        运行驱动
+        {t("settings.driver.label")}
         <select
           value={override ?? "auto"}
           disabled={pendingReload}
@@ -516,36 +557,53 @@ function DriverSwitch() {
             window.location.reload();
           }}
         >
-          <option value="auto">自动探测（默认）</option>
-          <option value="server">本地服务（Node API）</option>
-          <option value="local">浏览器本地内核</option>
+          <option value="auto">{t("settings.driver.optionAuto")}</option>
+          <option value="server">{t("settings.driver.optionServer")}</option>
+          <option value="local">{t("settings.driver.optionLocal")}</option>
         </select>
       </label>
       <button
         type="button"
         className="settings__tool-link"
         disabled={effective !== "local" || downloadMutation.isPending}
-        title={effective === "local" ? "导出浏览器库的完整 SQLite 文件（含项目、稿件与运行历史）" : "仅浏览器本地内核模式可用；本地服务模式请用下方系统备份档"}
+        title={effective === "local" ? t("settings.driver.downloadTitleLocal") : t("settings.driver.downloadTitleOther")}
         onClick={() => downloadMutation.mutate()}
       >
-        {downloadMutation.isPending ? "导出中…" : "下载我的库（.sqlite）"}
+        {downloadMutation.isPending ? t("settings.driver.downloading") : t("settings.driver.downloadAction")}
       </button>
       {downloadMutation.isError ? (
-        <ErrorNote error={downloadMutation.error} title="库导出失败" />
+        <ErrorNote error={downloadMutation.error} title={t("settings.driver.exportErrorTitle")} />
       ) : null}
       <p className="settings__section-note">
-        当前生效：{effective === "local" ? "浏览器本地内核" : effective === "server" ? "本地服务（Node API）" : "探测中"}
-        {override ? "（手动指定）" : "（自动探测）"}
+        {t("settings.driver.effectiveLabel", {
+          mode: effective === "local"
+            ? t("settings.driver.optionLocal")
+            : effective === "server"
+              ? t("settings.driver.optionServer")
+              : t("settings.driver.modeProbing"),
+        })}
+        {override ? t("settings.driver.sourceManual") : t("settings.driver.sourceAuto")}
       </p>
       {effective === "local" ? (
         <>
+          <p className="settings__section-note">{t("settings.driver.opfsNote")}</p>
           <p className="settings__section-note">
-            数据仅存于此浏览器的 OPFS 中：清站点数据即清空，导出 .sqlite 前请勿放置真实作品。
-          </p>
-          <p className="settings__section-note">
-            持久存储：{storageState === "granted" ? "已授权" : storageState === "denied" ? "未授权（浏览器仍可能回收）" : "读取中…"}
-            {storageEstimate ? ` · 已用 ${formatBytes(storageEstimate.usage)} / 估算上限 ${formatBytes(storageEstimate.quota)}` : ""}
-            {lastExportAt ? ` · 最近导出 ${formatRelativeDate(lastExportAt)}` : " · 尚未导出备份"}
+            {t("settings.driver.persistenceState", {
+              state: storageState === "granted"
+                ? t("settings.driver.persistenceGranted")
+                : storageState === "denied"
+                  ? t("settings.driver.persistenceDenied")
+                  : t("settings.driver.persistenceReading"),
+            })}
+            {storageEstimate
+              ? t("settings.driver.storageUsage", {
+                  usage: formatBytes(storageEstimate.usage),
+                  quota: formatBytes(storageEstimate.quota),
+                })
+              : ""}
+            {lastExportAt
+              ? t("settings.driver.lastExport", { date: formatRelativeDate(lastExportAt) })
+              : t("settings.driver.noExport")}
           </p>
           <button
             type="button"
@@ -553,7 +611,7 @@ function DriverSwitch() {
             onClick={() => void requestPersistence()}
             disabled={storageState === "granted" || !navigator.storage?.persist}
           >
-            {storageState === "granted" ? "持久存储已授权" : "请求浏览器持久存储"}
+            {storageState === "granted" ? t("settings.driver.persistGrantedAction") : t("settings.driver.persistRequestAction")}
           </button>
         </>
       ) : null}
@@ -564,6 +622,7 @@ function DriverSwitch() {
 /* ---- 系统备份档（从交付迁入：整库备份、校档与灾备恢复） ---------------------- */
 
 function SystemBackupsSection() {
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const systemBackupsQuery = useQuery({
     queryKey: ["system-backups"],
@@ -586,7 +645,7 @@ function SystemBackupsSection() {
   const systemRestoreMutation = useMutation({
     mutationFn: () => restoreSystemBackup(systemRestoreTarget!.manifest.id, restoreDirectory.trim(), false),
     onSuccess: (result) => {
-      setSystemRestoreResult(`整库已恢复到 ${result.databasePath}；哈希 ${result.sha256}`);
+      setSystemRestoreResult(t("settings.backups.restoreResult", { path: result.databasePath, hash: result.sha256 }));
       setSystemRestoreTarget(null);
       setRestoreDirectory("");
     },
@@ -595,36 +654,41 @@ function SystemBackupsSection() {
   const backups = useMemo(() => systemBackupsQuery.data ?? [], [systemBackupsQuery.data]);
 
   return (
-    <section className="settings__section delivery__section--backups" aria-label="系统备份档">
+    <section className="settings__section delivery__section--backups" aria-label={t("settings.backups.label")}>
       <header className="settings__section-head">
         <div>
           <p className="mono">DISASTER</p>
-          <h2><Archive size={13} strokeWidth={2} aria-hidden="true" /> 系统备份档</h2>
+          <h2><Archive size={13} strokeWidth={2} aria-hidden="true" /> {t("settings.backups.label")}</h2>
         </div>
         <button
           type="button"
           className="delivery__backup-new"
-          onClick={() => backupCreateMutation.mutate(`定期整备 ${new Date().toISOString().slice(0, 16)}`)}
+          onClick={() => backupCreateMutation.mutate(t("settings.backups.createLabel", { date: new Date().toISOString().slice(0, 16) }))}
           disabled={backupCreateMutation.isPending}
-          aria-label="新备一份全库"
+          aria-label={t("settings.backups.createAria")}
         >
           <Plus size={12} strokeWidth={2} aria-hidden="true" />
-          备一份
+          {t("settings.backups.createAction")}
         </button>
       </header>
       {systemBackupsQuery.isPending ? (
         <Skeleton lines={3} />
       ) : systemBackupsQuery.isError ? (
-        <ErrorNote error={systemBackupsQuery.error} title="备份清单暂时无法加载" />
+        <ErrorNote error={systemBackupsQuery.error} title={t("settings.backups.loadError")} />
       ) : backups.length === 0 ? (
-        <p className="delivery__empty">尚未备过。首份庋藏性备份从这里起。</p>
+        <p className="delivery__empty">{t("settings.backups.empty")}</p>
       ) : (
         <ol className="delivery__backups">
           {backups.map((backup) => (
             <li key={backup.id} className="delivery__backup-row">
               <span className="delivery__backup-label">{backup.label}</span>
               <span className="delivery__backup-meta mono">
-                {formatBytes(backup.sizeBytes)} · 档 {backup.pageCount} 页 · 书 {backup.projectCount} 册 · {formatRelativeDate(backup.createdAt)}
+                {t("settings.backups.meta", {
+                  size: formatBytes(backup.sizeBytes),
+                  pages: backup.pageCount,
+                  projects: backup.projectCount,
+                  date: formatRelativeDate(backup.createdAt),
+                })}
               </span>
               <span className="delivery__backup-hash mono">{shortHash(backup.sha256)}</span>
               <button
@@ -632,10 +696,10 @@ function SystemBackupsSection() {
                 className="delivery__backup-preview-btn"
                 onClick={() => backupPreviewMutation.mutate(backup.id)}
                 disabled={backupPreviewMutation.isPending}
-                aria-label={`预览备份 ${backup.label} 的完整性`}
+                aria-label={t("settings.backups.previewAria", { label: backup.label })}
               >
                 <FileCheck2 size={12} strokeWidth={2} aria-hidden="true" />
-                预览
+                {t("settings.backups.previewAction")}
               </button>
             </li>
           ))}
@@ -655,19 +719,25 @@ function SystemBackupsSection() {
       {systemRestoreResult ? <p className="delivery__restore-result" role="status">{systemRestoreResult}</p> : null}
       {systemRestoreTarget ? (
         <ConfirmDialog
-          title="恢复整库灾备"
-          confirmLabel="恢复到目标目录"
+          title={t("settings.backups.restoreTitle")}
+          confirmLabel={t("settings.backups.restoreConfirm")}
           danger
           pending={systemRestoreMutation.isPending}
           confirmDisabled={!restoreDirectory.trim()}
           onCancel={() => setSystemRestoreTarget(null)}
           onConfirm={() => systemRestoreMutation.mutate()}
         >
-          <p>校验哈希：{systemRestoreTarget.manifest.sha256}</p>
-          <p>完整性：{systemRestoreTarget.integrityCheck}；外键违例：{systemRestoreTarget.foreignKeyViolations}；项目：{systemRestoreTarget.counts.projects}。本操作不会覆盖当前数据库，目标目录必须与当前数据目录不同且默认禁止覆盖。</p>
-          <label className="delivery__restore-directory">服务端目标目录<input value={restoreDirectory} onChange={(event) => setRestoreDirectory(event.target.value)} placeholder="E:\\novel-restored-data" /></label>
-          {!restoreDirectory.trim() ? <p className="delivery__restore-warning">填写目标目录后才能确认。</p> : null}
-          {systemRestoreMutation.isError ? <ErrorNote error={systemRestoreMutation.error} title="整库未恢复" /> : null}
+          <p>{t("settings.backups.verifyHash", { hash: systemRestoreTarget.manifest.sha256 })}</p>
+          <p>
+            {t("settings.backups.restoreInfo", {
+              check: systemRestoreTarget.integrityCheck,
+              violations: systemRestoreTarget.foreignKeyViolations,
+              projects: systemRestoreTarget.counts.projects,
+            })}
+          </p>
+          <label className="delivery__restore-directory">{t("settings.backups.directoryLabel")}<input value={restoreDirectory} onChange={(event) => setRestoreDirectory(event.target.value)} placeholder="E:\\novel-restored-data" /></label>
+          {!restoreDirectory.trim() ? <p className="delivery__restore-warning">{t("settings.backups.directoryWarning")}</p> : null}
+          {systemRestoreMutation.isError ? <ErrorNote error={systemRestoreMutation.error} title={t("settings.backups.restoreErrorTitle")} /> : null}
         </ConfirmDialog>
       ) : null}
     </section>
@@ -685,14 +755,15 @@ function BackupPreviewPane({
   onClose: () => void;
   onRestore: (preview: SystemBackupPreview) => void;
 }) {
+  const { t } = useI18n();
   return (
     <div className="delivery__backup-preview" role="note">
       <header className="delivery__backup-preview-head">
         <p className="delivery__backup-preview-title mono">
-          校档 · {backupId.slice(0, 8)}
+          {t("settings.backups.previewTitle", { id: backupId.slice(0, 8) })}
         </p>
-        <button type="button" onClick={onClose} aria-label="合上校档">
-          合上
+        <button type="button" onClick={onClose} aria-label={t("settings.backups.closeAria")}>
+          {t("settings.backups.closeAction")}
         </button>
       </header>
       {!preview ? (
@@ -700,49 +771,54 @@ function BackupPreviewPane({
       ) : (
         <dl className="delivery__backup-preview-body">
           <div>
-            <dt>包名</dt>
+            <dt>{t("settings.backups.labelLabel")}</dt>
             <dd className="mono">{preview.manifest.label}</dd>
           </div>
           <div>
-            <dt>哈希</dt>
+            <dt>{t("settings.backups.hashLabel")}</dt>
             <dd className="mono">{shortHash(preview.manifest.sha256)}</dd>
           </div>
           <div>
-            <dt>庋藏</dt>
+            <dt>{t("settings.backups.archiveLabel")}</dt>
             <dd>
-              {formatTime(preview.manifest.createdAt)}
-              {" · "}
-              {formatBytes(preview.manifest.sizeBytes)}
-              {" · "}档{preview.manifest.pageCount}
+              {t("settings.backups.archiveInfo", {
+                time: formatTime(preview.manifest.createdAt),
+                size: formatBytes(preview.manifest.sizeBytes),
+                pages: preview.manifest.pageCount,
+              })}
             </dd>
           </div>
           <div>
-            <dt>哈希校</dt>
+            <dt>{t("settings.backups.hashCheckLabel")}</dt>
             <dd data-ok={preview.hashMatches}>
-              {preview.hashMatches ? "合" : "不合"}
+              {preview.hashMatches ? t("settings.backups.hashOk") : t("settings.backups.hashBad")}
             </dd>
           </div>
           <div>
-            <dt>完整性</dt>
+            <dt>{t("settings.backups.integrityLabel")}</dt>
             <dd>{preview.integrityCheck}</dd>
           </div>
           <div>
-            <dt>外键违例</dt>
+            <dt>{t("settings.backups.violationsLabel")}</dt>
             <dd data-ok={preview.foreignKeyViolations === 0}>
               {preview.foreignKeyViolations}
             </dd>
           </div>
           <div>
-            <dt>册数</dt>
+            <dt>{t("settings.backups.countsLabel")}</dt>
             <dd>
-              书 {preview.counts.projects} · 稿 {preview.counts.documents} · 版{" "}
-              {preview.counts.versions} · 典 {preview.counts.canonFacts} · 行{" "}
-              {preview.counts.runs}
+              {t("settings.backups.countsValue", {
+                projects: preview.counts.projects,
+                documents: preview.counts.documents,
+                versions: preview.counts.versions,
+                canon: preview.counts.canonFacts,
+                runs: preview.counts.runs,
+              })}
             </dd>
           </div>
         </dl>
       )}
-      {preview?.valid && preview.hashMatches && preview.foreignKeyViolations === 0 ? <button type="button" className="btn btn--primary" onClick={() => onRestore(preview)}>恢复到新目录</button> : null}
+      {preview?.valid && preview.hashMatches && preview.foreignKeyViolations === 0 ? <button type="button" className="btn btn--primary" onClick={() => onRestore(preview)}>{t("settings.backups.restoreAction")}</button> : null}
     </div>
   );
 }
@@ -756,6 +832,7 @@ function ProviderForm({ provider, pending, error, onCancel, onSubmit }: {
   onCancel: () => void;
   onSubmit: (value: UpsertProviderRequest) => void;
 }) {
+  const { t } = useI18n();
   const [name, setName] = useState(provider?.name ?? "");
   const [wireApi, setWireApi] = useState<WireApi>(provider?.wireApi ?? "openai-chat");
   const [baseUrl, setBaseUrl] = useState(provider?.baseUrl ?? "");
@@ -767,7 +844,7 @@ function ProviderForm({ provider, pending, error, onCancel, onSubmit }: {
   const submit = (event: FormEvent) => {
     event.preventDefault();
     if (!provider && !credentialRef.trim()) {
-      setLocalError("新建模型渠道必须填写密钥或 env:NAME 引用。");
+      setLocalError(t("settings.provider.credentialRequired"));
       return;
     }
     const value: UpsertProviderRequest = {
@@ -781,17 +858,17 @@ function ProviderForm({ provider, pending, error, onCancel, onSubmit }: {
   };
   return (
     <form className="supply__editor" onSubmit={submit}>
-      <h3>{provider ? "编辑模型渠道" : "新建模型渠道"}</h3>
-      <label>渠道名称<input required value={name} onChange={(event) => setName(event.target.value)} /></label>
-      <label>协议<select value={wireApi} onChange={(event) => setWireApi(event.target.value as WireApi)}>{WIRE_APIS.map((value) => <option key={value} value={value}>{wireApiLabel(value)}</option>)}</select></label>
+      <h3>{provider ? t("settings.provider.formTitleEdit") : t("settings.provider.formTitleNew")}</h3>
+      <label>{t("settings.provider.nameLabel")}<input required value={name} onChange={(event) => setName(event.target.value)} /></label>
+      <label>{t("settings.provider.protocolLabel")}<select value={wireApi} onChange={(event) => setWireApi(event.target.value as WireApi)}>{WIRE_APIS.map((value) => <option key={value} value={value}>{wireApiLabel(value)}</option>)}</select></label>
       <label>Base URL<input required type="url" value={baseUrl} onChange={(event) => setBaseUrl(event.target.value)} placeholder="https://api.example.com/v1" /></label>
-      <label>Endpoint（可选）<input value={endpoint} onChange={(event) => setEndpoint(event.target.value)} /></label>
-      <label>{provider ? "密钥（留空保持原值）" : "密钥或 env:NAME"}<input type="password" value={credentialRef} onChange={(event) => setCredentialRef(event.target.value)} autoComplete="off" /></label>
+      <label>{t("settings.provider.endpointLabel")}<input value={endpoint} onChange={(event) => setEndpoint(event.target.value)} /></label>
+      <label>{provider ? t("settings.provider.credentialLabelEdit") : t("settings.provider.credentialLabelNew")}<input type="password" value={credentialRef} onChange={(event) => setCredentialRef(event.target.value)} autoComplete="off" /></label>
       {wireApi === "anthropic-messages" ? <label>Anthropic Version<input value={anthropicVersion} onChange={(event) => setAnthropicVersion(event.target.value)} /></label> : null}
-      <label className="supply__check"><input type="checkbox" checked={enabled} onChange={(event) => setEnabled(event.target.checked)} />启用</label>
+      <label className="supply__check"><input type="checkbox" checked={enabled} onChange={(event) => setEnabled(event.target.checked)} />{t("common.action.enable")}</label>
       {localError ? <p className="supply__local-error" role="alert">{localError}</p> : null}
-      {error ? <ErrorNote error={error} title="模型渠道未保存" /> : null}
-      <div className="supply__editor-actions"><button type="button" className="btn" onClick={onCancel}>取消</button><button type="submit" className="btn btn--primary" disabled={pending}>{pending ? "保存中…" : "保存"}</button></div>
+      {error ? <ErrorNote error={error} title={t("settings.provider.saveErrorTitle")} /> : null}
+      <div className="supply__editor-actions"><button type="button" className="btn" onClick={onCancel}>{t("common.action.cancel")}</button><button type="submit" className="btn btn--primary" disabled={pending}>{pending ? t("common.state.saving") : t("common.action.save")}</button></div>
     </form>
   );
 }
@@ -804,6 +881,7 @@ function ModelForm({ providerId, model, pending, error, onCancel, onSubmit }: {
   onCancel: () => void;
   onSubmit: (value: UpsertModelRequest) => void;
 }) {
+  const { t } = useI18n();
   const [modelId, setModelId] = useState(model?.modelId ?? "");
   const [taskType, setTaskType] = useState<ModelTaskType>(model?.taskType ?? "writing");
   const [contextWindow, setContextWindow] = useState(model?.contextWindow?.toString() ?? "");
@@ -819,14 +897,14 @@ function ModelForm({ providerId, model, pending, error, onCancel, onSubmit }: {
         sampling: model?.sampling ?? {}, capabilities: model?.capabilities ?? {}, enabled,
       });
     }}>
-      <h3>{model ? "编辑模型" : "新建模型"}</h3>
-      <label>上游模型名<input required value={modelId} onChange={(event) => setModelId(event.target.value)} /></label>
-      <label>模型类型<select value={taskType} onChange={(event) => setTaskType(event.target.value as ModelTaskType)}>{TASK_TYPES.map((value) => <option key={value} value={value}>{assignmentRoleLabel(value)}</option>)}</select><span className="supply__field-hint">生成类模型可共同用于写作、规划与审稿；这里只记录它最常用的方向。</span></label>
-      <label>上下文上限<input type="number" min="1" value={contextWindow} onChange={(event) => setContextWindow(event.target.value)} placeholder="未知可留空" /></label>
-      <label>输出上限<input type="number" min="1" value={maxOutputTokens} onChange={(event) => setMaxOutputTokens(event.target.value)} placeholder="未知可留空" /></label>
-      <label className="supply__check"><input type="checkbox" checked={enabled} onChange={(event) => setEnabled(event.target.checked)} />启用</label>
-      {error ? <ErrorNote error={error} title="模型未保存" /> : null}
-      <div className="supply__editor-actions"><button type="button" className="btn" onClick={onCancel}>取消</button><button type="submit" className="btn btn--primary" disabled={pending}>{pending ? "保存中…" : "保存"}</button></div>
+      <h3>{model ? t("settings.model.formTitleEdit") : t("settings.model.formTitleNew")}</h3>
+      <label>{t("settings.model.modelIdLabel")}<input required value={modelId} onChange={(event) => setModelId(event.target.value)} /></label>
+      <label>{t("settings.model.taskTypeLabel")}<select value={taskType} onChange={(event) => setTaskType(event.target.value as ModelTaskType)}>{TASK_TYPES.map((value) => <option key={value} value={value}>{assignmentRoleLabel(value)}</option>)}</select><span className="supply__field-hint">{t("settings.model.taskTypeHint")}</span></label>
+      <label>{t("settings.model.contextLabel")}<input type="number" min="1" value={contextWindow} onChange={(event) => setContextWindow(event.target.value)} placeholder={t("settings.model.limitPlaceholder")} /></label>
+      <label>{t("settings.model.outputLabel")}<input type="number" min="1" value={maxOutputTokens} onChange={(event) => setMaxOutputTokens(event.target.value)} placeholder={t("settings.model.limitPlaceholder")} /></label>
+      <label className="supply__check"><input type="checkbox" checked={enabled} onChange={(event) => setEnabled(event.target.checked)} />{t("common.action.enable")}</label>
+      {error ? <ErrorNote error={error} title={t("settings.model.saveErrorTitle")} /> : null}
+      <div className="supply__editor-actions"><button type="button" className="btn" onClick={onCancel}>{t("common.action.cancel")}</button><button type="submit" className="btn btn--primary" disabled={pending}>{pending ? t("common.state.saving") : t("common.action.save")}</button></div>
     </form>
   );
 }
@@ -840,31 +918,33 @@ function ModelCard({ model, onEdit, onDelete, onProbe, probePending, probeData, 
   probeData: ProviderProbeResult | undefined;
   probeError: unknown;
 }) {
+  const { t } = useI18n();
   const lacksLimits = model.contextWindow === null || model.maxOutputTokens === null;
   return (
-    <article className="supply__model" data-enabled={model.enabled} aria-label={`模型 ${model.modelId}`}>
+    <article className="supply__model" data-enabled={model.enabled} aria-label={t("settings.model.cardAria", { id: model.modelId })}>
       <div className="supply__model-head"><span className="supply__model-id">{model.modelId}</span><span className="supply__model-task">{assignmentRoleLabel(model.taskType)}</span></div>
       <div className="supply__model-meta">
-        <span><strong>{model.contextWindow === null ? "未知" : model.contextWindow === 0 ? "0" : `${Math.round(model.contextWindow / 1000)}k`}</strong> 上下文</span>
-        <span><strong>{model.maxOutputTokens === null ? "未知" : model.maxOutputTokens === 0 ? "0" : `${Math.round(model.maxOutputTokens / 1000)}k`}</strong> 输出</span>
-        <span>{model.enabled ? "启用" : "停用"}</span><span>{metadataSourceLabel(model.metadataSource)}</span>
-        {model.metadataStale ? <span className="supply__warn">规格待复核</span> : null}
+        <span><strong>{model.contextWindow === null ? t("common.state.unknown") : model.contextWindow === 0 ? "0" : `${Math.round(model.contextWindow / 1000)}k`}</strong> {t("settings.model.context")}</span>
+        <span><strong>{model.maxOutputTokens === null ? t("common.state.unknown") : model.maxOutputTokens === 0 ? "0" : `${Math.round(model.maxOutputTokens / 1000)}k`}</strong> {t("settings.model.output")}</span>
+        <span>{model.enabled ? t("settings.state.enabled") : t("settings.state.disabled")}</span><span>{metadataSourceLabel(model.metadataSource)}</span>
+        {model.metadataStale ? <span className="supply__warn">{t("settings.model.metadataStale")}</span> : null}
       </div>
-      {lacksLimits && ["writing", "planning", "review"].includes(model.taskType) ? <p className="supply__model-missing">上限尚未确认；可以正常使用，运行时会采用保守预算。</p> : null}
+      {lacksLimits && ["writing", "planning", "review"].includes(model.taskType) ? <p className="supply__model-missing">{t("settings.model.limitsMissing")}</p> : null}
       <div className="supply__item-actions supply__item-actions--model">
-        <button type="button" className="btn" onClick={onProbe} disabled={probePending}><Radio size={12} /> {probePending ? "探测中…" : "探测"}</button>
-        <button type="button" className="btn" onClick={onEdit}><Edit3 size={12} /> 编辑</button>
-        <button type="button" className="btn" onClick={onDelete}><Trash2 size={12} /> 删除</button>
+        <button type="button" className="btn" onClick={onProbe} disabled={probePending}><Radio size={12} /> {probePending ? t("settings.model.probing") : t("settings.model.probe")}</button>
+        <button type="button" className="btn" onClick={onEdit}><Edit3 size={12} /> {t("common.action.edit")}</button>
+        <button type="button" className="btn" onClick={onDelete}><Trash2 size={12} /> {t("common.action.delete")}</button>
       </div>
-      {probeError ? <ErrorNote error={probeError} title="探测失败" /> : null}
+      {probeError ? <ErrorNote error={probeError} title={t("settings.model.probeErrorTitle")} /> : null}
       {probeData ? <ProbeReport result={probeData} /> : null}
     </article>
   );
 }
 
 function ProbeReport({ result }: { result: ProviderProbeResult }) {
+  const { t } = useI18n();
   return (
-    <div className="supply__probe"><p className="supply__probe-title">探测结果</p><div className="supply__probe-body">
+    <div className="supply__probe"><p className="supply__probe-title">{t("settings.model.probeReportTitle")}</p><div className="supply__probe-body">
       {result.stages.map((stage) => <div key={stage.stage} className="supply__probe-row">
         <span className="supply__probe-stage">{probeStageLabel(stage.stage)}</span>
         <span className="supply__probe-status" data-s={stage.status}>{probeStageStatusLabel(stage.status)}</span>
@@ -890,43 +970,49 @@ function RoleCard({ role, assignedModel, assignmentModelId, inheritedModel, inhe
   onAssign: (modelId: string) => void;
   onRemove: () => void;
 }) {
+  const { t } = useI18n();
   const inheritedActive = inherited && !assignmentModelId && inheritedModel;
   return (
-    <div className="supply__role" role="group" aria-label={ROLE_COPY[role].name}>
+    <div className="supply__role" role="group" aria-label={roleCopy(role).name}>
       <div className="supply__role-head">
-        <span className="supply__role-name">{ROLE_COPY[role].name}</span>
+        <span className="supply__role-name">{roleCopy(role).name}</span>
         <span className="supply__role-status" data-ready={Boolean(assignmentModelId) || Boolean(inheritedActive)}>
-          {assignmentModelId ? "已派" : inheritedActive ? "继承默认" : "待派"}
+          {assignmentModelId ? t("settings.roleCard.statusAssigned") : inheritedActive ? t("settings.roleCard.statusInherited") : t("settings.roleCard.statusPending")}
         </span>
       </div>
-      <p className="supply__role-description">{ROLE_COPY[role].note}</p>
+      <p className="supply__role-description">{roleCopy(role).note}</p>
       <div className="supply__role-model" data-unset={!assignmentModelId}>
-        {assignedModel ? <><strong>{modelDisplayName(assignedModel, providers)}</strong> · {assignedModel.enabled ? "启用" : "停用"}</> : assignmentModelId ? <>配置已失效</> : inheritedActive ? <>继承默认生成模型 <strong>{modelDisplayName(inheritedModel, providers)}</strong></> : <>未被接起</>}
+        {assignedModel ? <><strong>{modelDisplayName(assignedModel, providers)}</strong> · {assignedModel.enabled ? t("settings.state.enabled") : t("settings.state.disabled")}</> : assignmentModelId ? <>{t("settings.roleCard.staleConfig")}</> : inheritedActive ? <>{t("settings.roleCard.inheritFrom", { name: modelDisplayName(inheritedModel, providers) })}</> : <>{t("settings.roleCard.notConnected")}</>}
       </div>
       <div className="supply__role-actions">
         {candidates.map((model) => <button key={model.id} type="button" className="supply__role-assign-btn" disabled={pending || model.id === assignmentModelId} onClick={() => onAssign(model.id)}><Network size={12} /> {modelDisplayName(model, providers)}</button>)}
-        {assignmentModelId ? <button type="button" className="supply__role-assign-btn" disabled={pending} onClick={onRemove}><Unplug size={12} /> 解除{inherited ? "覆盖，回继承" : ""}</button> : null}
+        {assignmentModelId ? <button type="button" className="supply__role-assign-btn" disabled={pending} onClick={onRemove}><Unplug size={12} /> {inherited ? t("settings.roleCard.unassignOverride") : t("settings.roleCard.unassign")}</button> : null}
       </div>
-      {candidates.length === 0 ? <p className="supply__role-empty">没有可用于此处的已启用模型。</p> : null}
-      {error ? <ErrorNote error={error} title="派岗未完成" /> : null}
+      {candidates.length === 0 ? <p className="supply__role-empty">{t("settings.roleCard.emptyCandidates")}</p> : null}
+      {error ? <ErrorNote error={error} title={t("settings.roleCard.assignError")} /> : null}
     </div>
   );
 }
 
 function deleteDescription(target: DeleteTarget): string {
+  const locale = getLocale();
   if (target.kind === "assignment") {
-    const base = `解除${ROLE_COPY[target.value].name}的指派`;
+    const role = roleCopy(target.value).name;
     return target.value === "writing"
-      ? `${base}后，AI 链路不可用（手动创作仍然可用）。`
-      : `${base}后该岗回落继承默认生成模型。`;
+      ? translate(locale, "settings.confirm.unassignWriting", { role })
+      : translate(locale, "settings.confirm.unassignOther", { role });
   }
-  if (target.kind === "provider") return `将删除模型渠道「${target.value.name}」。若仍有模型、派岗或环境托管约束，服务端会拒绝并给出下一步。`;
-  return `将删除模型「${target.value.modelId}」。若仍被岗位或运行历史引用，服务端会拒绝并给出下一步。`;
+  if (target.kind === "provider") {
+    return translate(locale, "settings.confirm.deleteProvider", { name: target.value.name });
+  }
+  return translate(locale, "settings.confirm.deleteModel", { name: target.value.modelId });
 }
 
 function modelDisplayName(model: ModelConfigDto | undefined, providers: PublicProviderDto[]): string {
-  if (!model) return "未知模型";
-  const channelName = providers.find((provider) => provider.id === model.providerId)?.name ?? "未知渠道";
+  const locale = getLocale();
+  if (!model) return translate(locale, "settings.modelNames.unknownModel");
+  const channelName = providers.find((provider) => provider.id === model.providerId)?.name
+    ?? translate(locale, "settings.modelNames.unknownChannel");
   return `${channelName} · ${model.modelId}`;
 }
 

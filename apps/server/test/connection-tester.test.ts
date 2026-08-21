@@ -145,7 +145,7 @@ describe("model connection capability fallback", () => {
       expect.objectContaining({
         stage: "structured-output",
         status: "passed",
-        detail: expect.stringContaining("本地严格验证 fallback"),
+        detail: expect.stringContaining("strict local validation fallback"),
         capability: "prompt",
       }),
     ]);

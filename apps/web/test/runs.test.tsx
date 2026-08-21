@@ -6,6 +6,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { setLocale } from "../src/i18n";
 import { RunsWorkspace } from "../src/workspaces/runs";
 
 const NOW = Date.now();
@@ -101,6 +102,7 @@ function renderRuns(entry = "/projects/p-1/runs") {
 }
 
 beforeEach(() => {
+  setLocale("zh-CN");
   Object.defineProperty(window, "matchMedia", {
     configurable: true,
     writable: true,

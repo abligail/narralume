@@ -1,6 +1,8 @@
 import { LibraryBig } from "lucide-react";
 import { Link } from "react-router";
 
+import { useI18n } from "../i18n";
+
 import { Empty } from "./empty";
 
 interface ProjectRequiredStateProps {
@@ -15,6 +17,7 @@ export function ProjectRequiredState({
   title,
   description,
 }: ProjectRequiredStateProps) {
+  const { t } = useI18n();
   return (
     <main className="project-required">
       <Empty
@@ -26,7 +29,7 @@ export function ProjectRequiredState({
         action={
           <Link className="btn btn--primary project-required__back" to="/shelf">
             <LibraryBig size={14} strokeWidth={1.5} aria-hidden="true" />
-            返回藏书室
+            {t("components.projectRequired.backToShelf")}
           </Link>
         }
       />

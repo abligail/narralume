@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { useFocusTrap } from "../app/focus-trap";
+import { useI18n } from "../i18n";
 
 interface ConfirmDialogProps {
   title: string;
@@ -24,6 +25,7 @@ export function ConfirmDialog({
   onConfirm,
 }: ConfirmDialogProps) {
   const trapRef = useFocusTrap<HTMLDivElement>(onCancel);
+  const { t } = useI18n();
   return (
     <div
       className="confirm-dialog__backdrop"
@@ -42,7 +44,7 @@ export function ConfirmDialog({
         <div className="confirm-dialog__body">{children}</div>
         <div className="confirm-dialog__actions">
           <button type="button" className="btn btn--outline" disabled={pending} onClick={onCancel}>
-            取消
+            {t("common.action.cancel")}
           </button>
           <button
             type="button"
@@ -50,7 +52,7 @@ export function ConfirmDialog({
             disabled={pending || confirmDisabled}
             onClick={onConfirm}
           >
-            {pending ? "处理中…" : confirmLabel}
+            {pending ? t("components.confirmDialog.pending") : confirmLabel}
           </button>
         </div>
       </div>

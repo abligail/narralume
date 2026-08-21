@@ -9,6 +9,7 @@ import { ConfirmDialog } from "../components/confirm-dialog";
 import { ErrorNote } from "../components/error-note";
 import { ProjectRequiredState } from "../components/project-required-state";
 import { Skeleton } from "../components/skeleton";
+import { useI18n, type MessageKey } from "../i18n";
 import {
   controlAutopilotSession,
   controlRun,
@@ -42,6 +43,7 @@ import {
    待办计数与下一步。任务内部 Step 不在此解析；恢复走任务台账与深度链接。 */
 
 export function OverviewWorkspace() {
+  const { t } = useI18n();
   const projectId = useProjectId();
   const overviewQuery = useQuery({
     queryKey: ["project", projectId, "overview"],
@@ -77,9 +79,9 @@ export function OverviewWorkspace() {
     return (
       <div className="overview">
         <ProjectRequiredState
-          seal="览"
-          title="项目概览"
-          description="选定作品后，在这里查看创作进度、进行中的任务和下一步安排。"
+          seal={t("overview.requiredState.seal")}
+          title={t("overview.requiredState.title")}
+          description={t("overview.requiredState.description")}
         />
       </div>
     );
@@ -90,7 +92,7 @@ export function OverviewWorkspace() {
       {overviewQuery.isPending ? (
         <Skeleton lines={7} />
       ) : overviewQuery.isError ? (
-        <ErrorNote error={overviewQuery.error} title="概览暂时无法加载" />
+        <ErrorNote error={overviewQuery.error} title={t("overview.loadError")} />
       ) : overview ? (
         <OverviewBoard overview={overview} />
       ) : null}
@@ -99,19 +101,20 @@ export function OverviewWorkspace() {
 }
 
 function OverviewBoard({ overview }: { overview: ProjectOverview }) {
+  const { t } = useI18n();
   const { progress, currentChapter, activeTask, pending, nextAction } = overview;
-  const nextEntry = nextActionEntry(overview);
+  const nextEntry = nextActionEntry(overview, t);
   return (
     <main className="overview__board">
       <header className="overview__masthead">
         <h1 className="overview__masthead-title">{overview.project.title}</h1>
-        <p className="overview__masthead-premise">{overview.project.premise ?? "卷首尚待题。"}</p>
+        <p className="overview__masthead-premise">{overview.project.premise ?? t("overview.masthead.emptyPremise")}</p>
         <div className="overview__masthead-row mono">
           <span className="overview__masthead-index">OVERLOOK · 02</span>
           <span className="overview__masthead-phase">{projectPhaseLabel(overview.project.phase)}</span>
-          <span className="overview__masthead-progress">{progress.committedChapters} 已定稿 · 共 {progress.totalChapters} 章节 · {progress.wordCount} 字</span>
+          <span className="overview__masthead-progress">{t("overview.masthead.progress", { committed: progress.committedChapters, total: progress.totalChapters, words: progress.wordCount })}</span>
           <span className="overview__masthead-writingat">
-            {progress.lastWritingAt ? `最后动笔 ${formatRelativeDate(progress.lastWritingAt)}` : "尚未动笔"}
+            {progress.lastWritingAt ? t("overview.masthead.lastWriting", { time: formatRelativeDate(progress.lastWritingAt) }) : t("overview.masthead.neverWriting")}
           </span>
         </div>
       </header>
@@ -121,13 +124,13 @@ function OverviewBoard({ overview }: { overview: ProjectOverview }) {
 
       {!activeTask && currentChapter ? (
         <section className="overview__current">
-          <h2 className="overview__current-head">当前章节</h2>
+          <h2 className="overview__current-head">{t("overview.currentChapter.head")}</h2>
           <article className="overview__chapter-card">
             <strong className="overview__chapter-title">{currentChapter.title}</strong>
             <span className="overview__chapter-status mono">{outlineStatusLabel(currentChapter.status)}</span>
             <div className="overview__chapter-actions">
-              <Link to={chapterWritingHref(overview.project.id, currentChapter)} className="btn btn--primary" aria-label="在写作台续写此章">续写本章</Link>
-              <Link to={projectWorkspacePath(overview.project.id, "bible")} className="btn" aria-label="查看故事">查看故事</Link>
+              <Link to={chapterWritingHref(overview.project.id, currentChapter)} className="btn btn--primary" aria-label={t("overview.currentChapter.continueAria")}>{t("overview.currentChapter.continue")}</Link>
+              <Link to={projectWorkspacePath(overview.project.id, "bible")} className="btn" aria-label={t("overview.currentChapter.viewStory")}>{t("overview.currentChapter.viewStory")}</Link>
             </div>
           </article>
         </section>
@@ -135,18 +138,18 @@ function OverviewBoard({ overview }: { overview: ProjectOverview }) {
 
       {!activeTask && !currentChapter ? (
         <section className="overview__current">
-          <h2 className="overview__current-head">当前章节</h2>
-          <p className="overview__current-done">{completedChapterMessage(overview)}</p>
+          <h2 className="overview__current-head">{t("overview.currentChapter.head")}</h2>
+          <p className="overview__current-done">{completedChapterMessage(overview, t)}</p>
         </section>
       ) : null}
 
       <PendingStrip projectId={overview.project.id} pending={pending} activeTask={activeTask} />
 
-      <section className="overview__entries" aria-label="下一步入口">
+      <section className="overview__entries" aria-label={t("overview.entries.ariaLabel")}>
         <h3 className="overview__entries-head mono">NEXT · {nextActionKindLabel(nextAction.kind)}</h3>
         {EntryCard(nextEntry.label, nextEntry.href, nextEntry.blurb, true)}
-        {nextEntry.href !== projectWorkspacePath(overview.project.id, "bible") ? EntryCard("整理故事", projectWorkspacePath(overview.project.id, "bible"), "补齐人物、大纲和故事事实") : null}
-        {nextEntry.href !== projectWorkspacePath(overview.project.id, "autopilot") ? EntryCard("AI 快速创作", projectWorkspacePath(overview.project.id, "autopilot"), "按默认链路连续完成多章，作者可随时介入") : null}
+        {nextEntry.href !== projectWorkspacePath(overview.project.id, "bible") ? EntryCard(t("overview.entries.organizeStory.label"), projectWorkspacePath(overview.project.id, "bible"), t("overview.entries.organizeStory.blurb")) : null}
+        {nextEntry.href !== projectWorkspacePath(overview.project.id, "autopilot") ? EntryCard(t("overview.entries.autopilot.label"), projectWorkspacePath(overview.project.id, "autopilot"), t("overview.entries.autopilot.blurb")) : null}
       </section>
     </main>
   );
@@ -155,6 +158,7 @@ function OverviewBoard({ overview }: { overview: ProjectOverview }) {
 /** 活动任务卡：只展示任务协议字段（kind / status / stopReason / availableActions），
  *  并提供「回到任务现场」的恢复链接；不展开任务内部步骤。 */
 function ActiveTaskCard({ projectId, task }: { projectId: string; task: ProjectOverviewActiveTask }) {
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const restore = rememberedTasks(projectId).find((item) => item.taskId === task.id);
   const [confirmCancel, setConfirmCancel] = useState(false);
@@ -181,11 +185,11 @@ function ActiveTaskCard({ projectId, task }: { projectId: string; task: ProjectO
     documentId: task.targetChapter?.documentId ?? restore?.documentId ?? null,
   });
   return (
-    <section className="overview__current" aria-label="活动任务">
-      <h2 className="overview__current-head">活动任务 · {taskKindLabel(task.kind)}</h2>
+    <section className="overview__current" aria-label={t("overview.activeTask.aria")}>
+      <h2 className="overview__current-head">{t("overview.activeTask.head", { kind: taskKindLabel(task.kind) })}</h2>
       <article className="overview__chapter-card" data-task={task.kind}>
         <strong className="overview__chapter-title">
-          {task.targetChapter?.title ?? restore?.label ?? "后台任务"}
+          {task.targetChapter?.title ?? restore?.label ?? t("overview.activeTask.fallbackTitle")}
         </strong>
         <span className="overview__chapter-status mono">{taskStatusLabel(task.status)}</span>
         {task.stopReason ? (
@@ -193,35 +197,36 @@ function ActiveTaskCard({ projectId, task }: { projectId: string; task: ProjectO
         ) : null}
         <div className="overview__chapter-actions">
           {directActions.map((action) => <button key={action} type="button" className="btn" disabled={mutation.isPending} onClick={() => mutation.mutate(action)}>{action === "pause" ? <Pause size={13} /> : action === "resume" ? <Play size={13} /> : null}{taskActionLabel(action)}</button>)}
-          {task.availableActions.includes("cancel") ? <button type="button" className="btn" disabled={mutation.isPending} onClick={() => setConfirmCancel(true)}><Square size={13} />取消</button> : null}
+          {task.availableActions.includes("cancel") ? <button type="button" className="btn" disabled={mutation.isPending} onClick={() => setConfirmCancel(true)}><Square size={13} />{t("common.action.cancel")}</button> : null}
           <Link
             to={href}
             className="btn btn--primary"
-            aria-label="回到任务现场"
+            aria-label={t("overview.activeTask.backAria")}
           >
-            {needsProductDecision ? "处理候选与裁定" : "回到任务现场"}
+            {needsProductDecision ? t("overview.activeTask.decideLabel") : t("overview.activeTask.backLabel")}
           </Link>
         </div>
-        {mutation.isError ? <ErrorNote error={mutation.error} title="任务操作没有完成" /> : null}
+        {mutation.isError ? <ErrorNote error={mutation.error} title={t("overview.activeTask.error")} /> : null}
       </article>
-      {confirmCancel ? <ConfirmDialog title="取消当前任务" confirmLabel="确认取消" danger pending={mutation.isPending} onCancel={() => setConfirmCancel(false)} onConfirm={() => mutation.mutate("cancel")}><p>任务会在安全边界停止；已经保存的正文和版本不会被删除。</p></ConfirmDialog> : null}
+      {confirmCancel ? <ConfirmDialog title={t("overview.cancelDialog.title")} confirmLabel={t("overview.cancelDialog.confirm")} danger pending={mutation.isPending} onCancel={() => setConfirmCancel(false)} onConfirm={() => mutation.mutate("cancel")}><p>{t("overview.cancelDialog.body")}</p></ConfirmDialog> : null}
     </section>
   );
 }
 
 /** 待办汇总：四项计数大于零才显形；各连到裁定位置。 */
 function PendingStrip({ projectId, pending, activeTask }: { projectId: string; pending: ProjectOverview["pending"]; activeTask: ProjectOverviewActiveTask | null }) {
+  const { t } = useI18n();
   const resumeHint = activeTask === null ? rememberedTasks(projectId)[0] : null;
   const reviewHref = reviewWorkspaceHref(projectId, pending.reviewDocumentId);
   const items = [
-    { key: "foundation", count: pending.foundationCandidates, label: "建书候选", href: projectWorkspacePath(projectId, "autopilot") },
-    { key: "issues", count: pending.reviewIssues, label: "审稿问题", href: reviewHref },
-    { key: "proposals", count: pending.revisionProposals, label: "修订提案", href: reviewHref },
-    { key: "canon", count: pending.canonChangeSets, label: "故事变化", href: `${projectWorkspacePath(projectId, "studio")}?focus=canon` },
+    { key: "foundation", count: pending.foundationCandidates, label: t("overview.pending.foundation"), href: projectWorkspacePath(projectId, "autopilot") },
+    { key: "issues", count: pending.reviewIssues, label: t("overview.pending.issues"), href: reviewHref },
+    { key: "proposals", count: pending.revisionProposals, label: t("overview.pending.proposals"), href: reviewHref },
+    { key: "canon", count: pending.canonChangeSets, label: t("overview.pending.canon"), href: `${projectWorkspacePath(projectId, "studio")}?focus=canon` },
   ].filter((item) => item.count > 0);
   if (items.length === 0 && !resumeHint) return null;
   return (
-    <section className="overview__pending" aria-label="待办">
+    <section className="overview__pending" aria-label={t("overview.pending.aria")}>
       {items.map((item) => (
         <Link key={item.key} className="overview__pending-item mono" to={item.href}>
           {item.label} · {item.count}
@@ -229,7 +234,7 @@ function PendingStrip({ projectId, pending, activeTask }: { projectId: string; p
       ))}
       {resumeHint ? (
         <Link className="overview__pending-item mono" to={taskHref(projectId, resumeHint.kind, resumeHint.taskId, { origin: resumeHint.origin ?? null, documentId: resumeHint.documentId ?? null })}>
-          最近的 AI 任务 · {resumeHint.label}
+          {t("overview.pending.resume", { label: resumeHint.label })}
         </Link>
       ) : null}
     </section>
@@ -253,29 +258,31 @@ function chapterWritingHref(projectId: string, chapter: ProjectOverview["current
   return `${projectWorkspacePath(projectId, "studio")}${query ? `?${query}` : ""}`;
 }
 
-function nextActionEntry(overview: ProjectOverview): { label: string; href: string; blurb: string } {
+type Translate = (key: MessageKey, vars?: Record<string, string | number>) => string;
+
+function nextActionEntry(overview: ProjectOverview, t: Translate): { label: string; href: string; blurb: string } {
   const projectId = overview.project.id;
   switch (overview.nextAction.kind) {
     case "continue_task": {
       const task = overview.activeTask;
       return task ? {
-        label: "继续当前任务",
+        label: t("overview.nextAction.continueTask.label"),
         href: taskHref(projectId, task.kind, task.id, { origin: task.origin, documentId: task.targetChapter?.documentId ?? null }),
-        blurb: "回到发起位置，处理候选稿或继续创作",
-      } : { label: "回到写作台", href: projectWorkspacePath(projectId, "studio"), blurb: "继续当前正文" };
+        blurb: t("overview.nextAction.continueTask.blurb"),
+      } : { label: t("overview.nextAction.backToStudio.label"), href: projectWorkspacePath(projectId, "studio"), blurb: t("overview.nextAction.backToStudio.blurb") };
     }
     case "review_foundation":
-      return { label: "确认作品方向", href: projectWorkspacePath(projectId, "autopilot"), blurb: "从建书候选中确定故事指南针" };
+      return { label: t("overview.nextAction.reviewFoundation.label"), href: projectWorkspacePath(projectId, "autopilot"), blurb: t("overview.nextAction.reviewFoundation.blurb") };
     case "resolve_story_changes":
-      return { label: "确认故事变化", href: `${projectWorkspacePath(projectId, "studio")}?focus=canon`, blurb: "裁定正文带来的人物、时间线与伏笔变化" };
+      return { label: t("overview.nextAction.resolveStoryChanges.label"), href: `${projectWorkspacePath(projectId, "studio")}?focus=canon`, blurb: t("overview.nextAction.resolveStoryChanges.blurb") };
     case "review_writing":
-      return { label: "处理审稿与修订", href: reviewWorkspaceHref(projectId, overview.pending.reviewDocumentId), blurb: "在正文旁完成问题和修改建议的裁定" };
+      return { label: t("overview.nextAction.reviewWriting.label"), href: reviewWorkspaceHref(projectId, overview.pending.reviewDocumentId), blurb: t("overview.nextAction.reviewWriting.blurb") };
     case "write_chapter":
-      return { label: "续写本章", href: chapterWritingHref(projectId, overview.currentChapter), blurb: "手动写作，或把本章交给 AI 生成待采纳正文" };
+      return { label: t("overview.nextAction.writeChapter.label"), href: chapterWritingHref(projectId, overview.currentChapter), blurb: t("overview.nextAction.writeChapter.blurb") };
     case "build_outline":
-      return { label: "先搭故事大纲", href: projectWorkspacePath(projectId, "bible"), blurb: "确定人物、章节与故事推进方向" };
+      return { label: t("overview.nextAction.buildOutline.label"), href: projectWorkspacePath(projectId, "bible"), blurb: t("overview.nextAction.buildOutline.blurb") };
     case "complete":
-      return { label: "检查并交付", href: projectWorkspacePath(projectId, "delivery"), blurb: "检查质量后导出或备份作品" };
+      return { label: t("overview.nextAction.complete.label"), href: projectWorkspacePath(projectId, "delivery"), blurb: t("overview.nextAction.complete.blurb") };
   }
 }
 
@@ -285,22 +292,22 @@ function reviewWorkspaceHref(projectId: string, documentId: string | null | unde
   return `${projectWorkspacePath(projectId, "studio")}?${params}`;
 }
 
-function completedChapterMessage(overview: ProjectOverview): string {
+function completedChapterMessage(overview: ProjectOverview, t: Translate): string {
   if (overview.progress.totalChapters === 0) {
-    return "还没有章节；下一步：先搭故事大纲。";
+    return t("overview.completed.noChapters");
   }
   switch (overview.nextAction.kind) {
     case "review_foundation":
-      return "没有正在撰写的章节；下一步：确认作品方向。";
+      return t("overview.completed.reviewFoundation");
     case "resolve_story_changes":
-      return "章节正文已定稿；下一步：确认正文带来的故事变化。";
+      return t("overview.completed.resolveStoryChanges");
     case "review_writing":
-      return "章节正文已定稿；下一步：处理审稿与修订。";
+      return t("overview.completed.reviewWriting");
     case "build_outline":
-      return "还没有可写章节；下一步：先搭故事大纲。";
+      return t("overview.completed.buildOutline");
     case "complete":
-      return "所有章节已定稿；下一步：检查并交付。";
+      return t("overview.completed.complete");
     default:
-      return `没有正在撰写的章节；下一步：${nextActionKindLabel(overview.nextAction.kind)}。`;
+      return t("overview.completed.fallback", { action: nextActionKindLabel(overview.nextAction.kind) });
   }
 }

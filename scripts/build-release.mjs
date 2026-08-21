@@ -93,7 +93,7 @@ const copy = (relative) => {
 const commonFiles = [
   "LICENSE",
   "README.md",
-  "README.en.md",
+  "README.zh.md",
   "CONTRIBUTING.md",
   "CODE_OF_CONDUCT.md",
   "SECURITY.md",

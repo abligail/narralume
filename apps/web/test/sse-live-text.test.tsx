@@ -2,8 +2,9 @@
 import "@testing-library/jest-dom/vitest";
 
 import { act, cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { setLocale } from "../src/i18n";
 import { useRunLiveText } from "../src/lib/sse";
 
 class EventSourceStub {
@@ -30,6 +31,10 @@ class EventSourceStub {
 function Probe({ clearSignal }: { clearSignal: string | null }) {
   return <p>{useRunLiveText("run-1", clearSignal) || "empty"}</p>;
 }
+
+beforeEach(() => {
+  setLocale("zh-CN");
+});
 
 afterEach(() => {
   cleanup();

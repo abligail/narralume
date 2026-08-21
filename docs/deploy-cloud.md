@@ -14,7 +14,7 @@ Bridge 是维护者电脑上的本机转发器，不是 NarraLume 的必需后�
 
 ## 在线体验与部署边界
 
-[https://novelai.indevs.in/](https://novelai.indevs.in/) 是当前公开在线体验。
+[https://app.narralume.me/](https://app.narralume.me/) 是当前公开在线体验。
 它使用浏览器本地内核，作品保存在浏览器 OPFS，不依赖云端数据库。
 
 生产 Worker 名称、自定义域、上游地址和本机运维命令属于部署环境配置，统一放在

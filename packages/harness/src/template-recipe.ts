@@ -160,26 +160,26 @@ function parseTemplate(content: string): {
   } catch (error) {
     throw new RecipeTemplateError(
       "recipe.template.invalid_json",
-      `配方模板不是有效 JSON：${error instanceof Error ? error.message : String(error)}`,
+      `Recipe template is not valid JSON: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
   if (!value || typeof value !== "object" || Array.isArray(value))
     throw new RecipeTemplateError(
       "recipe.template.invalid",
-      "配方模板必须是 JSON 对象",
+      "Recipe template must be a JSON object",
     );
   const root = value as Record<string, unknown>;
   if (!Array.isArray(root.steps) || root.steps.length === 0)
     throw new RecipeTemplateError(
       "recipe.template.steps_missing",
-      "配方模板缺少步骤",
+      "Recipe template is missing steps",
     );
   const steps = root.steps.map((entry, index) => parseStep(entry, index));
   const kinds = steps.map((step) => step.kind);
   if (new Set(kinds).size !== kinds.length)
     throw new RecipeTemplateError(
       "recipe.template.duplicate_step",
-      "配方模板不能包含重复步骤定义",
+      "Recipe template must not contain duplicate step definitions",
     );
   return { root, steps };
 }
@@ -194,14 +194,14 @@ function parseStep(value: unknown, index: number): ParsedStep {
   if (typeof rawKind !== "string" || !rawKind.trim())
     throw new RecipeTemplateError(
       "recipe.template.step_invalid",
-      `步骤 ${index + 1} 缺少 kind`,
+      `Step ${index + 1} is missing kind`,
     );
   const kind = rawKind.trim();
   const baseKind = kind.endsWith("?") ? kind.slice(0, -1) : kind;
   if (!(baseKind in DEFAULT_ATTEMPTS))
     throw new RecipeTemplateError(
       "recipe.template.step_unsupported",
-      `不支持的配方步骤：${kind}`,
+      `Unsupported recipe step: ${kind}`,
     );
   const candidate =
     typeof value === "object" && value && !Array.isArray(value)
@@ -231,7 +231,7 @@ function assertExactOrder(
   )
     throw new RecipeTemplateError(
       "recipe.template.invariant",
-      `${recipe} 必须保持 ${expected.join(" -> ")}；settle 和安全门禁必须位于 commit 之前`,
+      `${recipe} must keep ${expected.join(" -> ")}; settle and the safety gate must come before commit`,
     );
 }
 
@@ -250,7 +250,7 @@ function integerInRange(
   )
     throw new RecipeTemplateError(
       "recipe.template.value_invalid",
-      `${field} 必须是 ${minimum} 到 ${maximum} 的整数`,
+      `${field} must be an integer between ${minimum} and ${maximum}`,
     );
   return Number(value);
 }

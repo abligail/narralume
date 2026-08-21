@@ -73,7 +73,7 @@ export class LongGoalCoordinator {
     if (active) {
       throw new LongGoalError(
         "assistant.long_goal.active",
-        `作品已有进行中的长期目标：${active.title}`,
+        `The project already has an active long goal: ${active.title}`,
         409,
       );
     }
@@ -194,7 +194,7 @@ export class LongGoalCoordinator {
     if (goal.status !== "paused_baseline") {
       throw new LongGoalError(
         "assistant.long_goal.invalid_state",
-        `长期目标处于 ${goal.status}，不能继续`,
+        `The long goal is in state "${goal.status}" and cannot be resumed`,
         409,
       );
     }
@@ -253,7 +253,8 @@ export class LongGoalCoordinator {
       if (!braindump) {
         this.failGoal(goal, {
           code: "assistant.long_goal.braindump_missing",
-          message: "复合任务缺少故事素材，无法整理故事方向",
+          message:
+            "The composite task has no story material, so the story direction cannot be assembled",
         });
         return;
       }
@@ -298,7 +299,8 @@ export class LongGoalCoordinator {
     if (!run) {
       this.failGoal(goal, {
         code: "assistant.long_goal.foundation_missing",
-        message: "建书任务丢失，无法继续复合任务",
+        message:
+          "The foundation run is missing; the composite task cannot continue",
       });
       return;
     }
@@ -313,7 +315,8 @@ export class LongGoalCoordinator {
     if (["failed", "cancelled"].includes(run.status)) {
       this.failGoal(goal, {
         code: "assistant.long_goal.foundation_failed",
-        message: "整理故事方向失败，复合任务已停靠",
+        message:
+          "Assembling the story direction failed; the composite task is parked",
       });
     }
   }
@@ -369,14 +372,16 @@ export class LongGoalCoordinator {
       }
       this.failGoal(goal, {
         code: "assistant.long_goal.outline_incomplete",
-        message: "大纲规划结束后章节数仍不足，复合任务已停靠",
+        message:
+          "The outline still has too few chapters after planning; the composite task is parked",
       });
       return;
     }
     if (["failed", "cancelled"].includes(session.status)) {
       this.failGoal(goal, {
         code: "assistant.long_goal.outline_failed",
-        message: "补齐章节大纲失败，复合任务已停靠",
+        message:
+          "Filling in the chapter outline failed; the composite task is parked",
       });
     }
   }
@@ -436,7 +441,7 @@ export class LongGoalCoordinator {
     if (session.status === "failed") {
       this.failGoal(goal, {
         code: "assistant.long_goal.writing_failed",
-        message: "连续创作失败，复合任务已停靠",
+        message: "The writing session failed; the composite task is parked",
       });
       return;
     }
@@ -475,7 +480,7 @@ export class LongGoalCoordinator {
       lastError: {
         code: "assistant.long_goal.baseline_changed",
         message:
-          "你修改了任务依赖的正文、大纲或 Canon，任务已暂停；继续后将基于最新状态重新读取。",
+          "You changed the manuscript, outline, or Canon that this task depends on, so the task is paused; it will re-read the latest state when resumed.",
       },
       now,
     });

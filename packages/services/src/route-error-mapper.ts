@@ -62,7 +62,7 @@ export function mapRouteError(
     return {
       status: 404,
       code: "project.not_found",
-      message: "作品不存在或已删除",
+      message: "The project does not exist or has been deleted",
     };
   }
   if (error instanceof ZodError) {
@@ -77,7 +77,7 @@ export function mapRouteError(
       return {
         status: 422,
         code: POLICY_UNKNOWN_FIELD,
-        message: `策略包含未知字段：${fields.join(", ")}`,
+        message: `Policy contains unknown fields: ${fields.join(", ")}`,
         fields,
       };
     }
@@ -207,7 +207,7 @@ export function mapRouteError(
     return { status: 422, code: error.code, message: error.message };
   }
   log(error, "request failed");
-  return { status: 500, code: "internal", message: "服务处理失败" };
+  return { status: 500, code: "internal", message: "Internal server error" };
 }
 
 /** True when a zod issue path points inside a policy object. */
@@ -233,50 +233,48 @@ function isStatusCodeError(error: unknown): error is StatusCodeError {
 }
 
 const REQUEST_FIELD_LABELS: Readonly<Record<string, string>> = {
-  braindump: "命题与脑暴",
-  title: "标题",
-  premise: "命题",
-  requestId: "请求标识",
-  targetChapters: "目标章数",
-  wordsPerChapter: "每章参考字数",
-  volumes: "卷数",
+  braindump: "Premise and braindump",
+  title: "Title",
+  premise: "Premise",
+  requestId: "Request ID",
+  targetChapters: "Target chapter count",
+  wordsPerChapter: "Words per chapter",
+  volumes: "Volume count",
 };
 
 function requestValidationMessage(error: ZodError): string {
   const issue = error.issues[0];
-  if (!issue) return "提交内容格式不正确";
+  if (!issue) return "The submitted content is malformed";
   const tail = issue.path.at(-1);
   const field =
-    typeof tail === "string"
-      ? (REQUEST_FIELD_LABELS[tail] ?? tail)
-      : "提交内容";
+    typeof tail === "string" ? (REQUEST_FIELD_LABELS[tail] ?? tail) : "content";
   const detail = issue as unknown as Record<string, unknown>;
 
   if (issue.code === "too_small" && typeof detail.minimum === "number") {
     if (detail.origin === "string") {
       return detail.minimum === 1
-        ? `${field}不能为空`
-        : `${field}至少需要 ${detail.minimum} 个字符`;
+        ? `${field} must not be empty`
+        : `${field} must be at least ${detail.minimum} characters`;
     }
     if (detail.origin === "array") {
-      return `${field}至少需要 ${detail.minimum} 项`;
+      return `${field} must contain at least ${detail.minimum} item(s)`;
     }
-    return `${field}不能小于 ${detail.minimum}`;
+    return `${field} must be at least ${detail.minimum}`;
   }
   if (issue.code === "too_big" && typeof detail.maximum === "number") {
     if (detail.origin === "string") {
-      return `${field}不能超过 ${detail.maximum} 个字符`;
+      return `${field} must not exceed ${detail.maximum} characters`;
     }
     if (detail.origin === "array") {
-      return `${field}不能超过 ${detail.maximum} 项`;
+      return `${field} must not contain more than ${detail.maximum} item(s)`;
     }
-    return `${field}不能大于 ${detail.maximum}`;
+    return `${field} must not be greater than ${detail.maximum}`;
   }
   if (issue.code === "invalid_type") {
-    return `${field}的类型不正确`;
+    return `${field} has an invalid type`;
   }
   if (issue.message && !issue.message.startsWith("Invalid input")) {
-    return issue.path.length > 0 ? `${field}：${issue.message}` : issue.message;
+    return issue.path.length > 0 ? `${field}: ${issue.message}` : issue.message;
   }
-  return `${field}格式不正确`;
+  return `${field} is malformed`;
 }

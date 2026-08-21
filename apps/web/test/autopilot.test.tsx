@@ -12,6 +12,7 @@ import {
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { setLocale } from "../src/i18n";
 import { AutopilotWorkspace } from "../src/workspaces/autopilot";
 
 const SESSION = {
@@ -182,6 +183,7 @@ const FOUNDATION_SET = {
 };
 
 beforeEach(() => {
+  setLocale("zh-CN");
   Object.defineProperty(window, "matchMedia", {
     configurable: true,
     writable: true,

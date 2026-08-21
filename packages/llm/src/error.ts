@@ -101,8 +101,9 @@ export function asModelError(error: unknown, partialText?: string): ModelError {
     return error;
   }
   if (error instanceof DOMException && error.name === "AbortError") {
-    return new ModelError("请求已取消", {
+    return new ModelError("Request cancelled", {
       category: "cancelled",
+      code: "model.cancelled",
       ...(partialText === undefined ? {} : { partialText }),
       cause: error,
     });

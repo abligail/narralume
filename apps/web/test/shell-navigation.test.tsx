@@ -3,12 +3,14 @@ import "@testing-library/jest-dom/vitest";
 
 import { cleanup, render } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { NaviLink, RepositoryLink } from "../src/app/shell";
 import { WORKSPACES, workspaceByPath } from "../src/app/workspaces";
+import { setLocale } from "../src/i18n";
 
 afterEach(cleanup);
+beforeEach(() => setLocale("zh-CN"));
 
 describe("项目导航", () => {
   const shelf = WORKSPACES.find((item) => item.id === "shelf")!;

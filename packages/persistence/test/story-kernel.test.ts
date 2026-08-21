@@ -248,7 +248,7 @@ describe("narrative state and retrieval", () => {
     state.insertTimelineEvent(aftermath);
     expect(() =>
       state.updateTimelineEvent({ ...arrival, causes: [aftermath.id] }),
-    ).toThrowError(/环路/u);
+    ).toThrowError(/cycle/u);
     expect(
       state.listTimeline("p1").find((event) => event.id === arrival.id)?.causes,
     ).toEqual([]);
@@ -296,10 +296,10 @@ describe("narrative state and retrieval", () => {
         sequence: 3,
         causes: [cause.id],
       }),
-    ).toThrowError(/不存在/u);
+    ).toThrowError(/does not exist/u);
     expect(() =>
       state.updateTimelineEvent({ ...effect, causes: [cause.id] }),
-    ).toThrowError(/不存在/u);
+    ).toThrowError(/does not exist/u);
     expect(state.listTimeline("p1")).toEqual([
       expect.objectContaining({ id: effect.id, causes: [] }),
     ]);
@@ -341,7 +341,7 @@ describe("narrative state and retrieval", () => {
     });
     expect(() =>
       state.updateForeshadow({ ...clue, dependencies: ["clue-3"] }),
-    ).toThrowError(/环路/u);
+    ).toThrowError(/cycle/u);
     expect(state.listRevisions("p1", "foreshadow", clue.id)).toEqual([
       expect.objectContaining({ operation: "create" }),
     ]);

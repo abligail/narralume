@@ -71,9 +71,11 @@ export async function generateStructured<T>(
   options: StructuredGenerationOptions = {},
 ): Promise<StructuredGenerationResult<T>> {
   if (!request.responseSchema) {
-    throw new StructuredOutputError("结构化调用缺少 responseSchema", 0, [
-      "missing schema",
-    ]);
+    throw new StructuredOutputError(
+      "Structured call is missing responseSchema",
+      0,
+      ["missing schema"],
+    );
   }
   const maxRepairs = Math.max(0, Math.min(options.maxRepairAttempts ?? 1, 3));
   let attempts = 0;
@@ -86,7 +88,7 @@ export async function generateStructured<T>(
 
   if (allowedModes.size === 0) {
     throw new StructuredOutputError(
-      "模型配置明确声明不支持任何结构化输出档位",
+      "Model configuration explicitly declares no supported structured output mode",
       0,
       ["structured output capability unavailable"],
     );
@@ -180,7 +182,7 @@ export async function generateStructured<T>(
 
   if (!allowedModes.has("prompt")) {
     throw new StructuredOutputError(
-      `结构化输出在 ${attempts} 次允许的档位尝试后仍未通过校验`,
+      `Structured output failed validation after ${attempts} allowed tier attempts`,
       attempts,
       lastIssues.length > 0
         ? lastIssues
@@ -255,7 +257,7 @@ export async function generateStructured<T>(
   }
 
   throw new StructuredOutputError(
-    `结构化输出在 ${attempts} 次尝试后仍未通过校验`,
+    `Structured output failed validation after ${attempts} attempts`,
     attempts,
     lastIssues,
     totalUsage,

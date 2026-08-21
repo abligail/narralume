@@ -316,13 +316,13 @@ export class SqliteRunRepository {
       if (step.status !== "pending" && step.status !== "failed") {
         throw new RunPersistenceError(
           "run.step.not_startable",
-          `步骤 ${stepId} 当前状态 ${step.status} 不能启动`,
+          `Step ${stepId} in status ${step.status} cannot be started`,
         );
       }
       if (step.attempt >= step.maxAttempts) {
         throw new RunPersistenceError(
           "run.step.attempts_exhausted",
-          `步骤 ${stepId} 已耗尽重试次数`,
+          `Step ${stepId} has exhausted its retries`,
         );
       }
       this.database.raw
@@ -365,7 +365,7 @@ export class SqliteRunRepository {
       if (step.status !== "running")
         throw new RunPersistenceError(
           "run.step.not_running",
-          `步骤 ${stepId} 并未运行`,
+          `Step ${stepId} is not running`,
         );
       const serialized = stableJson(output);
       const outputHash = hash(serialized);
@@ -444,7 +444,7 @@ export class SqliteRunRepository {
       if (step.status !== "running")
         throw new RunPersistenceError(
           "run.step.not_running",
-          `步骤 ${stepId} 并未运行`,
+          `Step ${stepId} is not running`,
         );
       const recoverable = error.retryable && step.attempt < step.maxAttempts;
       this.database.raw
@@ -586,7 +586,7 @@ export class SqliteRunRepository {
       if (run.status !== "failed_recoverable") {
         throw new RunPersistenceError(
           "run.partial.not_recoverable",
-          `运行 ${runId} 当前状态 ${run.status} 不能消费 partial`,
+          `Run ${runId} in status ${run.status} cannot consume a partial`,
         );
       }
       this.setRunStatus(runId, "cancelled", now, reason);
@@ -627,7 +627,7 @@ export class SqliteRunRepository {
       if (run.status !== "paused" && run.status !== "awaiting_user") {
         throw new RunPersistenceError(
           "run.not_resumable",
-          `运行 ${runId} 当前状态 ${run.status} 不能恢复`,
+          `Run ${runId} in status ${run.status} cannot be resumed`,
         );
       }
       this.database.raw
@@ -694,7 +694,7 @@ export class SqliteRunRepository {
       if (changed.changes !== 1) {
         throw new RunPersistenceError(
           "run.lease.lost",
-          `运行 ${runId} 的租约不属于 ${workerId}`,
+          `The lease of run ${runId} does not belong to ${workerId}`,
         );
       }
       this.database.raw
@@ -1091,7 +1091,7 @@ function requireUniqueOrdinals(steps: readonly RunStepSeedInput[]): void {
   ) {
     throw new RunPersistenceError(
       "run.recipe.duplicate_step",
-      "运行步骤的 ID、序号和幂等键必须唯一",
+      "Run step IDs, ordinals, and idempotency keys must be unique",
     );
   }
 }

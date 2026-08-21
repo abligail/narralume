@@ -31,7 +31,7 @@ export async function parseWritingSkillPackage(
     } catch {
       throw new WritingSkillPackageError(
         "skill.package.invalid_zip",
-        "Skill ZIP 无法读取",
+        "The skill ZIP cannot be read",
         422,
       );
     }
@@ -39,7 +39,7 @@ export async function parseWritingSkillPackage(
     if (entries.length > 200)
       throw new WritingSkillPackageError(
         "skill.package.too_many_entries",
-        "Skill ZIP 条目数超过安全上限",
+        "The skill ZIP entry count exceeds the safety limit",
         422,
       );
     if (
@@ -52,7 +52,7 @@ export async function parseWritingSkillPackage(
     )
       throw new WritingSkillPackageError(
         "skill.package.too_large",
-        "Skill ZIP 声明的解压体积超过安全上限",
+        "The skill ZIP declares an uncompressed size above the safety limit",
         422,
       );
     const skillEntry = entries.find(
@@ -62,7 +62,7 @@ export async function parseWritingSkillPackage(
     if (!skillEntry)
       throw new WritingSkillPackageError(
         "skill.package.missing_manifest",
-        "Skill ZIP 根目录缺少 SKILL.md",
+        "The skill ZIP root is missing SKILL.md",
         422,
       );
     if (
@@ -71,7 +71,7 @@ export async function parseWritingSkillPackage(
     )
       throw new WritingSkillPackageError(
         "skill.package.manifest_too_large",
-        "SKILL.md 声明的解压体积超过安全上限",
+        "SKILL.md declares an uncompressed size above the safety limit",
         422,
       );
     markdown = await skillEntry.async("string");
@@ -85,19 +85,19 @@ export async function parseWritingSkillPackage(
       )
         throw new WritingSkillPackageError(
           "skill.package.too_large",
-          `Skill 引用声明的解压体积过大：${path}`,
+          `Skill reference declares an excessive uncompressed size: ${path}`,
           422,
         );
       if (referencePaths.has(path))
         throw new WritingSkillPackageError(
           "skill.package.duplicate_reference",
-          `Skill ZIP 包含重复引用路径：${path}`,
+          `The skill ZIP contains a duplicate reference path: ${path}`,
           422,
         );
       if (references.length >= 100)
         throw new WritingSkillPackageError(
           "skill.package.too_many_references",
-          "引用文档不能超过 100 个",
+          "Reference documents must not exceed 100",
           422,
         );
       const content = await entry.async("string");
@@ -105,7 +105,7 @@ export async function parseWritingSkillPackage(
       if (content.length > 500_000 || totalCharacters > 2_000_000)
         throw new WritingSkillPackageError(
           "skill.package.too_large",
-          "Skill 解压后的引用内容过大",
+          "The extracted skill reference content is too large",
           422,
         );
       referencePaths.add(path);
@@ -117,7 +117,7 @@ export async function parseWritingSkillPackage(
   if (markdown.length > 150_000)
     throw new WritingSkillPackageError(
       "skill.package.manifest_too_large",
-      "SKILL.md 内容过大",
+      "SKILL.md content is too large",
       422,
     );
   const parsed = parseSkillMarkdown(filename, markdown);
@@ -193,7 +193,7 @@ function safeSkillPath(input: string): string {
   )
     throw new WritingSkillPackageError(
       "skill.package.unsafe_path",
-      "Skill ZIP 包含不安全路径",
+      "The skill ZIP contains an unsafe path",
       422,
     );
   return path;

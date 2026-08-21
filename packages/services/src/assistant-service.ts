@@ -34,7 +34,7 @@ export function validateAssistantContext(
   if (context.documentId && !documents.get(projectId, context.documentId)) {
     throw new AssistantServiceError(
       "assistant.context.document_not_found",
-      "当前作品中不存在该文档",
+      "The document does not exist in this project",
       422,
     );
   }
@@ -44,14 +44,14 @@ export function validateAssistantContext(
   ) {
     throw new AssistantServiceError(
       "assistant.context.outline_not_found",
-      "当前作品中不存在该大纲节点",
+      "The outline node does not exist in this project",
       422,
     );
   }
   if (context.selection && context.selection.end < context.selection.start) {
     throw new AssistantServiceError(
       "assistant.context.selection_invalid",
-      "选区结束位置不能早于开始位置",
+      "The selection end must not be before the selection start",
       422,
     );
   }
@@ -63,7 +63,11 @@ export function requireProject(
 ) {
   const project = projects.get(projectId);
   if (!project) {
-    throw new AssistantServiceError("project.not_found", "作品不存在", 404);
+    throw new AssistantServiceError(
+      "project.not_found",
+      "Project not found",
+      404,
+    );
   }
   return project;
 }
@@ -83,7 +87,7 @@ export function requireAliveAssistantModel(
   if (!model?.enabled || !provider?.enabled) {
     throw new AssistantServiceError(
       "assistant.model.not_available",
-      "对话指定的模型不存在或已停用，请在协作侧栏重新选择模型",
+      "The conversation's model does not exist or has been disabled; re-select a model in the assistant sidebar",
       422,
     );
   }
@@ -118,14 +122,14 @@ export function requireSwitchableAssistantModel(
   if (!anchorProvider) {
     throw new AssistantServiceError(
       "assistant.model.anchor_unavailable",
-      "尚未配置默认生成模型，请先到设置页完成配置",
+      "No default generation model is configured yet; configure one on the settings page first",
       422,
     );
   }
   if (targetProvider.wireApi !== anchorProvider.wireApi) {
     throw new AssistantServiceError(
       "assistant.model.protocol_mismatch",
-      `对话内只能切换到同为 ${anchorProvider.wireApi} 协议的模型；跨协议请到设置页修改默认生成模型`,
+      `You can only switch to another ${anchorProvider.wireApi} model within a conversation; for a different protocol, change the default generation model on the settings page`,
       422,
     );
   }

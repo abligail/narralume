@@ -4,7 +4,7 @@
 
 ## 在线体验
 
-打开 [novelai.indevs.in](https://novelai.indevs.in/)，浏览器会在当前站点创建本地数据库。在线体验不要求先配置模型，作品、设置和自带的模型密钥都保存在当前浏览器的 OPFS 中。
+打开 [app.narralume.me](https://app.narralume.me/)，浏览器会在当前站点创建本地数据库。在线体验不要求先配置模型，作品、设置和自带的模型密钥都保存在当前浏览器的 OPFS 中。
 
 使用在线体验前，请记住三点：
 

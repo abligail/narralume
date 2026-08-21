@@ -1,8 +1,11 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { followSystemTheme, useTheme } from "../src/app/theme";
+import { setLocale } from "../src/i18n";
+
+beforeEach(() => setLocale("zh-CN"));
 
 function stubThemeMedia(matches = false) {
   const listeners = new Set<(event: MediaQueryListEvent) => void>();

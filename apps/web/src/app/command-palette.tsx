@@ -3,6 +3,8 @@ import { Search, X } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 
+import { useI18n } from "../i18n";
+
 import { useFocusTrap } from "./focus-trap";
 import { ADVANCED_WORKSPACES, QUICK_WORKSPACES, WORKSPACES, workspacePath } from "./workspaces";
 
@@ -23,6 +25,7 @@ interface CommandPaletteProps {
 }
 
 export function CommandPalette({ projectId, onClose }: CommandPaletteProps) {
+  const { t } = useI18n();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
@@ -35,22 +38,25 @@ export function CommandPalette({ projectId, onClose }: CommandPaletteProps) {
       ...WORKSPACES,
       ...QUICK_WORKSPACES,
       ...ADVANCED_WORKSPACES,
-    ].map((item, position) => ({
-      id: `go-${item.id}`,
-      label: `前往${item.label}`,
-      key:
-        position < WORKSPACES.length
-          ? `${item.index} · ${item.en}`
-          : item.id === "autopilot" ? `AI · ${item.en}` : `高级 · ${item.en}`,
-      icon: item.icon,
-      keywords: `${item.label} ${item.en} ${item.path} ${item.blurb}`,
-      run: () => {
-        onClose();
-        navigate(workspacePath(item, projectId));
-      },
-    }));
+    ].map((item, position) => {
+      const itemLabel = t(item.label);
+      return {
+        id: `go-${item.id}`,
+        label: t("shell.nav.goTo", { label: itemLabel }),
+        key:
+          position < WORKSPACES.length
+            ? `${item.index} · ${item.en}`
+            : item.id === "autopilot" ? `AI · ${item.en}` : `${t("shell.palette.hintAdvanced")} · ${item.en}`,
+        icon: item.icon,
+        keywords: `${itemLabel} ${item.en} ${item.path} ${t(item.blurb)}`,
+        run: () => {
+          onClose();
+          navigate(workspacePath(item, projectId));
+        },
+      };
+    });
     return entries;
-  }, [navigate, onClose, projectId]);
+  }, [navigate, onClose, projectId, t]);
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -73,7 +79,7 @@ export function CommandPalette({ projectId, onClose }: CommandPaletteProps) {
       className="palette"
       role="dialog"
       aria-modal="true"
-      aria-label="命令面板"
+      aria-label={t("shell.palette.title")}
       tabIndex={-1}
       data-lenis-prevent
     >
@@ -88,7 +94,7 @@ export function CommandPalette({ projectId, onClose }: CommandPaletteProps) {
           <input
             className="palette__input"
             role="combobox"
-            aria-label="搜索命令"
+            aria-label={t("shell.palette.search")}
             aria-autocomplete="list"
             aria-controls={listId}
             aria-expanded="true"
@@ -97,7 +103,7 @@ export function CommandPalette({ projectId, onClose }: CommandPaletteProps) {
                 ? `${listId}-${filtered[activeIndex].id}`
                 : undefined
             }
-            placeholder="输入命令或工作区…"
+            placeholder={t("shell.palette.placeholder")}
             autoFocus
             value={query}
             onChange={(event) => {
@@ -122,7 +128,7 @@ export function CommandPalette({ projectId, onClose }: CommandPaletteProps) {
           <button
             type="button"
             className="palette__close"
-            aria-label="关闭命令面板"
+            aria-label={t("shell.palette.close")}
             onClick={onClose}
           >
             <X size={19} strokeWidth={1.5} aria-hidden="true" />
@@ -155,18 +161,18 @@ export function CommandPalette({ projectId, onClose }: CommandPaletteProps) {
             );
           })}
           {filtered.length === 0 ? (
-            <p className="palette__none">没有相符的命令</p>
+            <p className="palette__none">{t("shell.palette.noResults")}</p>
           ) : null}
         </div>
         <div className="palette__foot" aria-hidden="true">
           <span>
-            <span className="palette__kbd">↑↓</span> 选择
+            <span className="palette__kbd">↑↓</span> {t("shell.palette.footerSelect")}
           </span>
           <span>
-            <span className="palette__kbd">Enter</span> 执行
+            <span className="palette__kbd">Enter</span> {t("shell.palette.footerRun")}
           </span>
           <span>
-            <span className="palette__kbd">Esc</span> 关闭
+            <span className="palette__kbd">Esc</span> {t("common.action.close")}
           </span>
         </div>
       </div>

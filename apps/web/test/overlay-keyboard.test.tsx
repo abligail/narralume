@@ -4,10 +4,13 @@ import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { MemoryRouter } from "react-router";
-import { expect, it, vi } from "vitest";
+import { beforeEach, expect, it, vi } from "vitest";
 
 import { CommandPalette } from "../src/app/command-palette";
 import { ConfirmDialog } from "../src/components/confirm-dialog";
+import { setLocale } from "../src/i18n";
+
+beforeEach(() => setLocale("zh-CN"));
 
 function Harness() {
   const [open, setOpen] = useState(false);
