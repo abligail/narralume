@@ -202,3 +202,7 @@ The repository is split by responsibility: `apps/web` contains the UI and browse
 - **Can it be exposed publicly?** It can be self-hosted, but remote access requires a high-entropy token, TLS, access control, and independent backups. Do not expose the local Server directly.
 
 NarraLume is licensed under [Apache-2.0](LICENSE). Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request, report security issues privately through [SECURITY.md](SECURITY.md), and see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for dependency and demo-cover attribution.
+
+## Friend links
+
+- [linux.do](https://linux.do/)

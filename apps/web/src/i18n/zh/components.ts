@@ -24,8 +24,5 @@ export const components = {
     workerBootFailed: "内核 Worker 启动失败",
     pageClosed: "页面已关闭，内核已停止",
     requestFailed: "内核请求失败",
-    exportUnsupported: "当前驱动不支持库导出",
-    trialChapterLimit:
-      "内置体验模型每次最多连续创作 3 章；如需更多，请在设置中添加自己的模型渠道并设为默认生成模型。",
   },
 };

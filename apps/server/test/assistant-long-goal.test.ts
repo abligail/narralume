@@ -218,7 +218,6 @@ describe("assistant long goals (R7)", () => {
         kind: string;
         status: string;
         skillId: string | null;
-        skillLabel: string | null;
         phaseKey: string | null;
         linkedSources: { type: string; id: string }[];
       }[];
@@ -229,7 +228,6 @@ describe("assistant long goals (R7)", () => {
     expect(card).toMatchObject({
       status: "completed",
       skillId: "compose.serial",
-      skillLabel: "复合创作任务",
       phaseKey: "done",
     });
     expect(card!.linkedSources.map((source) => source.type)).toEqual([

@@ -33,7 +33,11 @@ export const errors = {
   },
   /* 主文案：键为后端错误码的 camelCase 形式；ApiError 命中即用本地化文案。 */
   message: {
+    trialAutopilotChapterLimit:
+      "内置体验模型每次最多连续创作 3 章；如需更多，请在设置中添加自己的模型渠道并设为默认生成模型。",
+    downloadUnsupported: "当前驱动不支持库导出",
     requestFailed: "请求失败",
+    httpFailed: "请求失败（{status}）",
     adoptionIdempotencyConflict: "同一个 requestId 已用于不同的场景采纳请求",
     adoptionRangeInvalid: "采纳范围不在当前分支或顺序无效",
     adoptionScopeMismatch: "采纳范围的分支或回合不属于当前会话",

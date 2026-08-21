@@ -52,7 +52,14 @@ import {
   type AssistantMessageDto,
 } from "../lib/api";
 import { formatRelativeDate } from "../lib/fmt";
-import { stopReasonLabel } from "../lib/labels";
+import {
+  activityGoalLabel,
+  activityStageLabel,
+  activitySummaryLabel,
+  artifactKindLabel,
+  assistantSkillLabel,
+  stopReasonLabel,
+} from "../lib/labels";
 import { projectWorkspacePath } from "../lib/project-route";
 import { useServerEvents } from "../lib/sse";
 
@@ -1127,17 +1134,23 @@ function ActivityEntry({
       <div className="assistant-activity__body">
         <header>
           <span className="mono">{activityKindLabel(activity.kind)}</span>
-          {activity.skillLabel ? (
-            <span className="assistant-activity__skill">{activity.skillLabel}</span>
+          {activity.skillId ? (
+            <span className="assistant-activity__skill">
+              {assistantSkillLabel(activity.skillId)}
+            </span>
           ) : null}
           <time dateTime={activity.updatedAt}>
             {formatRelativeDate(activity.updatedAt)}
           </time>
         </header>
-        <h3>{activity.goal}</h3>
-        <p className="assistant-activity__stage">{activity.stage}</p>
-        {activity.summary ? (
-          <p className="assistant-activity__summary">{activity.summary}</p>
+        <h3>{activityGoalLabel(activity.goal)}</h3>
+        <p className="assistant-activity__stage">
+          {activityStageLabel(activity.stage)}
+        </p>
+        {activitySummaryLabel(activity.summary) ? (
+          <p className="assistant-activity__summary">
+            {activitySummaryLabel(activity.summary)}
+          </p>
         ) : null}
         {activity.waitingReason ? (
           <p className="assistant-activity__reason">
@@ -1274,7 +1287,7 @@ function ActivityTrace({
             {activity.artifacts.map((artifact) => (
               <li key={`${artifact.kind}:${artifact.id}`}>
                 <Link to={artifactHref(projectId, artifact)}>
-                  {artifact.label}
+                  {artifactKindLabel(artifact.kind, artifact.label)}
                 </Link>
               </li>
             ))}

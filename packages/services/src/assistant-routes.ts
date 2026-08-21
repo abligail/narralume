@@ -17,6 +17,12 @@ import {
 } from "@narralume/contracts";
 import { buildAssistantTurnRecipe } from "@narralume/harness";
 import {
+  activityText,
+  toolGoalParams,
+  toolResultSummary,
+  toolStage,
+} from "./assistant-activity-text.js";
+import {
   AssistantPersistenceError,
   SqliteAssistantLongGoalRepository,
   SqliteAssistantRepository,
@@ -530,7 +536,7 @@ export function registerAssistantRoutes(
         projectId: conversation.projectId,
         conversationId: conversation.id,
         activityId,
-        title: `整理大纲并连续创作 ${input.targetChapters} 章`,
+        title: "tool.goal.long_goal.start",
         targetChapters: input.targetChapters,
         braindump: input.braindump,
         now: new Date().toISOString(),
@@ -627,9 +633,9 @@ function activityResponse(activity: AssistantActivity) {
       kind: "tool",
       layer: "local",
       status: activity.status,
-      goal: activity.goal,
-      stage: activity.status === "rejected" ? "已拒绝" : "已完成",
-      summary: activity.status === "rejected" ? "你没有执行这项建议" : null,
+      goal: activityText(activity.goal, toolGoalParams(activity)),
+      stage: toolStage(activity),
+      summary: toolResultSummary(activity),
       waitingReason: null,
       availableActions: [],
       sourceType: linkedSource ? activity.sourceType : "assistant_tool",

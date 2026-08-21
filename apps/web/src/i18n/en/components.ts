@@ -26,8 +26,5 @@ export const components: typeof componentsZh = {
     workerBootFailed: "The kernel worker failed to start",
     pageClosed: "The page was closed and the kernel has stopped",
     requestFailed: "Kernel request failed",
-    exportUnsupported: "The current driver does not support database export",
-    trialChapterLimit:
-      "The built-in trial model can write at most 3 chapters in a row. To write more, add your own model provider in Settings and set it as the default generation model.",
   },
 };

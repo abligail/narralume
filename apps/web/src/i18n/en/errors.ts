@@ -47,7 +47,11 @@ export const errors: typeof errorsZh = {
     routeNotFound: "The API endpoint does not exist.",
   },
   message: {
+    trialAutopilotChapterLimit:
+      "The built-in trial model writes at most 3 chapters per run; add your own model channel in Settings and set it as the default to continue.",
+    downloadUnsupported: "The current driver does not support library export",
     requestFailed: "Request failed",
+    httpFailed: "Request failed ({status})",
     adoptionIdempotencyConflict: "The same requestId was already used for a different scene adoption request",
     adoptionRangeInvalid: "The adoption range is outside the current branch or in an invalid order",
     adoptionScopeMismatch: "The branch or turn in the adoption range does not belong to the current session",

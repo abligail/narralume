@@ -20,6 +20,7 @@ import type {
   ReviewWorkspaceReport,
   RunStatus,
   RunStepKind,
+  AssistantActivityTextDto,
   StoryDocument,
   StoryPersona,
   WireApi,
@@ -637,6 +638,7 @@ export function stopReasonLabel(reason: string): string {
     session_cancelled: "labels.stopReason.sessionCancelled",
     "child.fatal": "labels.stopReason.childFatal",
     awaiting_user: "labels.stopReason.awaitingUser",
+    "long_goal.paused_baseline": "labels.stopReason.longGoalBaselineChanged",
   };
   const key: MessageKey | undefined = keys[reason];
   return key ? translate(getLocale(), key) : reason;
@@ -655,4 +657,66 @@ export function nextActionKindLabel(kind: string): string {
   };
   const key: MessageKey | undefined = keys[kind];
   return key ? translate(getLocale(), key) : kind;
+}
+
+/* --- 助手活动卡片（AssistantActivityDto） ------------------------------- */
+
+/* 服务端只发机码描述符；字典路径直接镜像机码（labels.<key> 的嵌套结构），
+   因此这里不需要逐键对照表。未知机码原样回显，便于发现漏配。 */
+function renderActivityMessage(message: AssistantActivityTextDto): string {
+  const key = `labels.${message.key}` as MessageKey;
+  const rendered = translate(getLocale(), key, message.params);
+  return rendered === key ? message.key : rendered;
+}
+
+/** 活动卡标题：机码描述符查字典渲染；原文字符串（用户自拟标题）原样返回。 */
+export function activityGoalLabel(
+  goal: string | AssistantActivityTextDto,
+): string {
+  if (typeof goal === "string") return goal;
+  return renderActivityMessage(goal);
+}
+
+/** 活动卡阶段行：运行状态或当前步骤的进行中文案。 */
+export function activityStageLabel(stage: AssistantActivityTextDto): string {
+  return renderActivityMessage(stage);
+}
+
+/** 活动卡摘要行。 */
+export function activitySummaryLabel(
+  summary: AssistantActivityTextDto | null,
+): string | null {
+  return summary ? renderActivityMessage(summary) : null;
+}
+
+/** 活动卡工件名：已知 kind 走字典，未知回退服务端 label。 */
+export function artifactKindLabel(kind: string, fallback: string): string {
+  const keys: Record<string, MessageKey> = {
+    foundation_candidate_set: "labels.artifactKind.foundationCandidateSet",
+    canon_change_set: "labels.artifactKind.canonChangeSet",
+    edit_proposal: "labels.artifactKind.editProposal",
+    document_version: "labels.artifactKind.documentVersion",
+    revision_proposal: "labels.artifactKind.revisionProposal",
+    cocreate_turn: "labels.artifactKind.cocreateTurn",
+    import_batch: "labels.artifactKind.importBatch",
+    outline_node: "labels.artifactKind.outlineNode",
+  };
+  const key: MessageKey | undefined = keys[kind];
+  return key ? translate(getLocale(), key) : fallback;
+}
+
+/** 内置技能名：按 skillId 查字典（服务端不再下发技能展示文案）。 */
+export function assistantSkillLabel(skillId: string): string {
+  const keys: Record<string, MessageKey> = {
+    "story.query": "labels.assistantSkill.storyQuery",
+    "book.foundation": "labels.assistantSkill.bookFoundation",
+    "chapter.write": "labels.assistantSkill.chapterWrite",
+    "serial.write": "labels.assistantSkill.serialWrite",
+    "compose.serial": "labels.assistantSkill.composeSerial",
+    "review.run": "labels.assistantSkill.reviewRun",
+    "canon.edit": "labels.assistantSkill.canonEdit",
+    "selection.polish": "labels.assistantSkill.selectionPolish",
+  };
+  const key: MessageKey | undefined = keys[skillId];
+  return key ? translate(getLocale(), key) : skillId;
 }

@@ -3,6 +3,7 @@ import {
   QUALITY_PRESETS,
   type AdoptRunStreamResponse,
   type AssistantActivityDto,
+  type AssistantActivityTextDto,
   type AssistantActivityActionResponseDto,
   type AssistantContext,
   type AssistantConversationDetailDto,
@@ -53,6 +54,7 @@ export { MIN_VIABLE_PARTIAL_CHARACTERS, QUALITY_PRESETS };
 export type {
   AdoptRunStreamResponse,
   AssistantActivityDto,
+  AssistantActivityTextDto,
   AssistantActivityActionResponseDto,
   AssistantContext,
   AssistantConversationDetailDto,
@@ -3324,7 +3326,7 @@ function transportError(
   const message =
     envelope && typeof envelope.message === "string"
       ? envelope.message
-      : `请求失败（${status}）`;
+      : translate(getLocale(), "errors.message.httpFailed", { status });
   let details: unknown = envelope?.details;
   if (details === undefined && envelope) {
     // 后端有时把附加信息直接放进 error 包（如 fields:string[]），

@@ -212,6 +212,16 @@ export type AssistantActivityArtifactDto = z.infer<
   typeof AssistantActivityArtifactSchema
 >;
 
+/** 展示文案描述符：key 为前端标签表的机器键，params 供插值。
+ *  服务端不再产出任何自然语言展示文案（waitingReason 同理，只发机码）。 */
+export const AssistantActivityTextSchema = z.object({
+  key: z.string().trim().min(1).max(120),
+  params: z.record(z.string(), z.union([z.string(), z.number()])).default({}),
+});
+export type AssistantActivityTextDto = z.infer<
+  typeof AssistantActivityTextSchema
+>;
+
 export const AssistantActivityErrorSchema = z.object({
   code: z.string().min(1).max(200),
   message: z.string().min(1).max(2_000),
@@ -232,9 +242,10 @@ export const AssistantActivitySchema = z.object({
     "cancelled",
     "rejected",
   ]),
-  goal: z.string(),
-  stage: z.string(),
-  summary: z.string().nullable(),
+  /** 任务卡标题：机码描述符；长任务的用户自拟标题为原文字符串。 */
+  goal: z.union([z.string(), AssistantActivityTextSchema]),
+  stage: AssistantActivityTextSchema,
+  summary: AssistantActivityTextSchema.nullable(),
   /** 停泊/等待原因的机器码（如 chapter_commit_approval_required），
    *  展示文案由前端标签表统一渲染，服务端不再各自维护中文措辞。 */
   waitingReason: z.string().nullable(),
@@ -245,7 +256,6 @@ export const AssistantActivitySchema = z.object({
   result: JsonObjectSchema.nullable(),
   toolCall: AssistantToolCallSchema.nullable(),
   skillId: z.string().trim().min(1).max(300).nullable().default(null),
-  skillLabel: z.string().max(200).nullable().default(null),
   phaseKey: z.string().trim().min(1).max(100).nullable().default(null),
   artifacts: z.array(AssistantActivityArtifactSchema).default([]),
   lastError: AssistantActivityErrorSchema.nullable().default(null),

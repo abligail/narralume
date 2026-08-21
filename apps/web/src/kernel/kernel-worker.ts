@@ -60,8 +60,6 @@ import {
 } from "@narralume/narrative";
 import { HarnessSupervisor } from "@narralume/harness";
 
-import { getLocale, translate } from "../i18n";
-
 import { createRelayFetch } from "./relay-fetch";
 import { exceedsTrialRelayAutopilotLimit } from "../lib/trial-policy";
 
@@ -285,10 +283,8 @@ async function boot(): Promise<void> {
             throw {
               code: "trial.autopilot_chapter_limit",
               statusCode: 403,
-              message: translate(
-                getLocale(),
-                "components.kernel.trialChapterLimit",
-              ),
+              message:
+                "The built-in trial model writes at most 3 chapters per run; add your own model channel in Settings to continue.",
             };
           }
           },
@@ -343,7 +339,7 @@ async function boot(): Promise<void> {
         body: {
           error: {
             code: "download.unsupported",
-            message: translate(getLocale(), "components.kernel.exportUnsupported"),
+            message: "The current driver does not support library export",
           },
         },
       };

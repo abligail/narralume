@@ -73,7 +73,7 @@ export class LongGoalCoordinator {
     if (active) {
       throw new LongGoalError(
         "assistant.long_goal.active",
-        `The project already has an active long goal: ${active.title}`,
+        "The project already has an active long goal",
         409,
       );
     }

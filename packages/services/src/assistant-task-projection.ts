@@ -3,6 +3,7 @@ import {
   AssistantToolCallSchema,
   type AssistantActivityArtifactDto,
   type AssistantActivityDto,
+  type AssistantActivityTextDto,
   type AssistantContext,
 } from "@narralume/contracts";
 import type { NarrativeRun, RunSnapshot } from "@narralume/domain";
@@ -19,7 +20,13 @@ import {
 } from "@narralume/persistence";
 
 import { runProductProjection } from "./run-policy.js";
-import { getBuiltinAgentSkill } from "./agent-skill-registry.js";
+import {
+  activityProgress,
+  activityText,
+  toolGoalParams,
+  toolResultSummary,
+  toolStage,
+} from "./assistant-activity-text.js";
 import { isRetryableAssistantActivityError } from "./assistant-retry.js";
 import { runTaskLayer } from "./task-classification.js";
 
@@ -81,8 +88,12 @@ export class AssistantTaskProjectionService {
           layer: "primary",
           status: sessionStatus(session.status),
           goal: planningOnly
-            ? `规划后续 ${session.targetChapters} 章大纲`
-            : `AI 快速创作 ${session.targetChapters} 章`,
+            ? activityText("activity.goal.sessionOutline", {
+                count: session.targetChapters,
+              })
+            : activityText("activity.goal.sessionChapters", {
+                count: session.targetChapters,
+              }),
           stage: sessionStage(
             session.status,
             session.completedChapters,
@@ -93,8 +104,18 @@ export class AssistantTaskProjectionService {
           summary:
             session.status === "completed"
               ? planningOnly
-                ? `已规划 ${session.targetChapters} 章大纲`
-                : `已完成 ${session.completedChapters} 章`
+                ? activityText("activity.stage.sessionCompletedOutline", {
+                    progress: activityProgress(
+                      session.completedChapters,
+                      session.targetChapters,
+                    ),
+                  })
+                : activityText("activity.stage.sessionCompletedChapters", {
+                    progress: activityProgress(
+                      session.completedChapters,
+                      session.targetChapters,
+                    ),
+                  })
               : null,
           waitingReason: reason,
           availableActions: sessionActions(session.status, reason),
@@ -110,7 +131,6 @@ export class AssistantTaskProjectionService {
           },
           toolCall: null,
           skillId: null,
-          skillLabel: null,
           phaseKey: sessionPhaseKey(session, child, planningOnly),
           artifacts: sessionArtifacts(session),
           lastError: sessionLastError(session, child),
@@ -159,7 +179,6 @@ export class AssistantTaskProjectionService {
       result: projection.result,
       toolCall: null,
       skillId: null,
-      skillLabel: null,
       phaseKey: runPhaseKey(snapshot),
       artifacts: runArtifacts(projection.result),
       lastError: runLastError(snapshot),
@@ -187,9 +206,9 @@ export class AssistantTaskProjectionService {
       kind: "tool",
       layer: "local",
       status: activityStatus(activity.status),
-      goal: activity.goal,
+      goal: activityText(activity.goal, toolGoalParams(activity)),
       stage: toolStage(activity),
-      summary: resultSummary(activity),
+      summary: toolResultSummary(activity),
       waitingReason:
         activity.status === "failed"
           ? stringValue(activity.error, "message")
@@ -207,9 +226,6 @@ export class AssistantTaskProjectionService {
       result: activity.result,
       toolCall,
       skillId: activity.skillId,
-      skillLabel: activity.skillId
-        ? (getBuiltinAgentSkill(activity.skillId)?.label ?? null)
-        : null,
       phaseKey: activity.phaseKey,
       artifacts: activity.artifacts ?? [],
       lastError: activityLastError(activity),
@@ -228,7 +244,7 @@ export class AssistantTaskProjectionService {
       : activityStatus(activity.status);
     const waitingReason =
       goal?.status === "paused_baseline"
-        ? "你修改了任务依赖的内容，任务已暂停；继续后将基于最新状态重新读取"
+        ? "long_goal.paused_baseline"
         : activity.status === "failed"
           ? stringValue(activity.error, "message")
           : null;
@@ -238,11 +254,16 @@ export class AssistantTaskProjectionService {
       kind: "long_goal",
       layer: "primary",
       status,
-      goal: activity.goal,
+      goal:
+        activity.goal === LONG_GOAL_TITLE_KEY
+          ? activityText(LONG_GOAL_TITLE_KEY, {
+              ...(goal ? { count: goal.targetChapters } : {}),
+            })
+          : activity.goal,
       stage: longGoalStage(goal, activity),
       summary:
         goal?.status === "completed"
-          ? `已完成长期任务：${activity.goal}`
+          ? activityText("activity.summary.longGoalCompleted")
           : null,
       waitingReason,
       availableActions:
@@ -259,9 +280,6 @@ export class AssistantTaskProjectionService {
       result: activity.result,
       toolCall: null,
       skillId: activity.skillId,
-      skillLabel: activity.skillId
-        ? (getBuiltinAgentSkill(activity.skillId)?.label ?? null)
-        : null,
       phaseKey: goal?.phase ?? activity.phaseKey,
       artifacts: activity.artifacts ?? [],
       lastError: goal?.lastError
@@ -290,6 +308,9 @@ export class AssistantTaskProjectionService {
     });
   }
 }
+
+/** 长任务标题的机码：两条创建路径（工具确认 / 直接路由）都存此键。 */
+const LONG_GOAL_TITLE_KEY = "tool.goal.long_goal.start";
 
 function runStatus(
   status: NarrativeRun["status"],
@@ -335,77 +356,102 @@ function goalStatus(
 function longGoalStage(
   goal: AssistantLongGoal | null,
   activity: AssistantActivity,
-): string {
+): AssistantActivityTextDto {
   if (!goal) return toolStage(activity);
-  if (goal.status === "paused_baseline") return "基线已变化，等待你继续或取消";
-  if (goal.status === "completed") return "长期任务已完成";
-  if (goal.status === "failed") return "长期任务需要处理失败";
-  if (goal.status === "cancelled") return "长期任务已取消";
-  const phases: Record<AssistantLongGoal["phase"], string> = {
-    foundation: "整理故事方向",
-    outline: "补齐章节大纲",
-    writing: "连续创作章节",
-    done: "已完成",
+  if (goal.status === "paused_baseline")
+    return activityText("activity.stage.longGoalBaselineChanged");
+  if (goal.status === "completed")
+    return activityText("activity.stage.longGoalCompleted");
+  if (goal.status === "failed")
+    return activityText("activity.stage.longGoalFailed");
+  if (goal.status === "cancelled")
+    return activityText("activity.stage.longGoalCancelled");
+  const phases: Record<AssistantLongGoal["phase"], AssistantActivityTextDto> = {
+    foundation: activityText("activity.stage.longGoalFoundation"),
+    outline: activityText("activity.stage.longGoalOutline"),
+    writing: activityText("activity.stage.longGoalWriting"),
+    done: activityText("activity.stage.longGoalDone"),
   };
-  return `复合任务 · ${phases[goal.phase]}`;
+  return phases[goal.phase];
 }
 
-function runGoal(run: NarrativeRun, story: SqliteStoryRepository): string {
+function runGoal(
+  run: NarrativeRun,
+  story: SqliteStoryRepository,
+): AssistantActivityTextDto {
   const target = run.targetOutlineNodeId
     ? story.getOutlineNode(run.projectId, run.targetOutlineNodeId)
     : null;
-  if (run.recipe === "assistant-turn") return "理解你的请求";
-  if (run.recipe === "book-foundation") return "整理故事方向";
-  if (run.recipe === "rolling-outline") return "规划后续章节";
-  if (run.recipe === "canon-spread-candidate") return "整理故事圣经候选修改";
+  if (run.recipe === "assistant-turn")
+    return activityText("activity.goal.assistantTurn");
+  if (run.recipe === "book-foundation")
+    return activityText("activity.goal.bookFoundation");
+  if (run.recipe === "rolling-outline")
+    return activityText("activity.goal.rollingOutline");
+  if (run.recipe === "canon-spread-candidate")
+    return activityText("activity.goal.canonSpread");
   if (run.recipe === "chapter-production") {
-    return target ? `完成《${target.title}》` : "完成当前章节";
+    return target
+      ? activityText("activity.goal.chapterTitle", { title: target.title })
+      : activityText("activity.goal.chapter");
   }
-  if (run.recipe === "selection-edit") return "修改选中文本";
-  if (run.recipe === "cocreate-reply") return "继续共创回合";
-  if (run.recipe === "scene-adoption") return "采纳共创片段";
-  if (run.recipe === "import-analysis") return "分析导入稿件";
-  return "后台创作任务";
+  if (run.recipe === "selection-edit")
+    return activityText("activity.goal.selectionEdit");
+  if (run.recipe === "cocreate-reply")
+    return activityText("activity.goal.cocreateReply");
+  if (run.recipe === "scene-adoption")
+    return activityText("activity.goal.sceneAdoption");
+  if (run.recipe === "import-analysis")
+    return activityText("activity.goal.importAnalysis");
+  return activityText("activity.goal.generic");
 }
 
-function runStage(snapshot: RunSnapshot): string {
-  if (snapshot.run.status === "pending") return "等待开始";
-  if (snapshot.run.status === "paused") return "已暂停";
-  if (snapshot.run.status === "awaiting_user") return "等待你确认";
-  if (snapshot.run.status === "completed") return "已完成";
-  if (snapshot.run.status === "cancelled") return "已取消";
+function runStage(snapshot: RunSnapshot): AssistantActivityTextDto {
+  if (snapshot.run.status === "pending")
+    return activityText("activity.stage.pending");
+  if (snapshot.run.status === "paused")
+    return activityText("activity.stage.paused");
+  if (snapshot.run.status === "awaiting_user")
+    return activityText("activity.stage.awaitingUser");
+  if (snapshot.run.status === "completed")
+    return activityText("activity.stage.completed");
+  if (snapshot.run.status === "cancelled")
+    return activityText("activity.stage.cancelled");
   if (
     snapshot.run.status === "failed" ||
     snapshot.run.status === "failed_recoverable"
   ) {
-    return "需要处理失败";
+    return activityText("activity.stage.failed");
   }
   const current = snapshot.steps.find(
     (step) => step.id === snapshot.run.currentStepId,
   );
-  return current ? stepLabel(current.kind) : "正在准备";
+  return current
+    ? stepLabel(current.kind)
+    : activityText("activity.step.preparing");
 }
 
-function stepLabel(kind: string): string {
-  const labels: Record<string, string> = {
-    "assistant.context": "正在读取当前作品",
-    "assistant.respond": "正在理解并组织回复",
-    "assistant.stage": "正在整理结果",
-    "canon.context": "正在读取当前故事板块",
-    "canon.candidate": "正在整理候选修改",
-    "canon.stage": "正在保存待采纳候选",
-    "foundation.generate": "正在整理故事方向",
-    "outline.generate": "正在规划后续章节",
-    "context.compile": "正在装配本章上下文",
-    "scene.plan": "正在规划本章",
-    "draft.generate": "正在写作正文",
-    "deterministic.check": "正在检查正文",
-    "semantic.review": "正在轻量审稿",
-    "revision.generate": "正在修订正文",
-    "chapter.settle": "正在结算故事状态",
-    "chapter.commit": "正在保存本章",
-  };
-  return labels[kind] ?? "正在处理";
+const STEP_LABEL_KEYS: Record<string, AssistantActivityTextDto> = {
+  "assistant.context": activityText("activity.step.assistantContext"),
+  "assistant.respond": activityText("activity.step.assistantRespond"),
+  "assistant.stage": activityText("activity.step.assistantStage"),
+  "canon.context": activityText("activity.step.canonContext"),
+  "canon.candidate": activityText("activity.step.canonCandidate"),
+  "canon.stage": activityText("activity.step.canonStage"),
+  "foundation.generate": activityText("activity.step.foundationGenerate"),
+  "outline.generate": activityText("activity.step.outlineGenerate"),
+  "context.compile": activityText("activity.step.contextCompile"),
+  "scene.plan": activityText("activity.step.scenePlan"),
+  "draft.generate": activityText("activity.step.draftGenerate"),
+  "deterministic.check": activityText("activity.step.deterministicCheck"),
+  "semantic.review": activityText("activity.step.semanticReview"),
+  "revision.generate": activityText("activity.step.revisionGenerate"),
+  "chapter.settle": activityText("activity.step.chapterSettle"),
+  "chapter.commit": activityText("activity.step.chapterCommit"),
+};
+
+function stepLabel(kind: string): AssistantActivityTextDto {
+  return STEP_LABEL_KEYS[kind] ?? activityText("activity.step.processing");
 }
 
 function runPhaseKey(snapshot: RunSnapshot): string | null {
@@ -434,14 +480,14 @@ function runArtifacts(
   push(
     "foundation_candidate_set",
     result.foundationCandidateSetId,
-    "故事方向候选",
+    "foundation_candidate_set",
   );
-  push("canon_change_set", result.canonChangeSetId, "故事圣经候选修改");
-  push("edit_proposal", result.editProposalId, "选区修改候选");
-  push("document_version", result.documentVersionId, "正文版本");
-  push("revision_proposal", result.revisionProposalId, "修订提案");
-  push("cocreate_turn", result.cocreateTurnId, "共创回合");
-  push("import_batch", result.importBatchId, "导入批次");
+  push("canon_change_set", result.canonChangeSetId, "canon_change_set");
+  push("edit_proposal", result.editProposalId, "edit_proposal");
+  push("document_version", result.documentVersionId, "document_version");
+  push("revision_proposal", result.revisionProposalId, "revision_proposal");
+  push("cocreate_turn", result.cocreateTurnId, "cocreate_turn");
+  push("import_batch", result.importBatchId, "import_batch");
   return artifacts;
 }
 
@@ -460,7 +506,7 @@ function runLastError(
     };
   }
   const reason = latestRunReason(snapshot);
-  return reason ? { code: reason, message: stopReasonLabel(reason) } : null;
+  return reason ? { code: reason, message: reason } : null;
 }
 
 function sessionPhaseKey(
@@ -493,7 +539,7 @@ function sessionArtifacts(session: {
         {
           kind: "outline_node",
           id: session.currentOutlineNodeId,
-          label: "当前章节",
+          label: "outline_node",
         },
       ]
     : [];
@@ -514,9 +560,7 @@ function sessionLastError(
   if (isRecord(error)) {
     const code = typeof error.code === "string" ? error.code : "session.failed";
     const message =
-      typeof error.message === "string" && error.message
-        ? error.message
-        : stopReasonLabel(code);
+      typeof error.message === "string" && error.message ? error.message : code;
     return { code, message };
   }
   return null;
@@ -542,15 +586,17 @@ function activityLastError(
 function runSummary(
   run: NarrativeRun,
   result: Readonly<Record<string, unknown>>,
-): string | null {
+): AssistantActivityTextDto | null {
   if (run.status !== "completed") return null;
-  if (typeof result.documentVersionId === "string") return "正文版本已经保存";
+  if (typeof result.documentVersionId === "string")
+    return activityText("activity.summary.documentVersion");
   if (typeof result.foundationCandidateSetId === "string")
-    return "故事方向候选已经生成";
+    return activityText("activity.summary.foundationCandidates");
   if (typeof result.canonCandidateSetId === "string")
-    return "故事圣经候选修改已经生成";
-  if (typeof result.editProposalId === "string") return "选区修改候选已经生成";
-  return "任务已经完成";
+    return activityText("activity.summary.canonCandidates");
+  if (typeof result.editProposalId === "string")
+    return activityText("activity.summary.editProposal");
+  return activityText("activity.summary.taskCompleted");
 }
 
 function sessionStage(
@@ -559,19 +605,60 @@ function sessionStage(
   target: number,
   chapterTitle: string | null,
   planningOnly: boolean,
-): string {
-  const unit = planningOnly ? "章大纲" : "章";
-  if (status === "completed") return `已完成 ${completed}/${target} ${unit}`;
-  if (status === "paused") return `已暂停 · ${completed}/${target} ${unit}`;
+): AssistantActivityTextDto {
+  const progressText = activityProgress(completed, target);
+  if (status === "completed")
+    return planningOnly
+      ? activityText("activity.stage.sessionCompletedOutline", {
+          progress: progressText,
+        })
+      : activityText("activity.stage.sessionCompletedChapters", {
+          progress: progressText,
+        });
+  if (status === "paused")
+    return planningOnly
+      ? activityText("activity.stage.sessionPausedOutline", {
+          progress: progressText,
+        })
+      : activityText("activity.stage.sessionPausedChapters", {
+          progress: progressText,
+        });
   if (status === "awaiting_user")
-    return `等待确认 · ${completed}/${target} ${unit}`;
+    return planningOnly
+      ? activityText("activity.stage.sessionAwaitingOutline", {
+          progress: progressText,
+        })
+      : activityText("activity.stage.sessionAwaitingChapters", {
+          progress: progressText,
+        });
   if (status === "failed")
-    return `需要处理失败 · ${completed}/${target} ${unit}`;
-  if (status === "cancelled") return `已结束 · ${completed}/${target} ${unit}`;
-  if (planningOnly) return `正在规划 · ${completed}/${target} 章大纲`;
+    return planningOnly
+      ? activityText("activity.stage.sessionFailedOutline", {
+          progress: progressText,
+        })
+      : activityText("activity.stage.sessionFailedChapters", {
+          progress: progressText,
+        });
+  if (status === "cancelled")
+    return planningOnly
+      ? activityText("activity.stage.sessionCancelledOutline", {
+          progress: progressText,
+        })
+      : activityText("activity.stage.sessionCancelledChapters", {
+          progress: progressText,
+        });
+  if (planningOnly)
+    return activityText("activity.stage.sessionPlanningOutline", {
+      progress: progressText,
+    });
   return chapterTitle
-    ? `正在创作《${chapterTitle}》 · ${completed}/${target} 章`
-    : `正在规划 · ${completed}/${target} 章`;
+    ? activityText("activity.stage.sessionWritingTitle", {
+        title: chapterTitle,
+        progress: progressText,
+      })
+    : activityText("activity.stage.sessionPlanningChapters", {
+        progress: progressText,
+      });
 }
 
 function sessionActions(status: string, reason: string | null): string[] {
@@ -599,43 +686,6 @@ function latestRunReason(snapshot: RunSnapshot): string | null {
   return typeof event?.payload.reason === "string"
     ? event.payload.reason
     : null;
-}
-
-function stopReasonLabel(reason: string): string {
-  const labels: Record<string, string> = {
-    scene_plan_approval_required: "本章细纲等待确认",
-    chapter_commit_approval_required: "正文候选等待采纳",
-    settlement_conflict_requires_resolution: "故事变化存在冲突，等待裁定",
-    request_start_timeout: "模型首响应超时，可以重试",
-    session_cancelled: "快速创作已经取消",
-  };
-  return labels[reason] ?? reason;
-}
-
-function toolStage(activity: AssistantActivity): string {
-  if (activity.status === "proposed") return "等待你确认";
-  if (activity.status === "running") {
-    if (activity.executionMode === "auto") return "正在交办";
-    return "正在执行";
-  }
-  if (activity.status === "completed") {
-    return activity.executionMode === "auto"
-      ? "已交办到现有任务链路"
-      : "已交给现有任务链路";
-  }
-  if (activity.status === "rejected") return "已拒绝";
-  if (activity.status === "cancelled") return "已取消";
-  return "执行失败";
-}
-
-function resultSummary(activity: AssistantActivity): string | null {
-  if (activity.status === "completed") {
-    return activity.executionMode === "auto"
-      ? "已交办并关联任务"
-      : "已创建并关联任务";
-  }
-  if (activity.status === "rejected") return "你没有执行这项建议";
-  return null;
 }
 
 function assistantContext(

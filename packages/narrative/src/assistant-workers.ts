@@ -543,44 +543,23 @@ function toolDescriptorArray(value: unknown): AssistantToolDescriptor[] {
   });
 }
 
+/** 工具活动卡片的 goal 机码：落库存储，展示文案由前端标签表渲染。
+ *  数字参数（targetChapters）由投影层从 input 提取插值。 */
 function toolGoal(call: AssistantToolCall): string {
-  if (call.name === "foundation.start") return "整理并生成故事方向候选";
-  if (call.name === "chapter.start") return "生成指定章节的候选正文";
-  if (call.name === "autopilot.start") {
-    return `连续创作 ${call.arguments.targetChapters} 章`;
-  }
-  if (call.name === "outline.plan.start") {
-    return `规划后续 ${call.arguments.targetChapters} 章大纲`;
-  }
+  if (call.name === "foundation.start") return "tool.goal.foundation.start";
+  if (call.name === "chapter.start") return "tool.goal.chapter.start";
+  if (call.name === "autopilot.start") return "tool.goal.autopilot.start";
+  if (call.name === "outline.plan.start") return "tool.goal.outline.plan.start";
   if (call.name === "canon.candidate.start") {
-    const spreads = {
-      intent: "作者意图",
-      outline: "大纲",
-      entities: "实体",
-      facts: "正典事实",
-      relations: "关系",
-      timeline: "时间线",
-      foreshadows: "伏笔",
-    } as const;
-    return `为${spreads[call.arguments.spread]}生成候选修改`;
+    return `tool.goal.canon.candidate.start.${call.arguments.spread}`;
   }
-  if (call.name === "selection.edit.start") return "生成选区修改候选";
-  if (call.name === "long_goal.start") {
-    return `整理大纲并连续创作 ${call.arguments.targetChapters} 章`;
-  }
+  if (call.name === "selection.edit.start")
+    return "tool.goal.selection.edit.start";
+  if (call.name === "long_goal.start") return "tool.goal.long_goal.start";
   if (call.name === "task.control") {
-    const labels = {
-      pause: "暂停",
-      resume: "继续",
-      cancel: "取消",
-      "retry-current": "重试当前章节",
-      "skip-chapter": "跳过当前章节",
-      replan: "重排后续章节",
-      stop: "停止",
-    } as const;
-    return `${labels[call.arguments.action]}当前任务`;
+    return `tool.goal.task.control.${call.arguments.action}`;
   }
-  return "查看当前作品信息";
+  return "tool.goal.info";
 }
 
 function requiredArtifact(
