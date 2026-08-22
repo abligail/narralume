@@ -15,6 +15,7 @@ import {
 } from "@narralume/persistence";
 
 import type { NarrativeModelClient } from "./model-client.js";
+import { instructionsFor } from "./prompt-language.js";
 import { ParagraphLocator } from "./paragraph-locator.js";
 import {
   requireActiveProject,
@@ -139,6 +140,7 @@ export class DeliveryWorkerSuite {
           importAnalysisRequest({
             projectTitle: project.title,
             premise: project.premise,
+            language: project.language,
             filename: batch.filename,
             text: chunk.promptText,
             rangeLabel: `分段 ${index + 1}/${chunks.length}`,
@@ -219,6 +221,7 @@ export class DeliveryWorkerSuite {
         importSynthesisRequest(
           aggregate,
           analyses[index]!,
+          project.language,
           policyNumber(snapshot.run.policy, "analysisMaxOutputTokens", 16_000),
         ),
         IMPORT_ANALYSIS_CONTRACT,
@@ -404,19 +407,29 @@ export class DeliveryWorkerSuite {
 function importAnalysisRequest(input: {
   projectTitle: string;
   premise: string | null;
+  language: string | null;
   filename: string;
   text: string;
   rangeLabel: string;
   maxOutputTokens: number;
 }) {
   return {
-    instructions: [
-      "你是长篇小说拆书编辑。只分析给定文本，不续写、不补齐、不模仿原句。",
-      "输出是待作者裁定的候选，不是正典。实体必须有文本依据；不确定时宁缺毋滥。",
-      "风格规则要可操作且与题材事实分离；examples 只能摘取很短的原文片段。",
-      "Writing Skill 是可开关的流程指令，不能包含具体人物、世界事实或要求复制原文。",
-      "分开提取关系、时间线、伏笔、角色弧和场景；每一项必须用 evidenceParagraphs 给出本分段中带 [P#] 标签的一个或多个原文段号。",
-    ].join("\n"),
+    instructions: instructionsFor(input.language, {
+      "zh-CN": [
+        "你是长篇小说拆书编辑。只分析给定文本，不续写、不补齐、不模仿原句。",
+        "输出是待作者裁定的候选，不是正典。实体必须有文本依据；不确定时宁缺毋滥。",
+        "风格规则要可操作且与题材事实分离；examples 只能摘取很短的原文片段。",
+        "Writing Skill 是可开关的流程指令，不能包含具体人物、世界事实或要求复制原文。",
+        "分开提取关系、时间线、伏笔、角色弧和场景；每一项必须用 evidenceParagraphs 给出本分段中带 [P#] 标签的一个或多个原文段号。",
+      ],
+      en: [
+        "You are the deconstruction editor of a long-form novel. Analyze only the given text; do not continue it, fill gaps, or imitate its sentences.",
+        "The output is a set of candidates awaiting the author's adjudication, not canon. Entities must have textual evidence; when uncertain, prefer omission over inclusion.",
+        "Style rules must be actionable and separated from genre facts; examples may quote only very short excerpts of the original text.",
+        "A Writing Skill is a switchable process instruction and must not contain specific characters, world facts, or demands to copy the original text.",
+        "Extract relations, timeline, foreshadowing, character arcs, and scenes separately; every item must cite one or more source paragraphs tagged [P#] within this segment through evidenceParagraphs.",
+      ],
+    }),
     messages: [
       {
         role: "user" as const,
@@ -440,15 +453,24 @@ function importAnalysisRequest(input: {
 function importSynthesisRequest(
   accumulated: ImportAnalysis,
   next: ImportAnalysis,
+  language: string | null,
   maxOutputTokens: number,
 ) {
   return {
-    instructions: [
-      "你是长篇拆书结果的合并编辑。合并两份分段分析，去重但不得丢弃后段独有信息。",
-      "证据 evidenceParagraphs 必须原样保留自输入分析，不得改写、合并段号或创造段号。",
-      "时间线按全书因果顺序重新编号；同名实体谨慎合并，无法确认时分别保留。",
-      "输出仍是同一份完整 ImportAnalysis JSON。",
-    ].join("\n"),
+    instructions: instructionsFor(language, {
+      "zh-CN": [
+        "你是长篇拆书结果的合并编辑。合并两份分段分析，去重但不得丢弃后段独有信息。",
+        "证据 evidenceParagraphs 必须原样保留自输入分析，不得改写、合并段号或创造段号。",
+        "时间线按全书因果顺序重新编号；同名实体谨慎合并，无法确认时分别保留。",
+        "输出仍是同一份完整 ImportAnalysis JSON。",
+      ],
+      en: [
+        "You are the merge editor for long-form deconstruction results. Merge two segment analyses, deduplicating without dropping information unique to the later segment.",
+        "Evidence evidenceParagraphs must be preserved verbatim from the input analyses; never rewrite, merge, or invent paragraph numbers.",
+        "Renumber the timeline by whole-book causal order; merge same-name entities cautiously and keep them separate when unsure.",
+        "The output remains the same complete ImportAnalysis JSON.",
+      ],
+    }),
     messages: [
       {
         role: "user" as const,

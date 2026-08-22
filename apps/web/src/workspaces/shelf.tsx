@@ -40,7 +40,13 @@ import { Empty } from "../components/empty";
 import { ErrorNote } from "../components/error-note";
 import { IconButton } from "../components/icon-button";
 import { Skeleton } from "../components/skeleton";
-import { getLocale, translate, useI18n } from "../i18n";
+import {
+  LOCALES,
+  LOCALE_LABELS,
+  getLocale,
+  translate,
+  useI18n,
+} from "../i18n";
 import {
   applyStoryImport,
   createProject,
@@ -60,6 +66,7 @@ import {
   type ImportFormat,
   type Project,
   type ProjectCoverMutation,
+  type ProjectLanguage,
   type RecycledProject,
 } from "../lib/api";
 import { coverHue, formatRelativeDate, shortId } from "../lib/fmt";
@@ -682,16 +689,22 @@ function CreateDialog({
   const { t } = useI18n();
   const [title, setTitle] = useState("");
   const [premise, setPremise] = useState("");
+  const [language, setLanguage] = useState<ProjectLanguage>("zh-CN");
   const aiRequestRef = useRef<{ identity: string; requestId: string } | null>(null);
   const blankRequestRef = useRef<{ identity: string; requestId: string } | null>(null);
   const mutation = useMutation({
-    mutationFn: async (input: { title: string; premise: string | null }) => {
+    mutationFn: async (input: {
+      title: string;
+      premise: string | null;
+      language: ProjectLanguage;
+    }) => {
       /* 空白建书走纯项目创建（无模型也可用）；AI 引导建书一次立项并发起
          foundation 后台任务，requestId 即本次提交的幂等键。 */
       if (mode === "ai" && input.premise) {
         const request = {
           title: input.title,
           premise: input.premise,
+          language: input.language,
           braindump: input.premise,
           preferences: {
             genre: null,
@@ -748,6 +761,7 @@ function CreateDialog({
     mutation.mutate({
       title: trimmed,
       premise: premise.trim() ? premise.trim() : null,
+      language,
     });
   };
 
@@ -775,6 +789,23 @@ function CreateDialog({
             onChange={(event) => setTitle(event.target.value)}
             autoFocus
           />
+        </div>
+        <div className="shelf-dialog__field">
+          <label className="shelf-dialog__label mono" htmlFor="create-language">
+            {t("shelf.create.languageLabel")}
+          </label>
+          <select
+            id="create-language"
+            className="shelf-dialog__input"
+            value={language}
+            onChange={(event) => setLanguage(event.target.value as ProjectLanguage)}
+          >
+            {LOCALES.map((locale) => (
+              <option key={locale} value={locale}>
+                {LOCALE_LABELS[locale]}
+              </option>
+            ))}
+          </select>
         </div>
         <div className="shelf-dialog__field">
           <label
@@ -1126,6 +1157,7 @@ function BookEditDialog({
   const [title, setTitle] = useState(project.title);
   const [subtitle, setSubtitle] = useState(project.subtitle ?? "");
   const [premise, setPremise] = useState(project.premise ?? "");
+  const [language, setLanguage] = useState<ProjectLanguage>(project.language);
   const [prepared, setPrepared] = useState<PreparedCover | null>(null);
   const [removeCover, setRemoveCover] = useState(false);
   const [cropSource, setCropSource] = useState<PreparedCover | null>(null);
@@ -1151,6 +1183,7 @@ function BookEditDialog({
         title: title.trim(),
         subtitle: subtitle.trim() || null,
         premise: premise.trim() || null,
+        language,
         archived: project.archivedAt !== null,
         expectedUpdatedAt: project.updatedAt,
         ...(cover ? { cover } : {}),
@@ -1231,6 +1264,21 @@ function BookEditDialog({
             <div className="shelf-dialog__field">
               <label className="shelf-dialog__label mono" htmlFor="edit-premise">{t("shelf.edit.premiseLabel")}</label>
               <textarea id="edit-premise" className="shelf-dialog__textarea" rows={4} value={premise} onChange={(event) => setPremise(event.target.value)} placeholder={t("shelf.edit.premisePlaceholder")} />
+            </div>
+            <div className="shelf-dialog__field">
+              <label className="shelf-dialog__label mono" htmlFor="edit-language">{t("shelf.edit.languageLabel")}</label>
+              <select
+                id="edit-language"
+                className="shelf-dialog__input"
+                value={language}
+                onChange={(event) => setLanguage(event.target.value as ProjectLanguage)}
+              >
+                {LOCALES.map((locale) => (
+                  <option key={locale} value={locale}>
+                    {LOCALE_LABELS[locale]}
+                  </option>
+                ))}
+              </select>
             </div>
             <p className="book-edit__hint">{t("shelf.edit.hint")}</p>
           </div>

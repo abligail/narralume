@@ -52,6 +52,7 @@ export const shelf: typeof shelfZh = {
     recycle: "Move to recycle bin",
   },
   create: {
+    languageLabel: "Writing language (controls AI prose and replies)",
     ariaLabel: "Create book",
     blank: "Blank book",
     ai: "AI-guided book",
@@ -82,6 +83,7 @@ export const shelf: typeof shelfZh = {
     fallback: "Cropping failed, please try again.",
   },
   edit: {
+    languageLabel: "Writing language (controls AI prose and replies)",
     title: "Edit book & cover",
     note: "The cover on the shelf is only an identifier; chapters, bible, and versions are maintained inside the book.",
     previewAlt: "Cover preview pending save",

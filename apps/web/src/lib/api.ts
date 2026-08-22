@@ -3,6 +3,7 @@ import {
   QUALITY_PRESETS,
   type AdoptRunStreamResponse,
   type AssistantActivityDto,
+  type ProjectLanguage,
   type AssistantActivityTextDto,
   type AssistantActivityActionResponseDto,
   type AssistantContext,
@@ -53,7 +54,7 @@ import {
 export { MIN_VIABLE_PARTIAL_CHARACTERS, QUALITY_PRESETS };
 export type {
   AdoptRunStreamResponse,
-  AssistantActivityDto,
+  ProjectLanguage,  AssistantActivityDto,
   AssistantActivityTextDto,
   AssistantActivityActionResponseDto,
   AssistantContext,
@@ -389,7 +390,7 @@ export interface Project {
   title: string;
   subtitle: string | null;
   premise: string | null;
-  language: string;
+  language: ProjectLanguage;
   phase:
     | "idea"
     | "foundation"
@@ -1368,6 +1369,7 @@ export async function createProject(input: {
   requestId: string;
   title: string;
   premise: string | null;
+  language?: ProjectLanguage;
 }): Promise<Project> {
   return requestJson<Project>("/api/projects", jsonRequest("POST", input));
 }
@@ -1462,6 +1464,7 @@ export async function updateProject(
     title: string;
     subtitle: string | null;
     premise: string | null;
+    language?: ProjectLanguage;
     archived: boolean;
     expectedUpdatedAt: string;
     cover?: ProjectCoverMutation;

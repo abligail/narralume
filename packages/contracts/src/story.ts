@@ -13,12 +13,16 @@ export const ProjectPhaseSchema = z.enum([
   "complete",
 ]);
 
+/** 作品创作语言：决定 AI 指令与产出的语言，与界面语言无关。 */
+export const ProjectLanguageSchema = z.enum(["zh-CN", "en"]);
+export type ProjectLanguage = z.infer<typeof ProjectLanguageSchema>;
+
 export const ProjectSchema = z.object({
   id: IdSchema,
   title: z.string(),
   subtitle: z.string().nullable(),
   premise: z.string().nullable(),
-  language: z.string(),
+  language: ProjectLanguageSchema,
   phase: ProjectPhaseSchema,
   archivedAt: TimestampSchema.nullable(),
   createdAt: TimestampSchema,
@@ -71,7 +75,7 @@ export const CreateProjectRequestSchema = z.object({
   title: z.string().trim().min(1).max(200),
   subtitle: z.string().trim().max(300).nullable().optional(),
   premise: z.string().trim().max(10_000).nullable().optional(),
-  language: z.string().trim().min(2).max(30).default("zh-CN"),
+  language: ProjectLanguageSchema.default("zh-CN"),
 });
 /**
  * 封面变更与书籍资料保存在同一个请求里提交，服务端在同一事务中应用，
@@ -98,6 +102,7 @@ export const UpdateProjectRequestSchema = z.object({
   title: z.string().trim().min(1).max(200),
   subtitle: z.string().trim().max(300).nullable(),
   premise: z.string().trim().max(10_000).nullable(),
+  language: ProjectLanguageSchema.optional(),
   archived: z.boolean(),
   expectedUpdatedAt: TimestampSchema,
   cover: ProjectCoverMutationSchema.optional(),

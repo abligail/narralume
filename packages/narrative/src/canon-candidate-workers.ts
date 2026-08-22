@@ -30,6 +30,7 @@ import {
   CanonCandidateModelResultSchema,
   canonCandidateModelValidator,
 } from "./canon-candidate-schemas.js";
+import { instructionsFor } from "./prompt-language.js";
 import type { NarrativeModelClient } from "./model-client.js";
 import { requireActiveProject } from "./project-guard.js";
 
@@ -175,15 +176,29 @@ export class CanonCandidateWorkerSuite {
       step,
       "canon-revision",
       {
-        instructions: [
-          "你是长篇小说的故事圣经编辑。只根据提供的作品材料，为指定 Canon Spread 生成少量、可逐项裁定的候选修改。",
-          "不要直接改写数据库，不要声称候选已经生效。每项必须说明理由和影响；没有必要的改动不要凑数。",
-          "create 的 targetId 必须为 null；update 必须使用 currentSpread 中真实存在的 id。作者意图只能 update 且 targetId 固定为 intent。",
-          "只有 facts 可以 withdraw，此时 afterJson 为 null；其他 create/update 的 afterJson 必须是一个 JSON 对象序列化后的字符串。",
-          `afterJson 只能使用这些字段：${candidateAfterInstructions(context.spread)}。update 只放要改的字段，create 提供完整必填字段。`,
-          "引用实体、大纲、因果或依赖时只能使用 supportingIndex 中给出的真实 ID。不得生成数据库 ID。",
-          "不要修改锁定策略本身；如果建议触及锁定内容，仍作为候选说明，系统会要求作者二次确认。",
-        ].join("\n"),
+        instructions: instructionsFor(
+          this.projects.get(snapshot.run.projectId)?.language ?? null,
+          {
+            "zh-CN": [
+              "你是长篇小说的故事圣经编辑。只根据提供的作品材料，为指定 Canon Spread 生成少量、可逐项裁定的候选修改。",
+              "不要直接改写数据库，不要声称候选已经生效。每项必须说明理由和影响；没有必要的改动不要凑数。",
+              "create 的 targetId 必须为 null；update 必须使用 currentSpread 中真实存在的 id。作者意图只能 update 且 targetId 固定为 intent。",
+              "只有 facts 可以 withdraw，此时 afterJson 为 null；其他 create/update 的 afterJson 必须是一个 JSON 对象序列化后的字符串。",
+              `afterJson 只能使用这些字段：${candidateAfterInstructions(context.spread)}。update 只放要改的字段，create 提供完整必填字段。`,
+              "引用实体、大纲、因果或依赖时只能使用 supportingIndex 中给出的真实 ID。不得生成数据库 ID。",
+              "不要修改锁定策略本身；如果建议触及锁定内容，仍作为候选说明，系统会要求作者二次确认。",
+            ],
+            en: [
+              "You are the story bible editor of a long-form novel. Working only from the provided project material, generate a small number of individually adjudicable change candidates for the given Canon Spread.",
+              "Never rewrite the database directly and never claim candidates took effect. Every item must state its reasoning and impact; do not pad with unnecessary changes.",
+              "create's targetId must be null; update must use ids that actually exist in currentSpread. Author intent may only be updated, with targetId fixed to intent.",
+              "Only facts can be withdrawn, with afterJson null in that case; every other create/update must carry afterJson as a serialized JSON object string.",
+              `afterJson accepts only these fields: ${candidateAfterInstructions(context.spread)}. update carries only changed fields; create provides every required field.`,
+              "When referencing entities, outline nodes, causes, or dependencies, use only real IDs given in supportingIndex. Never invent database IDs.",
+              "Do not modify lock policies themselves; when a suggestion touches locked content, still describe it as a candidate and the system will ask the author to confirm again.",
+            ],
+          },
+        ),
         messages: [{ role: "user", content: context.prompt }],
         reasoningEffort: "medium",
         maxOutputTokens: policyNumber(

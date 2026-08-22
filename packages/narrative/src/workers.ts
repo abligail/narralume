@@ -55,6 +55,7 @@ import {
   SettlementApplicationService,
   SettlementConflictError,
 } from "./settlement-application-service.js";
+import { instructionsFor } from "./prompt-language.js";
 import { StoryStatePacketBuilder } from "./story-state-packet.js";
 import {
   REVIEW_CONTRACT,
@@ -156,6 +157,10 @@ export class ChapterWorkerSuite {
     return template?.effectiveContent.trim()
       ? `${systemInvariants}\n<author-prompt-layer>\n${template.effectiveContent}\n</author-prompt-layer>`
       : systemInvariants;
+  }
+
+  private projectLanguage(projectId: string): string | null {
+    return this.projects.get(projectId)?.language ?? null;
   }
 
   private async compileContext(
@@ -629,13 +634,20 @@ export class ChapterWorkerSuite {
       step,
       "scene-plan",
       {
-        instructions: this.instructions(
-          "prompt.scene-plan",
-          [
-            "你是长篇小说章节规划师。把章节目标拆成可写的场景，不写正文。",
-            "每个场景必须有目标、阻力、转折和不可逆结果；只使用上下文中存在的实体 ID。",
-            "保持滚动规划：只规划当前章，不擅自锁死远期情节。",
-          ].join("\n"),
+        instructions: instructionsFor(
+          this.projectLanguage(snapshot.run.projectId),
+          {
+            "zh-CN": [
+              "你是长篇小说章节规划师。把章节目标拆成可写的场景，不写正文。",
+              "每个场景必须有目标、阻力、转折和不可逆结果；只使用上下文中存在的实体 ID。",
+              "保持滚动规划：只规划当前章，不擅自锁死远期情节。",
+            ],
+            en: [
+              "You are the chapter planner of a long-form novel. Break the chapter goal into writable scenes; do not write prose.",
+              "Every scene must have a goal, resistance, a turn, and an irreversible outcome; only use entity IDs that exist in the context.",
+              "Keep the rolling plan going: plan only the current chapter and never lock in distant plot on your own.",
+            ],
+          },
         ),
         messages: [
           {
@@ -690,14 +702,22 @@ export class ChapterWorkerSuite {
       step,
       "chapter-draft",
       {
-        instructions: this.instructions(
-          "prompt.chapter-draft",
-          [
-            "你是成熟的中文长篇小说作者。按照场景计划写出完整章节正文。",
-            "让因果通过行动、感官、选择与后果显现；避免大纲腔、总结腔和解释性结尾。",
-            "不得改写锁定事实，不得泄露 POV 角色未知的信息，不要输出标题、说明或 Markdown 围栏。",
-            "若计划与锁定正典冲突，以锁定正典为准，并在不暴露流程的前提下自然化解。",
-          ].join("\n"),
+        instructions: instructionsFor(
+          this.projectLanguage(snapshot.run.projectId),
+          {
+            "zh-CN": [
+              "你是成熟的中文长篇小说作者。按照场景计划写出完整章节正文。",
+              "让因果通过行动、感官、选择与后果显现；避免大纲腔、总结腔和解释性结尾。",
+              "不得改写锁定事实，不得泄露 POV 角色未知的信息，不要输出标题、说明或 Markdown 围栏。",
+              "若计划与锁定正典冲突，以锁定正典为准，并在不暴露流程的前提下自然化解。",
+            ],
+            en: [
+              "You are an accomplished novelist writing a long-form novel in English. Write the full chapter prose according to the scene plan.",
+              "Let causality emerge through action, senses, choices, and consequences; avoid outline-speak, summary-speak, and explanatory endings.",
+              "Do not rewrite locked facts, do not reveal information unknown to the POV character, and output no titles, notes, or Markdown fences.",
+              "If the plan conflicts with locked canon, locked canon wins; resolve it naturally without exposing the machinery.",
+            ],
+          },
         ),
         messages: [
           {
@@ -933,14 +953,22 @@ export class ChapterWorkerSuite {
       step,
       "semantic-review",
       {
-        instructions: this.instructions(
-          "prompt.semantic-review",
-          [
-            "你是证据约束的小说审稿人。独立检查正典连续性、角色能动性、因果链、节奏、视角、信息释放、风格一致性、伏笔推进和章节目标。",
-            "每个问题必须用 evidenceParagraphs 引用带 [P#] 标签的正文段落；可引用多段，无法举证就不要提出。",
-            "章节目标未完成必须提出 category=goal 且 severity=major/critical 的问题，不能只降低 goal 分数或标成 minor/info。",
-            "每个问题都填写 requiresAuthorDecision。只有无法通过局部修订安全解决、必须由作者选择方向的 major/critical 正典或方向冲突才填 true；其余一律填 false。不要输出总 verdict，系统会根据问题派生。",
-          ].join("\n"),
+        instructions: instructionsFor(
+          this.projectLanguage(snapshot.run.projectId),
+          {
+            "zh-CN": [
+              "你是证据约束的小说审稿人。独立检查正典连续性、角色能动性、因果链、节奏、视角、信息释放、风格一致性、伏笔推进和章节目标。",
+              "每个问题必须用 evidenceParagraphs 引用带 [P#] 标签的正文段落；可引用多段，无法举证就不要提出。",
+              "章节目标未完成必须提出 category=goal 且 severity=major/critical 的问题，不能只降低 goal 分数或标成 minor/info。",
+              "每个问题都填写 requiresAuthorDecision。只有无法通过局部修订安全解决、必须由作者选择方向的 major/critical 正典或方向冲突才填 true；其余一律填 false。不要输出总 verdict，系统会根据问题派生。",
+            ],
+            en: [
+              "You are an evidence-bound novel reviewer. Independently check canon continuity, character agency, causal chains, pacing, point of view, information release, style consistency, foreshadowing progress, and the chapter goal.",
+              "Every issue must cite paragraphs tagged [P#] through evidenceParagraphs; citing several is allowed, and issues you cannot evidence must not be raised.",
+              "An unmet chapter goal must yield an issue with category=goal and severity=major/critical; do not merely lower the goal score or file it as minor/info.",
+              "Fill requiresAuthorDecision on every issue. Set true only for major/critical canon or direction conflicts that local revision cannot safely resolve and that require the author to choose a direction; set false otherwise. Output no overall verdict; the system derives one from the issues.",
+            ],
+          },
         ),
         messages: [
           {
@@ -1049,14 +1077,22 @@ export class ChapterWorkerSuite {
       step,
       "chapter-revision",
       {
-        instructions: this.instructions(
-          "prompt.chapter-revision",
-          [
-            "你是小说修订者。只解决给定的可举证问题，同时保护原稿已成立的声音、节奏和事实。",
-            "输出修订后的完整正文，不要解释，不要 Markdown 围栏。",
-            "非空输出必须从原稿开头写到结尾；如果无法完成全文修订，返回空字符串，不得只返回改动段落、摘要或说明。",
-            "不要为了润色而全篇换风格；不得新增上下文之外的锁定事实。",
-          ].join("\n"),
+        instructions: instructionsFor(
+          this.projectLanguage(snapshot.run.projectId),
+          {
+            "zh-CN": [
+              "你是小说修订者。只解决给定的可举证问题，同时保护原稿已成立的声音、节奏和事实。",
+              "输出修订后的完整正文，不要解释，不要 Markdown 围栏。",
+              "非空输出必须从原稿开头写到结尾；如果无法完成全文修订，返回空字符串，不得只返回改动段落、摘要或说明。",
+              "不要为了润色而全篇换风格；不得新增上下文之外的锁定事实。",
+            ],
+            en: [
+              "You are a manuscript reviser. Resolve only the given evidence-backed issues while protecting the voice, rhythm, and facts the draft has already established.",
+              "Output the full revised prose without explanations or Markdown fences.",
+              "A non-empty output must run from the start of the draft to its end; if the full revision is impossible, return an empty string - never only changed passages, summaries, or notes.",
+              "Do not restyle the whole piece as polish; do not introduce locked facts beyond the context.",
+            ],
+          },
         ),
         messages: [
           {
@@ -1252,18 +1288,32 @@ export class ChapterWorkerSuite {
       {
         instructions: this.instructions(
           "prompt.chapter-settlement",
-          [
-            "你是章节结算员。仅从正文提取可举证的状态变化、候选事实、事件、关系变化与伏笔动作。每一项都用 evidenceParagraphs 引用带 [P#] 标签的一个或多个正文段落。",
-            "这些结果都是候选，不得声称已修改正典。实体只能使用给定 ID。",
-            "事实操作规则：assert 用于增加一个正文已证实的命题，即使同一 subjectId/predicate 已有其他值也不需要覆盖；只有正文明确推翻或替换某条当前事实时才使用 supersede，并必须通过 factId 指定被替换事实；withdraw 也必须通过 factId 指定撤回目标。不得根据 subjectId/predicate 猜测替换目标。关系使用 start/update/end，伏笔仅在 plant 时不提供 foreshadowId。",
-            "ID 引用规则：causeEventIds 只能使用上下文中 [timeline:…] 标注的事件 ID；targetFromNodeId/targetToNodeId 只能使用 [node:…] 标注的大纲节点 ID；实体、关系、伏笔同理只能使用上下文标注的对应 ID。禁止编造或挪用其它类型的 ID。",
-            "事实宾语规则：assert/supersede 必须在 objectEntityId 与 value 中二选一。实体宾语填 objectEntityId 并将 value 置 null；普通文本、数字或布尔值填 value 并将 objectEntityId 置 null。不要额外填写布尔值或字符串 true 表示事实成立，operation 已表达事实操作；同时需要实体和文本时拆成两条事实。withdraw 通过 factId 指定目标事实，subjectId/predicate 必须与目标一致，objectEntityId 与 value 都填 null。",
-            "伏笔规则：plant（新埋）不填 foreshadowId 也不填 expectedStatus；update/resolve 必须引用已有伏笔 ID，且 expectedStatus 填该伏笔现在所处的状态（乐观并发检查：status 标注里｜竖线后面的值，如 planted），不是你想改成的新状态——新状态由 action 决定。",
-            "只记录本章实际发生的变化；未变化的状态和未回收伏笔不要重复提交，也不要为了推进下一章而强行回收伏笔。",
-            "factCandidates 必须描述故事世界里的实际命题，不要使用‘得知’‘看见’‘意识到’等元谓词来重复表达知情关系。例如角色得知‘钥匙能开侧门’，predicate/value 应记录‘钥匙能开侧门’这个命题，谁知道它只由 knowledgeScope、knowledgeSubjectId 和 belief 表达。",
-            "人物知识必须填写真正的知情角色；knowledgeSubjectId 仅在 knowledgeScope 为 character 时填写该角色 ID，其余 scope（omniscient/reader/author_secret）必须填 null。",
-            "不要把修辞、推测或人物谎言当作全知事实。",
-          ].join("\n"),
+          instructionsFor(this.projectLanguage(snapshot.run.projectId), {
+            "zh-CN": [
+              "你是章节结算员。仅从正文提取可举证的状态变化、候选事实、事件、关系变化与伏笔动作。每一项都用 evidenceParagraphs 引用带 [P#] 标签的一个或多个正文段落。",
+              "这些结果都是候选，不得声称已修改正典。实体只能使用给定 ID。",
+              "事实操作规则：assert 用于增加一个正文已证实的命题，即使同一 subjectId/predicate 已有其他值也不需要覆盖；只有正文明确推翻或替换某条当前事实时才使用 supersede，并必须通过 factId 指定被替换事实；withdraw 也必须通过 factId 指定撤回目标。不得根据 subjectId/predicate 猜测替换目标。关系使用 start/update/end，伏笔仅在 plant 时不提供 foreshadowId。",
+              "ID 引用规则：causeEventIds 只能使用上下文中 [timeline:…] 标注的事件 ID；targetFromNodeId/targetToNodeId 只能使用 [node:…] 标注的大纲节点 ID；实体、关系、伏笔同理只能使用上下文标注的对应 ID。禁止编造或挪用其它类型的 ID。",
+              "事实宾语规则：assert/supersede 必须在 objectEntityId 与 value 中二选一。实体宾语填 objectEntityId 并将 value 置 null；普通文本、数字或布尔值填 value 并将 objectEntityId 置 null。不要额外填写布尔值或字符串 true 表示事实成立，operation 已表达事实操作；同时需要实体和文本时拆成两条事实。withdraw 通过 factId 指定目标事实，subjectId/predicate 必须与目标一致，objectEntityId 与 value 都填 null。",
+              "伏笔规则：plant（新埋）不填 foreshadowId 也不填 expectedStatus；update/resolve 必须引用已有伏笔 ID，且 expectedStatus 填该伏笔现在所处的状态（乐观并发检查：status 标注里｜竖线后面的值，如 planted），不是你想改成的新状态——新状态由 action 决定。",
+              "只记录本章实际发生的变化；未变化的状态和未回收伏笔不要重复提交，也不要为了推进下一章而强行回收伏笔。",
+              "factCandidates 必须描述故事世界里的实际命题，不要使用‘得知’‘看见’‘意识到’等元谓词来重复表达知情关系。例如角色得知‘钥匙能开侧门’，predicate/value 应记录‘钥匙能开侧门’这个命题，谁知道它只由 knowledgeScope、knowledgeSubjectId 和 belief 表达。",
+              "人物知识必须填写真正的知情角色；knowledgeSubjectId 仅在 knowledgeScope 为 character 时填写该角色 ID，其余 scope（omniscient/reader/author_secret）必须填 null。",
+              "不要把修辞、推测或人物谎言当作全知事实。",
+            ],
+            en: [
+              "You are the chapter settler. Extract only evidence-backed state changes, candidate facts, events, relationship changes, and foreshadowing actions from the prose. Cite one or more [P#]-tagged paragraphs through evidenceParagraphs for every item.",
+              "These results are candidates; never claim canon has been modified. Entities may only use the given IDs.",
+              "Fact operation rules: assert adds a proposition the prose has evidenced - even when another value exists for the same subjectId/predicate no overwrite is needed; use supersede only when the prose explicitly overturns or replaces a current fact, naming the replaced fact via factId; use withdraw only against a target named via factId. Never guess replacement targets from subjectId/predicate. Relationships use start/update/end; foreshadows omit foreshadowId only when planting.",
+              "ID reference rules: causeEventIds may only use event IDs annotated [timeline:…] in the context; targetFromNodeId/targetToNodeId may only use outline node IDs annotated [node:…]; entities, relationships, and foreshadows likewise may only use correspondingly annotated IDs. Fabricating or repurposing other ID types is forbidden.",
+              "Fact object rules: assert/supersede must choose exactly one of objectEntityId and value. Fill objectEntityId with a null value for entity objects; fill value with a null objectEntityId for plain text, numbers, or booleans. Do not put boolean true or a quoted true to state that a fact holds - the operation already expresses it; split into two facts when both an entity and text are needed. withdraw names its target via factId with matching subjectId/predicate and both objectEntityId and value null.",
+              "Foreshadow rules: plant (a new one) fills neither foreshadowId nor expectedStatus; update/resolve must reference an existing foreshadow ID, and expectedStatus takes the status the foreshadow currently holds (optimistic concurrency check: the value after the | bar in the status annotation, e.g. planted) - not the new state you intend, which the action determines.",
+              "Record only changes that actually happen in this chapter; do not resubmit unchanged states or unrecovered foreshadows, and never force a foreshadow to pay off just to move the next chapter forward.",
+              "factCandidates must describe real propositions in the story world; never restate knowledge through meta-predicates such as learns, sees, or realizes. If a character learns that the key opens the side door, predicate/value should record the proposition that the key opens the side door; who knows it is expressed only by knowledgeScope, knowledgeSubjectId, and belief.",
+              "Character knowledge names the character who actually knows; fill knowledgeSubjectId only when knowledgeScope is character, and leave it null for the other scopes (omniscient/reader/author_secret).",
+              "Never treat rhetoric, speculation, or in-character lies as omniscient facts.",
+            ],
+          }),
         ),
         messages: [
           {

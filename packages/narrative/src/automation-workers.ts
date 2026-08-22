@@ -35,6 +35,7 @@ import {
   SteerClassificationResultSchema,
 } from "./automation-schemas.js";
 import { fingerprint } from "./canon-candidate-context.js";
+import { instructionsFor } from "./prompt-language.js";
 import { StoryStatePacketBuilder } from "./story-state-packet.js";
 import {
   requireActiveProject,
@@ -127,12 +128,20 @@ export class AutomationWorkerSuite {
       step,
       "book-foundation",
       {
-        instructions: [
-          "你是长篇小说总策划。把作者的原始灵感整理成可选择的建书候选，而不是替作者宣告正典。",
-          "保持创意具体、可持续写作、角色有欲望与代价。不要模仿在世作者。",
-          "所有字段必须完整；边界应尊重作者原话，不能擅自添加猎奇内容。",
-          "规划规模只属于故事指南针的 compass.target，不属于作者意图。除非作者素材原文明确提出相同限制，不得把目标章节数、每章字数或卷数写入 intent.boundaries、intent.currentFocus 或其他作者意图字段。",
-        ].join("\n"),
+        instructions: instructionsFor(project.language, {
+          "zh-CN": [
+            "你是长篇小说总策划。把作者的原始灵感整理成可选择的建书候选，而不是替作者宣告正典。",
+            "保持创意具体、可持续写作、角色有欲望与代价。不要模仿在世作者。",
+            "所有字段必须完整；边界应尊重作者原话，不能擅自添加猎奇内容。",
+            "规划规模只属于故事指南针的 compass.target，不属于作者意图。除非作者素材原文明确提出相同限制，不得把目标章节数、每章字数或卷数写入 intent.boundaries、intent.currentFocus 或其他作者意图字段。",
+          ],
+          en: [
+            "You are the chief planner of a long-form novel. Shape the author's raw inspiration into selectable book-foundation candidates instead of declaring canon on the author's behalf.",
+            "Keep ideas concrete and sustainable to write, and give characters desire and cost. Do not imitate living authors.",
+            "Every field must be complete; boundaries must respect the author's own words and never add sensational content on their own.",
+            "Planning scale belongs only to the story compass's compass.target, not to author intent. Unless the author's source material explicitly states the same limits, never write target chapter counts, per-chapter lengths, or volume counts into intent.boundaries, intent.currentFocus, or other author-intent fields.",
+          ],
+        }),
         messages: [
           {
             role: "user",
@@ -279,11 +288,18 @@ export class AutomationWorkerSuite {
       step,
       "rolling-outline",
       {
-        instructions: [
-          "你是长篇小说滚动规划师。只详细规划当前可见窗口，不要一次冻结整部长篇。",
-          "计划必须承接已提交章节，兑现指南针，尊重作者锁定意图与 steer。",
-          "每章要有目标、阻力、转折、结果与结尾钩子；结果必须推动因果链。",
-        ].join("\n"),
+        instructions: instructionsFor(project.language, {
+          "zh-CN": [
+            "你是长篇小说滚动规划师。只详细规划当前可见窗口，不要一次冻结整部长篇。",
+            "计划必须承接已提交章节，兑现指南针，尊重作者锁定意图与 steer。",
+            "每章要有目标、阻力、转折、结果与结尾钩子；结果必须推动因果链。",
+          ],
+          en: [
+            "You are the rolling planner of a long-form novel. Plan only the currently visible window in detail; never freeze an entire long novel at once.",
+            "The plan must continue from committed chapters, honor the compass, and respect the author's locked intent and steers.",
+            "Each chapter needs a goal, resistance, a turn, an outcome, and a closing hook; outcomes must advance the causal chain.",
+          ],
+        }),
         messages: [
           {
             role: "user",
@@ -525,11 +541,21 @@ export class AutomationWorkerSuite {
       step,
       "steer-classification",
       {
-        instructions: [
-          "你是小说生产 harness 的 steer 仲裁器，只分类影响范围，不创作正文。",
-          "立即影响仅用于作者明确要求停止或改变正在生成的内容；涉及既有正文或正典要提高风险。",
-          "输出必须选择唯一分类和最早安全生效边界。",
-        ].join("\n"),
+        instructions: instructionsFor(
+          this.projects.get(snapshot.run.projectId)?.language ?? null,
+          {
+            "zh-CN": [
+              "你是小说生产 harness 的 steer 仲裁器，只分类影响范围，不创作正文。",
+              "立即影响仅用于作者明确要求停止或改变正在生成的内容；涉及既有正文或正典要提高风险。",
+              "输出必须选择唯一分类和最早安全生效边界。",
+            ],
+            en: [
+              "You are the steer arbitrator of the novel production harness; classify impact scope only and never write prose.",
+              "Immediate impact applies only when the author explicitly asks to stop or change content being generated; anything touching existing prose or canon raises the risk.",
+              "The output must choose exactly one classification and the earliest safe effective boundary.",
+            ],
+          },
+        ),
         messages: [
           {
             role: "user",
@@ -627,10 +653,19 @@ export class AutomationWorkerSuite {
       step,
       `${scopeType}-review`,
       {
-        instructions: [
-          `你是长篇小说${scopeType === "arc" ? "故事弧" : "卷"}复盘编辑。`,
-          "基于章节摘要评估承诺兑现、因果、人物弧、节奏和连续性。建议服务于下一滚动窗口，不改写已提交事实。",
-        ].join("\n"),
+        instructions: instructionsFor(
+          this.projects.get(snapshot.run.projectId)?.language ?? null,
+          {
+            "zh-CN": [
+              `你是长篇小说${scopeType === "arc" ? "故事弧" : "卷"}复盘编辑。`,
+              "基于章节摘要评估承诺兑现、因果、人物弧、节奏和连续性。建议服务于下一滚动窗口，不改写已提交事实。",
+            ],
+            en: [
+              `You are the retrospective editor of a long-form novel ${scopeType === "arc" ? "story arc" : "volume"}.`,
+              "Assess promise fulfillment, causality, character arcs, pacing, and continuity from chapter summaries. Suggestions serve the next rolling window and never rewrite committed facts.",
+            ],
+          },
+        ),
         messages: [
           {
             role: "user",

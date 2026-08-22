@@ -35,6 +35,7 @@ import {
   recordEmbeddingDegradation,
 } from "./embedding-support.js";
 import { outlineContextSources } from "./outline-context.js";
+import { instructionsFor } from "./prompt-language.js";
 import { StoryStatePacketBuilder } from "./story-state-packet.js";
 import {
   ADOPTION_RESULT_CONTRACT,
@@ -470,15 +471,29 @@ export class CollaborationWorkerSuite {
       step,
       "cocreate-response",
       {
-        instructions: [
-          "你在小说共创房间中扮演角色或叙述者。延续当前局面，用具体行动、对白和感官细节推进一小步。",
-          "不得替作者发言，不得解释模型行为，不得把导演注原样写进故事。保持角色认知边界。",
-          "每次只生成一个自然回合；content 直接可读，不加姓名前缀或 Markdown 围栏。",
-          expected
-            ? `speakerPersonaId 必须严格等于 ${expected}。`
-            : `speakerPersonaId 必须从以下 ID 中选择：${allowed.join(", ")}。`,
-          "suggestedCanonFacts 只是候选，不宣告已进入正典。",
-        ].join("\n"),
+        instructions: instructionsFor(
+          this.projects.get(snapshot.run.projectId)?.language ?? null,
+          {
+            "zh-CN": [
+              "你在小说共创房间中扮演角色或叙述者。延续当前局面，用具体行动、对白和感官细节推进一小步。",
+              "不得替作者发言，不得解释模型行为，不得把导演注原样写进故事。保持角色认知边界。",
+              "每次只生成一个自然回合；content 直接可读，不加姓名前缀或 Markdown 围栏。",
+              expected
+                ? `speakerPersonaId 必须严格等于 ${expected}。`
+                : `speakerPersonaId 必须从以下 ID 中选择：${allowed.join(", ")}。`,
+              "suggestedCanonFacts 只是候选，不宣告已进入正典。",
+            ],
+            en: [
+              "You are playing a character or the narrator in a novel co-writing room. Continue the current situation and advance it one small step with concrete action, dialogue, and sensory detail.",
+              "Never speak for the author, never explain model behavior, and never copy director's notes verbatim into the story. Respect character knowledge boundaries.",
+              "Generate exactly one natural turn; content must be directly readable with no name prefixes or Markdown fences.",
+              expected
+                ? `speakerPersonaId must equal ${expected}.`
+                : `speakerPersonaId must be chosen from these IDs: ${allowed.join(", ")}.`,
+              "suggestedCanonFacts are candidates only; they never enter canon by themselves.",
+            ],
+          },
+        ),
         messages: [{ role: "user", content: stringField(context, "context") }],
         reasoningEffort: "low",
         maxOutputTokens: policyNumber(
@@ -633,11 +648,21 @@ export class CollaborationWorkerSuite {
       step,
       "cocreate-adoption",
       {
-        instructions: [
-          "把已选共创回合整理成可进入正文的小说场景。导演注是改写指令，不得原样出现在 sceneContent。",
-          "保留发生过的行动、对白含义与角色能动性，补足必要的叙述连接，但不要擅自增加重大事件。",
-          "sceneContent 只输出场景正文，不含标题或 Markdown 围栏。canonCandidates 仅列正文有直接证据的新事实，并用 evidenceParagraphs 返回 sceneContent 中从 1 开始的段落序号；多段证据使用数组。",
-        ].join("\n"),
+        instructions: instructionsFor(
+          this.projects.get(snapshot.run.projectId)?.language ?? null,
+          {
+            "zh-CN": [
+              "把已选共创回合整理成可进入正文的小说场景。导演注是改写指令，不得原样出现在 sceneContent。",
+              "保留发生过的行动、对白含义与角色能动性，补足必要的叙述连接，但不要擅自增加重大事件。",
+              "sceneContent 只输出场景正文，不含标题或 Markdown 围栏。canonCandidates 仅列正文有直接证据的新事实，并用 evidenceParagraphs 返回 sceneContent 中从 1 开始的段落序号；多段证据使用数组。",
+            ],
+            en: [
+              "Turn the chosen co-writing turn into a novel scene ready for the manuscript. Director's notes are rewrite instructions and must not appear verbatim in sceneContent.",
+              "Preserve actions that happened, the meaning of dialogue, and character agency; supply necessary narrative connective tissue but never invent major events on your own.",
+              "sceneContent outputs only scene prose without titles or Markdown fences. canonCandidates lists only new facts directly evidenced in the prose, returning 1-based paragraph indexes into sceneContent through evidenceParagraphs; use an array for multiple paragraphs.",
+            ],
+          },
+        ),
         messages: [
           {
             role: "user",
@@ -978,11 +1003,21 @@ export class CollaborationWorkerSuite {
       step,
       "selection-edit",
       {
-        instructions: [
-          "你是小说文字编辑，只改写给定选区。返回 replacementText，不输出全文、解释前缀或 Markdown 围栏。",
-          "保持选区之外的事实、视角和时态；若指令会改变正典或事件结果，将 risk 标为 high，但仍给出最保守的候选。",
-          "不要模仿在世作者。",
-        ].join("\n"),
+        instructions: instructionsFor(
+          this.projects.get(snapshot.run.projectId)?.language ?? null,
+          {
+            "zh-CN": [
+              "你是小说文字编辑，只改写给定选区。返回 replacementText，不输出全文、解释前缀或 Markdown 围栏。",
+              "保持选区之外的事实、视角和时态；若指令会改变正典或事件结果，将 risk 标为 high，但仍给出最保守的候选。",
+              "不要模仿在世作者。",
+            ],
+            en: [
+              "You are a fiction line editor who rewrites only the given selection. Return replacementText with no full text, explanation prefixes, or Markdown fences.",
+              "Preserve facts, point of view, and tense outside the selection; if the instruction would change canon or event outcomes, set risk to high while still giving the most conservative candidate.",
+              "Do not imitate living authors.",
+            ],
+          },
+        ),
         messages: [
           {
             role: "user",

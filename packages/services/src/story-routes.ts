@@ -258,6 +258,7 @@ export function registerStoryRoutes(
           title: input.title,
           subtitle: input.subtitle,
           premise: input.premise,
+          ...(input.language === undefined ? {} : { language: input.language }),
           archivedAt: input.archived ? (latest.archivedAt ?? updatedAt) : null,
           updatedAt,
         });

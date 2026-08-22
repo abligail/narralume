@@ -51,6 +51,7 @@ export const shelf = {
     recycle: "移入回收站",
   },
   create: {
+    languageLabel: "创作语言（决定 AI 写作与回复的语言）",
     ariaLabel: "建书入口",
     blank: "空白建书",
     ai: "AI 引导建书",
@@ -81,6 +82,7 @@ export const shelf = {
     fallback: "取景裁切失败，请重试。",
   },
   edit: {
+    languageLabel: "创作语言（决定 AI 写作与回复的语言）",
     title: "编辑书籍与封面",
     note: "书架上的封面只是识别入口；正文、圣经与版本仍在作品内部维护。",
     previewAlt: "待保存的封面预览",

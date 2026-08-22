@@ -416,6 +416,7 @@ describe("藏书室", () => {
     expect(createBodies[0]).toEqual({
       title: "雾中青山",
       premise: null,
+      language: "zh-CN",
       requestId: expect.any(String),
     });
     expect(createBodies[1]?.requestId).toBe(createBodies[0]?.requestId);
