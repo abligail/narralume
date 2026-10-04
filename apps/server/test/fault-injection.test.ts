@@ -259,7 +259,13 @@ const REVIEW_PASS = {
 };
 
 const SETTLEMENT = {
-  summary: "林昼发现灯塔熄灭会触发遗忘。",
+  summaryPoints: [
+    {
+      text: "林昼发现灯塔熄灭会触发遗忘。",
+      basis: "observed",
+      evidenceParagraphs: [1],
+    },
+  ],
   stateDelta: [],
   factCandidates: [],
   timelineCandidates: [],

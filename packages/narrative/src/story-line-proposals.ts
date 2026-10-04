@@ -15,23 +15,26 @@ import {
   type NarrativeDatabase,
 } from "@narralume/persistence";
 import { requireActiveProject } from "./project-guard.js";
+import { currentSummaryPoints } from "./chapter-memory.js";
+import { ParagraphLocator } from "./paragraph-locator.js";
 
-/** Only summaries tied to the current manuscript count as review evidence. */
+/** Review the target stage against manuscripts written through its last committed chapter. */
 export function storyLineReviewEvidence(
   database: NarrativeDatabase,
   projectId: string,
-  scopeId: string,
+  scopeId?: string,
 ) {
   const story = new SqliteStoryRepository(database);
   const outline = story.listOutline(projectId);
   const nodes = new Map(outline.map((node) => [node.id, node]));
-  const scope = nodes.get(scopeId);
-  const withinScope = (id: string) => {
+  const scope = scopeId !== undefined ? nodes.get(scopeId) : null;
+  const withinScope = (id: string, targetScopeId?: string) => {
     let node = nodes.get(id);
     let inside = false;
     while (node) {
       if (node.status === "abandoned") return false;
-      if (node.id === scopeId) inside = true;
+      if (targetScopeId === undefined || node.id === targetScopeId)
+        inside = true;
       node = node.parentId ? nodes.get(node.parentId) : undefined;
     }
     return inside;
@@ -43,15 +46,19 @@ export function storyLineReviewEvidence(
   );
   const documents = new SqliteDocumentRepository(database);
   const manuscript = documents.list(projectId);
-  const chapters =
-    !scope || !["arc", "volume"].includes(scope.kind)
-      ? []
-      : outline.filter(
-          (node) =>
-            node.kind === "chapter" &&
-            node.status === "committed" &&
-            withinScope(node.id),
+  const committedChapters = outline.filter(
+    (node) =>
+      node.kind === "chapter" &&
+      node.status === "committed" &&
+      withinScope(node.id),
+  );
+  const scopeEnd =
+    scopeId !== undefined && (!scope || !["arc", "volume"].includes(scope.kind))
+      ? -1
+      : committedChapters.findLastIndex((chapter) =>
+          withinScope(chapter.id, scopeId),
         );
+  const chapters = committedChapters.slice(0, scopeEnd + 1);
   const chapterNumbers = new Map(
     outline
       .filter((node) => node.kind === "chapter" && node.status !== "abandoned")
@@ -65,31 +72,56 @@ export function storyLineReviewEvidence(
       ? documents.getVersion(projectId, document.id, document.currentVersionId)
       : null;
     const summary = state.latestSummary(projectId, "chapter", chapter.id);
-    if (!version || !summary || summary.sourceHash !== version.contentHash)
-      return [];
+    if (!version) return [];
+    const summaryPoints = currentSummaryPoints(
+      summary,
+      new ParagraphLocator(version.content, { documentVersionId: version.id }),
+    );
     return [
       {
         chapterId: chapter.id,
         chapterNumber: chapterNumbers.get(chapter.id)!,
+        inScope: withinScope(chapter.id, scopeId),
         title: chapter.title,
-        summary: summary.summary,
+        summary: summaryPoints.length
+          ? summaryPoints.map((point) => point.text).join("\n")
+          : summary?.sourceHash === version.contentHash
+            ? summary.summary
+            : "",
+        summaryPoints,
         versionId: version.id,
         sourceHash: version.contentHash,
+        content: version.content,
       },
     ];
   });
   const referenced = new Set<string>();
-  for (const id of [scopeId, ...chapters.map((chapter) => chapter.id)]) {
+  for (const id of [
+    ...(scopeId !== undefined ? [scopeId] : []),
+    ...chapters.map((chapter) => chapter.id),
+  ]) {
     let node = nodes.get(id);
     while (node) {
       referenced.add(node.id);
       node = node.parentId ? nodes.get(node.parentId) : undefined;
     }
   }
+  const indexes = evidence.map((chapter) => ({
+    chapterId: chapter.chapterId,
+    chapterNumber: chapter.chapterNumber,
+    inScope: chapter.inScope,
+    title: chapter.title,
+    summary: chapter.summary,
+    summaryPoints: chapter.summaryPoints,
+    versionId: chapter.versionId,
+    sourceHash: chapter.sourceHash,
+  }));
   return {
-    evidence,
+    chapters: evidence,
+    evidence: indexes,
     fingerprint: sha256Hex(
       JSON.stringify({
+        scopeId: scopeId ?? null,
         outline: outline
           .filter((node) => referenced.has(node.id))
           .map(({ id, parentId, ordinal, status }) => ({
@@ -98,7 +130,7 @@ export function storyLineReviewEvidence(
             ordinal,
             status,
           })),
-        evidence,
+        evidence: indexes,
       }),
     ),
   };
@@ -123,7 +155,7 @@ export function storyLineProposalIssues(
       item.evidenceChapterIds.some((id) => !evidenceIds.has(id))
     )
       issues.push(
-        "Evidence must use unique chapter IDs from the supplied current manuscript summaries",
+        "Evidence must use unique chapter IDs from the supplied current manuscripts",
       );
     return issues;
   });

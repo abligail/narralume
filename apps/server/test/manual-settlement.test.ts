@@ -46,7 +46,13 @@ const MANUSCRIPT =
 function settlementPayload(): string {
   if (!settlementWithCandidates || !settlementSubjectId) {
     return JSON.stringify({
-      summary: "林昼发现灯塔熄灭会触发遗忘。",
+      summaryPoints: [
+        {
+          text: "林昼发现灯塔熄灭会触发遗忘。",
+          basis: "observed",
+          evidenceParagraphs: [1],
+        },
+      ],
       stateDelta: [],
       factCandidates: [],
       timelineCandidates: [],
@@ -55,7 +61,13 @@ function settlementPayload(): string {
     });
   }
   return JSON.stringify({
-    summary: "林昼发现灯塔熄灭会触发遗忘。",
+    summaryPoints: [
+      {
+        text: "林昼发现灯塔熄灭会触发遗忘。",
+        basis: "observed",
+        evidenceParagraphs: [1],
+      },
+    ],
     stateDelta: [],
     factCandidates: [
       {

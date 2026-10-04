@@ -101,6 +101,7 @@ function scriptedE2eModel(): NarrativeModelClient {
       ) {
         value = {
           rationale: "调查扩展到外港，需要当地见证者和不同规则的空间。",
+          decisionAcknowledgements: [],
           volumeId: null,
           arcId: null,
           volume: {

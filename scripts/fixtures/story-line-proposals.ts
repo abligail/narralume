@@ -144,7 +144,19 @@ export async function seedStoryLineProposals(
     },
     async structured(_run, _step, _purpose, _request, _contract, validate) {
       const checked = validate({
-        summary: "调查获得新证据",
+        observations: [
+          {
+            text: "林澈取得旧信，潮声仍没有答案。",
+            basis: "observed",
+            citations: [
+              {
+                chapterId: chapter.id,
+                paragraphOrdinal: 1,
+                quote: "林澈从见证者手中接过旧信。潮声仍没有答案。",
+              },
+            ],
+          },
+        ],
         scores: {
           promise: 80,
           causality: 80,
@@ -154,6 +166,16 @@ export async function seedStoryLineProposals(
         },
         recommendations: [],
         compassAdjustments: [],
+        lineEvidence: [0, 1, 2].map((lineIndex) => ({
+          lineIndex,
+          citations: [
+            {
+              chapterId: chapter.id,
+              paragraphOrdinal: 1,
+              quote: "林澈从见证者手中接过旧信。潮声仍没有答案。",
+            },
+          ],
+        })),
         lineProposals: [0, 1, 2].map((lineIndex) => ({
           lineIndex,
           rationale: "旧信交出已有正文依据，潮声尚待解释。",

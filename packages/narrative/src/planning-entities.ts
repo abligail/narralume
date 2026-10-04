@@ -1,5 +1,6 @@
 import {
   entityNamesOverlap,
+  sha256Hex,
   type CanonEntity,
   type OutlineNode,
   type RunSnapshot,
@@ -17,6 +18,10 @@ import {
   RollingOutlineProposalSchema,
   type RollingOutlineProposal,
 } from "./automation-schemas.js";
+import {
+  StoryLineProposalService,
+  storyLineReviewEvidence,
+} from "./story-line-proposals.js";
 import {
   fingerprint,
   materializeCandidateItems,
@@ -63,7 +68,13 @@ export function requirePlanningBaseline(
     (step) => step.kind === "outline.generate" && step.status === "succeeded",
   )?.outputArtifact;
   const generation = generated?.generation as
-    { compassVersion?: number | null; outlineFingerprint?: string } | undefined;
+    | {
+        compassVersion: number | null;
+        outlineFingerprint: string;
+        manuscriptFingerprint: string;
+        decisionFingerprint: string;
+      }
+    | undefined;
   if (
     !generation ||
     generation.compassVersion !==
@@ -85,6 +96,23 @@ export function requirePlanningBaseline(
     throw new PlanningEntityError(
       "outline.baseline.conflict",
       "The outline changed after planning; generate a new plan",
+    );
+  }
+  if (
+    generation.manuscriptFingerprint !==
+      storyLineReviewEvidence(database, snapshot.run.projectId).fingerprint ||
+    generation.decisionFingerprint !==
+      sha256Hex(
+        JSON.stringify(
+          new StoryLineProposalService(database)
+            .list(snapshot.run.projectId)
+            .slice(0, 12),
+        ),
+      )
+  ) {
+    throw new PlanningEntityError(
+      "planning.memory.stale",
+      "Manuscripts or author decisions changed after planning; generate a new plan",
     );
   }
 }

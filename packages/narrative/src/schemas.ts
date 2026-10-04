@@ -130,8 +130,16 @@ const CandidateFactSchema = z
       });
     }
   });
+export const SummaryPointSchema = z
+  .object({
+    text: z.string().trim().min(1).max(2_000),
+    basis: z.enum(["observed", "reported", "inferred", "unresolved"]),
+    evidenceParagraphs: EvidenceParagraphsSchema,
+  })
+  .strict();
+
 export const SettlementSchema = z.object({
-  summary: z.string().min(1),
+  summaryPoints: z.array(SummaryPointSchema).min(1).max(20),
   stateDelta: z
     .array(
       z.object({
@@ -210,6 +218,15 @@ export const GroundedParagraphEvidenceSchema = z.object({
 });
 
 export const GroundedSettlementSchema = SettlementSchema.extend({
+  summary: z.string().min(1),
+  summaryPoints: z
+    .array(
+      SummaryPointSchema.extend({
+        evidence: z.array(GroundedParagraphEvidenceSchema).min(1).max(5),
+      }),
+    )
+    .min(1)
+    .max(20),
   stateDelta: z.array(
     SettlementSchema.shape.stateDelta.element.extend({
       evidence: z.array(GroundedParagraphEvidenceSchema).min(1).max(5),
@@ -365,7 +382,7 @@ export const SETTLEMENT_CONTRACT: JsonSchemaContract = {
     type: "object",
     additionalProperties: false,
     required: [
-      "summary",
+      "summaryPoints",
       "stateDelta",
       "factCandidates",
       "timelineCandidates",
@@ -373,7 +390,7 @@ export const SETTLEMENT_CONTRACT: JsonSchemaContract = {
       "foreshadowCandidates",
     ],
     properties: {
-      summary: { type: "string" },
+      summaryPoints: z.toJSONSchema(z.array(SummaryPointSchema).min(1).max(20)),
       stateDelta: {
         type: "array",
         maxItems: 100,

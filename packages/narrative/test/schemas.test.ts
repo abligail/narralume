@@ -157,6 +157,9 @@ describe("chapter settlement fact object contract", () => {
 function settlement(factCandidates: unknown[]) {
   return {
     summary: "结算摘要",
+    summaryPoints: [
+      { text: "结算摘要", basis: "observed", evidenceParagraphs: [1] },
+    ],
     stateDelta: [],
     factCandidates,
     timelineCandidates: [],

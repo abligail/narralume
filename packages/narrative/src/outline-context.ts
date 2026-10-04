@@ -82,7 +82,7 @@ export function outlineContextSources(
             `- ${node.title}${summaryByScope.get(node.id) ? `：${clip(summaryByScope.get(node.id)!, 160)}` : ""}`,
         )
         .join("\n"),
-      authority: "confirmed",
+      authority: "reference",
       priority: 90,
       sourceType: "outline_near",
       sourceId: targetChapter?.id ?? request.projectId,
@@ -104,7 +104,7 @@ export function outlineContextSources(
         .filter((node): node is OutlineNode => Boolean(node))
         .map((node) => `- ${node.title}｜${node.status}`)
         .join("\n"),
-      authority: "confirmed",
+      authority: "reference",
       priority: 64,
       sourceType: "outline_far",
       sourceId: request.projectId,
@@ -133,7 +133,7 @@ function isAncestorOfTarget(
 }
 
 function outlineLine(node: OutlineNode): string {
-  return `${"  ".repeat(node.depth)}- [${node.kind}｜${node.status}] [node:${node.id}] ${node.title}${node.summary ? `：${node.summary}` : ""}${node.goal ? `｜目标：${node.goal}` : ""}${node.outcome ? `｜结果：${node.outcome}` : ""}`;
+  return `${"  ".repeat(node.depth)}- [${node.kind}｜${node.status}] [node:${node.id}] ${node.title}${node.summary ? `｜计划摘要：${node.summary}` : ""}${node.goal ? `｜计划目标：${node.goal}` : ""}${node.outcome ? `｜计划结果（须以正文核实）：${node.outcome}` : ""}`;
 }
 
 function chapterLine(
@@ -143,13 +143,15 @@ function chapterLine(
 ): string {
   const summary = committedSummary ?? node.summary;
   if (compact)
-    return `- [${node.status}] [node:${node.id}] ${node.title}${summary ? `：${clip(summary, 240)}` : ""}`;
+    return `- [${node.status}] [node:${node.id}] ${node.title}${summary ? `｜${committedSummary ? "已写摘要（检索索引）" : "计划摘要（尚非正文事实）"}：${clip(summary, 240)}` : ""}`;
   return [
     `- [${node.status}] [node:${node.id}] ${node.title}`,
-    summary ? `  摘要：${summary}` : "",
-    node.goal ? `  目标：${node.goal}` : "",
+    summary
+      ? `  ${committedSummary ? "已写摘要（检索索引）" : "计划摘要（尚非正文事实）"}：${summary}`
+      : "",
+    node.goal ? `  计划目标：${node.goal}` : "",
     node.conflict ? `  冲突：${node.conflict}` : "",
-    node.outcome ? `  结果：${node.outcome}` : "",
+    node.outcome ? `  计划结果（须以正文核实）：${node.outcome}` : "",
     node.storyTime ? `  故事时间：${node.storyTime}` : "",
   ]
     .filter(Boolean)

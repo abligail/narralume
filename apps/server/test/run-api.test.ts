@@ -969,7 +969,13 @@ function scriptedModel(
               }
             : options.settlementInvalid
               ? {
-                  summary: "永远无效的结算输出。",
+                  summaryPoints: [
+                    {
+                      text: "永远无效的结算输出。",
+                      basis: "observed",
+                      evidenceParagraphs: [1],
+                    },
+                  ],
                   stateDelta: [],
                   factCandidates: [],
                   timelineCandidates: [],
@@ -989,7 +995,13 @@ function scriptedModel(
                   ],
                 }
               : {
-                  summary: "林昼发现灯塔熄灭会触发遗忘。",
+                  summaryPoints: [
+                    {
+                      text: "林昼发现灯塔熄灭会触发遗忘。",
+                      basis: "observed",
+                      evidenceParagraphs: [2],
+                    },
+                  ],
                   stateDelta: [
                     {
                       key: "ruleObserved",

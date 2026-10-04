@@ -66,6 +66,12 @@ import {
 import { StoryStatePacketBuilder } from "./story-state-packet.js";
 import { outlineContextSources } from "./outline-context.js";
 import {
+  memoryManuscriptSources,
+  memorySummarySources,
+  validateMemoryCitations,
+  bindMemoryCitations,
+} from "./chapter-memory.js";
+import {
   requireActiveProject,
   requireActiveRunCommit,
 } from "./project-guard.js";
@@ -318,6 +324,19 @@ export class AutomationWorkerSuite {
     const latestChapter = outline
       .filter((node) => node.kind === "chapter" && node.status === "committed")
       .at(-1);
+    const memoryBaseline = storyLineReviewEvidence(this.database, project.id);
+    const decisionSets = new StoryLineProposalService(this.database)
+      .list(project.id)
+      .slice(0, 12);
+    const authorDecisions = decisionSets.flatMap((set) =>
+      set.items.map((item) => ({
+        setId: set.id,
+        itemId: item.id,
+        title: item.before.title,
+        action: item.decision?.action ?? "pending",
+        result: item.decision?.result ?? null,
+      })),
+    );
     const sources: ContextSource[] = [
       {
         id: "planning-task",
@@ -358,9 +377,47 @@ export class AutomationWorkerSuite {
       ...outlineContextSources({
         projectId: project.id,
         outline,
-        chapterSummaries: this.state.listLatestSummaries(project.id, "chapter"),
+        chapterSummaries: this.state
+          .listLatestSummaries(project.id, "chapter")
+          .filter((summary) =>
+            memoryBaseline.chapters.some(
+              (chapter) =>
+                chapter.chapterId === summary.scopeId &&
+                chapter.sourceHash === summary.sourceHash,
+            ),
+          ),
         targetOutlineNodeId: latestChapter?.id ?? null,
       }),
+      ...memoryManuscriptSources(
+        memoryBaseline.chapters,
+        1,
+        JSON.stringify(compass?.longLines ?? []),
+      ),
+      {
+        id: "author-decision-receipt",
+        kind: "author-intent",
+        label: "作者裁定的实际记录",
+        authority: "locked",
+        priority: 99,
+        required: true,
+        compressible: false,
+        sourceType: "canon_item_decisions",
+        sourceId: project.id,
+        content: JSON.stringify({
+          authorDecisions,
+          counts: {
+            applied: authorDecisions.filter((item) => item.action === "apply")
+              .length,
+            rejected: authorDecisions.filter((item) => item.action === "reject")
+              .length,
+            pending: authorDecisions.filter((item) => item.action === "pending")
+              .length,
+          },
+          decisionScope:
+            "Only the proposed update; rejection never cancels an existing line. Current compass is authoritative.",
+        }),
+      },
+      ...memorySummarySources(memoryBaseline.chapters, latestChapter?.id),
       {
         id: "planning-entities",
         kind: "canon",
@@ -386,31 +443,28 @@ export class AutomationWorkerSuite {
         }),
       },
       ...continuationState.sources,
-      ...new StoryLineProposalService(this.database)
-        .list(project.id)
-        .slice(0, 12)
-        .map((set, index): ContextSource => ({
-          id: `story-line-decisions:${set.id}`,
-          kind: "author-intent",
-          label: "故事线建议与作者逐项裁定",
-          content: JSON.stringify({
-            scopeNodeId: set.scopeNodeId,
-            stale: set.stale,
-            items: set.items.map((item) => ({
-              title: item.before.title,
-              before: item.before,
-              proposal: item.after,
-              decisionScope:
-                "proposed_update_only; rejecting an update does not remove or cancel the existing story line",
-              decision: item.decision ?? "pending",
-            })),
-          }),
-          authority: "reference",
-          priority: Math.max(50, 97 - index),
-          compressible: false,
-          sourceType: "canon_change_set",
-          sourceId: set.id,
-        })),
+      ...decisionSets.map((set, index): ContextSource => ({
+        id: `story-line-decisions:${set.id}`,
+        kind: "author-intent",
+        label: "故事线建议与作者逐项裁定",
+        content: JSON.stringify({
+          scopeNodeId: set.scopeNodeId,
+          stale: set.stale,
+          items: set.items.map((item) => ({
+            title: item.before.title,
+            before: item.before,
+            proposal: item.after,
+            decisionScope:
+              "proposed_update_only; rejecting an update does not remove or cancel the existing story line",
+            decision: item.decision ?? "pending",
+          })),
+        }),
+        authority: "reference",
+        priority: Math.max(50, 97 - index),
+        compressible: false,
+        sourceType: "canon_change_set",
+        sourceId: set.id,
+      })),
       ...[
         ...this.state.listLatestSummaries(project.id, "arc"),
         ...this.state.listLatestSummaries(project.id, "volume"),
@@ -419,16 +473,14 @@ export class AutomationWorkerSuite {
         .map((review, index): ContextSource => ({
           id: `planning-review:${review.id}`,
           kind: "summary",
-          label: "阶段复盘建议（不是已发生事实）",
+          label: "阶段复盘的后续建议（须以正文核实）",
           content: JSON.stringify({
             scopeId: review.scopeId,
-            summary: review.summary,
-            suggestions: review.stateDelta,
+            recommendations: review.stateDelta.recommendations,
           }),
-          summary: review.summary,
           authority: "reference",
-          priority: Math.max(50, 96 - index),
-          required: index < 2,
+          priority: Math.max(50, 80 - index),
+          compressible: false,
           sourceType: "narrative_summary",
           sourceId: review.id,
         })),
@@ -470,6 +522,9 @@ export class AutomationWorkerSuite {
           "zh-CN": [
             "你是长篇小说滚动规划师。只详细规划当前可见窗口，不要一次冻结整部长篇。",
             "计划必须承接已提交章节，兑现指南针，尊重作者锁定意图与 steer。",
+            "已提交正文是事件依据，摘要仅是检索索引；summaryPoints 的 observed/reported/inferred/unresolved 分别为叙述事实、人物说法、推测和未解问题。保留说话者与知情范围，不把计划 outcome、人物怀疑或复盘建议当成既成事实。",
+            "原文已经讲明的身份或往事不得重新安排为首次揭示；继续写它的后果、人物回应或仍未知的具体问题。作者进展记录或旧复盘仍写着尚未揭示时，也必须先以原文核对。",
+            "decisionAcknowledgements 必须逐项原样确认 author-decision-receipt 中的 setId、itemId 和 action，包含 pending；不要从复盘文字推断作者裁定。rationale 只说明本窗口的创作安排，不重新统计或概括采纳／拒绝情况，实际裁定由程序单独记录。",
             "故事线候选中的 pending 尚未采纳，reject 已被作者拒绝，均不得当成作者方向。apply 的 result 是当时实际写入记录，当前指南针优先；不要重复被拒绝的变化。reject 只否决该次更新，不取消既有故事线，也不表示只能推进 apply 过的线；指南针中保留的每条线仍然有效。",
             "指南针 longLines 的 development 是作者维护的阶段记录：scopeNodeId 指定当前卷或弧，stageGoal 是阶段目标，progress 是作者对进展的记录，openPromises 是尚未兑现的承诺，nextDevelopment 是后续方向。结合当前阶段选择本窗口推进的线，不要求每条线每章出场，也不为完成窗口而全部解决。evidenceChapterIds 指向已定稿章节；核对摘要和事实，不把计划目标或缺少证据的进展记录变成已经发生的事实。",
             "每章要有目标、阻力、转折、结果与结尾钩子；结果必须推动因果链。",
@@ -482,6 +537,9 @@ export class AutomationWorkerSuite {
           en: [
             "You are the rolling planner of a long-form novel. Plan only the currently visible window in detail; never freeze an entire long novel at once.",
             "The plan must continue from committed chapters, honor the compass, and respect the author's locked intent and steers.",
+            "Committed manuscripts evidence events; summaries are retrieval indexes. summaryPoints distinguish observed narration, reported character accounts, inferred speculation, and unresolved questions. Preserve speakers and knowledge scope. Planned outcomes, suspicions, and retrospective suggestions are not established facts.",
+            "Do not plan the first revelation of an identity or backstory already disclosed in prose. Develop its consequences, responses, or specific remaining unknowns. Check manuscripts even when author progress notes or older reviews still call it unrevealed.",
+            "decisionAcknowledgements must repeat every setId, itemId and action from author-decision-receipt exactly, including pending. Never infer decisions from review prose. rationale explains creative choices only; do not recount acceptance or rejection. The program separately records actual author decisions.",
             "For story line proposals, pending is unaccepted and reject is an author rejection; neither is author direction. An apply result records the actual write at that time; the current compass takes precedence. Do not repeat rejected changes. Reject applies only to that proposed update: it does not cancel the existing story line or restrict development to lines with applied proposals. All lines still present in the current compass remain valid.",
             "Each longLines.development entry is an author-maintained stage record: scopeNodeId identifies its volume or arc, stageGoal is the current objective, progress is the author's progress note, openPromises lists outstanding promises, and nextDevelopment gives future direction. Select lines relevant to this window; not every line must appear in every chapter or resolve by the window's end. evidenceChapterIds reference committed chapters. Check summaries and facts; planned goals and unsupported progress notes are not established events.",
             "Each chapter needs a goal, resistance, a turn, an outcome, and a closing hook; outcomes must advance the causal chain.",
@@ -501,22 +559,55 @@ export class AutomationWorkerSuite {
         reasoningEffort: "low",
       },
       ROLLING_OUTLINE_CONTRACT,
-      automationValidator(RollingOutlineProposalSchema, (plan) =>
-        planningEntityIssues(
+      automationValidator(RollingOutlineProposalSchema, (plan) => [
+        ...planningEntityIssues(
           { ...plan, chapters: plan.chapters.slice(0, windowSize) },
           entities,
         ),
-      ),
+        ...(JSON.stringify(
+          plan.decisionAcknowledgements
+            .map(({ setId, itemId, action }) => ({ setId, itemId, action }))
+            .sort((a, b) =>
+              `${a.setId}:${a.itemId}`.localeCompare(`${b.setId}:${b.itemId}`),
+            ),
+        ) ===
+        JSON.stringify(
+          authorDecisions
+            .map(({ setId, itemId, action }) => ({ setId, itemId, action }))
+            .sort((a, b) =>
+              `${a.setId}:${a.itemId}`.localeCompare(`${b.setId}:${b.itemId}`),
+            ),
+        )
+          ? []
+          : [
+              "decisionAcknowledgements must exactly match every actual author decision",
+            ]),
+      ]),
       signal,
     );
     const value = {
       ...result.value,
       chapters: result.value.chapters.slice(0, windowSize),
     };
+    if (
+      storyLineReviewEvidence(this.database, project.id).fingerprint !==
+        memoryBaseline.fingerprint ||
+      JSON.stringify(
+        new StoryLineProposalService(this.database)
+          .list(project.id)
+          .slice(0, 12),
+      ) !== JSON.stringify(decisionSets)
+    ) {
+      throw permanent(
+        "planning.memory.stale",
+        "Manuscripts or author decisions changed while planning; generate a new plan",
+      );
+    }
     return {
       artifactKind: "rolling-outline-proposal",
       output: {
         ...value,
+        authorDecisions,
         generation: {
           mode: result.mode,
           attempts: result.attempts,
@@ -524,6 +615,8 @@ export class AutomationWorkerSuite {
           outlineFingerprint: outlineFingerprint(outline),
           compassVersion: compass?.version ?? null,
           contextReceiptId: compiled.receipt.id,
+          manuscriptFingerprint: memoryBaseline.fingerprint,
+          decisionFingerprint: sha256Hex(JSON.stringify(decisionSets)),
         },
       },
       usage: result.usage,
@@ -871,7 +964,26 @@ export class AutomationWorkerSuite {
       node.id,
     );
     const evidence = evidenceBaseline.evidence;
-    const source = JSON.stringify(evidence);
+    const manuscriptSources = memoryManuscriptSources(
+      [
+        ...evidenceBaseline.chapters.filter((chapter) => !chapter.inScope),
+        ...evidenceBaseline.chapters.filter((chapter) => chapter.inScope),
+      ],
+      this.automation.requireSession(sessionId).windowSize * 2,
+      JSON.stringify(baselineCompass?.longLines ?? []),
+    ).map((source) => ({
+      ...source,
+      content: JSON.stringify({
+        ...JSON.parse(source.content),
+        inScope: evidenceBaseline.chapters.find(
+          (chapter) => chapter.chapterId === source.sourceId,
+        )!.inScope,
+      }),
+    }));
+    const source = JSON.stringify({
+      evidence,
+      manuscripts: manuscriptSources.map((s) => s.content),
+    });
     const contextWindow =
       this.model.effectiveContextWindow?.(
         snapshot.run,
@@ -902,7 +1014,11 @@ export class AutomationWorkerSuite {
           sourceType: "outline_node",
           sourceId: node.id,
           content: JSON.stringify({
+            scopeNodeId: node.id,
             scope: node.title,
+            scopeChapterIds: evidence
+              .filter((chapter) => chapter.inScope)
+              .map((chapter) => chapter.chapterId),
             compass: baselineCompass,
           }),
         },
@@ -911,12 +1027,13 @@ export class AutomationWorkerSuite {
           kind: "summary",
           label: chapter.title,
           content: JSON.stringify(chapter),
-          authority: "confirmed",
+          authority: "reference",
           compressible: false,
           priority: 60 + 30 * ((index + 1) / evidence.length),
           sourceType: "outline_node",
           sourceId: chapter.chapterId,
         })),
+        ...manuscriptSources,
       ],
     });
     new SqliteContextReceiptRepository(this.database).insert(compiled.receipt, {
@@ -933,17 +1050,27 @@ export class AutomationWorkerSuite {
           {
             "zh-CN": [
               `你是长篇小说${scopeType === "arc" ? "故事弧" : "卷"}复盘编辑。`,
-              "基于章节摘要评估承诺兑现、因果、人物弧、节奏和连续性。建议服务于下一滚动窗口，不改写已提交事实。",
-              "这是当前已写部分的阶段复盘，不意味着故事弧、卷或全书已经结束。区分已兑现、仍在发展和需要后续处理的承诺；不要仅因本次运行结束而要求结局或回收所有伏笔。仅依据所给摘要判断，明确证据不足之处。章节序号使用 chapterNumber，从 1 开始；chapterId 是不透明标识，不能从其尾部数字推断序号。",
-              "对照长期故事线的阶段目标、作者进展记录与未兑现承诺，指出有摘要支持的变化和下一阶段建议。作者记录本身不是正文证据，计划中的 nextDevelopment 尚未发生；调整仅作为 compassAdjustments 建议，不自动修改故事线。",
-              "lineProposals 是供作者逐项接受或拒绝的建议。lineIndex 是 compass.longLines 的零基索引，每条线最多一项；仅引用本次实际提供的 chapterId 作为 evidenceChapterIds。progress 概括有摘要支持的进展，openPromises 保留尚未兑现的承诺，nextDevelopment 仅为后续方向。不要仅因阶段结束建议 resolved；无有效证据则返回空数组。",
+              "章节摘要只是检索索引，已提交正文才是事件依据。基于实际提供的带段号正文评估承诺兑现、因果、人物弧、节奏和连续性；摘要与原文不符时以原文为准。建议服务于下一滚动窗口，不改写已提交事实。",
+              "只评价 review-task 的目标范围和 scopeChapterIds；inScope=false 的较早章节是历史核对依据，可引用来校正旧承诺和作者进展记录，不把历史事件记成目标阶段的新进展。所有正文均截止于目标范围最后已提交章，不借用后来故事弧的事实来判定本阶段已兑现。",
+              "observations 是有原文证据的关键进展，每项 text 自足并明确说话者与知情范围；basis 区分 observed 叙述事实、reported 人物说法、inferred 推测、unresolved 未解问题。每项 citations 引用 chapterId、paragraphOrdinal 和该段连续的逐字原文 quote。系统直接据此生成复盘摘要，不另写无证据概括。核对人物、地点、时间和已经写出的身份／往事揭示；不要把修复完成写成待修复，把人物说法升级为确定机制。",
+              "recommendations 和 lineProposals 也必须保留原文证据的认知层级：reported、inferred、unresolved 不能写成已确定的事实，后续建议应写验证该判断；不要因本阶段没提到而断言角色不知道，尤其历史正文已写过获知或交接时。",
+              "引用选该段中简短、能支持判断的连续原文，直接复制，保留标点与字词；不要改写、跨段拼接或加省略号。已披露的往事只列仍未知的具体问题，nextDevelopment 不重复要求首次披露，也不把推测当成已经确立的规则。",
+              "这是当前已写部分的阶段复盘，不意味着故事弧、卷或全书已经结束。区分已兑现、仍在发展和需要后续处理的承诺；不要仅因本次运行结束而要求结局或回收所有伏笔。检索未命中或摘要没提到不证明某事未发生；complete=false 的正文片段不能证明整章不存在某事。章节序号使用 chapterNumber，从 1 开始；chapterId 是不透明标识，不能从其尾部数字推断序号。",
+              "对照长期故事线的阶段目标、作者进展记录与未兑现承诺，指出有正文支持的变化和下一阶段建议。作者记录本身不是正文证据，计划中的 nextDevelopment 尚未发生；调整仅作为 compassAdjustments 建议，不自动修改故事线。",
+              "lineProposals 是供作者逐项接受或拒绝的建议。lineIndex 是 compass.longLines 的零基索引，每条线最多一项；仅引用本次实际提供的 chapterId 作为 evidenceChapterIds。progress 概括有正文支持的进展，openPromises 保留尚未兑现的承诺，nextDevelopment 仅为后续方向。不要仅因阶段结束建议 resolved；无有效证据则返回空数组。",
+              "lineEvidence 对每条 lineProposals 恰好一项，lineIndex 相同，citations 必须逐字引用支持 progress、status 和 openPromises 的正文。evidenceChapterIds 与 citations 的章节集合完全一致。认定已兑现或尚未揭示时回查原文；明确区分角色知道、读者知道和作者秘密。证据不足不生成该项调整，合理嫌疑和省略不能自动当作矛盾。",
             ],
             en: [
               `You are the retrospective editor of a long-form novel ${scopeType === "arc" ? "story arc" : "volume"}.`,
-              "Assess promise fulfillment, causality, character arcs, pacing, and continuity from chapter summaries. Suggestions serve the next rolling window and never rewrite committed facts.",
+              "Chapter summaries are retrieval indexes; committed manuscripts evidence events. Assess promise fulfillment, causality, character arcs, pacing, and continuity from the supplied numbered prose. Prefer prose when an index disagrees. Suggestions serve the next window and never rewrite committed facts.",
+              "Evaluate only the target scope and scopeChapterIds in review-task. Earlier chapters marked inScope=false are historical references: cite them to correct stale promises or author progress notes, without counting their events as new developments of this stage. Manuscripts stop at the target scope's last committed chapter; never use later arcs to claim this stage fulfilled a promise.",
+              "observations are self-contained developments grounded in prose, with explicit speakers and knowledge scope. basis distinguishes observed narration, reported accounts, inferred speculation, and unresolved questions. Every citations entry gives chapterId, paragraphOrdinal and a contiguous verbatim quote from that paragraph. The program builds the summary from these observations. Check people, places, times and revelations already written; a completed repair is not future work and a character's account is not an established mechanism.",
+              "recommendations and lineProposals must preserve the evidence's epistemic level too: reported, inferred and unresolved claims cannot become established facts; recommend verifying the judgment instead. Do not claim a character lacks knowledge merely because this stage does not mention it, especially when earlier prose already records their discovery or a handoff.",
+              "Copy a short continuous excerpt that supports the judgment, preserving its words and punctuation. Never paraphrase, join paragraphs, or add ellipses. For disclosed backstory, list only specific remaining unknowns: nextDevelopment must not request its first disclosure again or treat speculation as an established rule.",
               "This reviews progress so far, not an assumed arc, volume, or book ending. Distinguish fulfilled promises, ongoing developments, and future work. Do not demand an ending or resolve every setup because this run is over. State evidence limitations when summaries are insufficient. Use the supplied chapterNumber (starting at 1), never infer numbers from opaque chapterId values.",
-              "Compare long-line stage goals, author progress notes, and open promises with the supplied summaries. Identify supported changes and possible next developments. Author notes are not manuscript evidence, and planned nextDevelopment has not happened. Return adjustments as compassAdjustments suggestions without updating story lines.",
+              "Compare long-line stage goals, author progress notes, and open promises with the supplied manuscripts. Identify supported changes and possible next developments. Author notes are not manuscript evidence, and planned nextDevelopment has not happened. Return adjustments as compassAdjustments suggestions without updating story lines.",
               "Return lineProposals for individual author decisions. lineIndex is the zero-based compass.longLines index; at most one proposal per line. evidenceChapterIds may only reference chapterId values actually supplied. progress records supported developments, openPromises retains outstanding promises, and nextDevelopment is future direction. Never suggest resolved merely because this stage ends. Return an empty array without valid evidence.",
+              "Return exactly one lineEvidence item per proposal with the same lineIndex. Its citations quote manuscript evidence for progress, status and openPromises. evidenceChapterIds must exactly equal the citation chapter set. Check original prose before claiming fulfilled or unrevealed; separate character knowledge, reader knowledge and author secrets. Omit unsupported adjustments. Missing retrieval or summary mentions do not establish absence, and complete=false excerpts cannot establish absence across a chapter. Preserve legitimate suspicion and narrative omission.",
             ],
           },
         ),
@@ -956,19 +1083,72 @@ export class AutomationWorkerSuite {
         reasoningEffort: "low",
       },
       PLANNING_REVIEW_CONTRACT,
-      automationValidator(PlanningReviewResultSchema, (value) =>
-        storyLineProposalIssues(
+      automationValidator(PlanningReviewResultSchema, (value) => {
+        const includedSources = manuscriptSources.filter((source) =>
+          compiled.sections.some((section) => section.id === source.id),
+        );
+        const issues = storyLineProposalIssues(
           value.lineProposals,
           baselineCompass?.longLines.length ?? 0,
           new Set(
             compiled.sections
-              .filter((section) => section.id.startsWith("review-chapter:"))
+              .filter((section) => section.id.startsWith("memory-manuscript:"))
               .map((section) => section.sourceId!),
           ),
-        ),
-      ),
+        );
+        issues.push(
+          ...value.observations.flatMap((item, index) =>
+            validateMemoryCitations(
+              item.citations,
+              includedSources,
+              `observations.${index}.citations`,
+            ),
+          ),
+        );
+        if (
+          value.lineEvidence.length !== value.lineProposals.length ||
+          new Set(value.lineEvidence.map((item) => item.lineIndex)).size !==
+            value.lineEvidence.length
+        )
+          issues.push(
+            "Evidence must cover each proposed lineIndex exactly once",
+          );
+        for (const item of value.lineEvidence) {
+          const proposal = value.lineProposals.find(
+            (p) => p.lineIndex === item.lineIndex,
+          );
+          if (
+            !proposal ||
+            JSON.stringify(
+              [...new Set(item.citations.map((c) => c.chapterId))].sort(),
+            ) !== JSON.stringify([...proposal.evidenceChapterIds].sort())
+          )
+            issues.push(
+              "Evidence chapter IDs must exactly match the proposal citations",
+            );
+          issues.push(
+            ...validateMemoryCitations(
+              item.citations,
+              includedSources,
+              `lineEvidence.${item.lineIndex}.citations`,
+            ),
+          );
+        }
+        return issues;
+      }),
       signal,
     );
+    const summary = result.value.observations
+      .map((item) => item.text)
+      .join("\n");
+    const observations = result.value.observations.map((item) => ({
+      ...item,
+      citations: bindMemoryCitations(item.citations, evidenceBaseline.chapters),
+    }));
+    const lineEvidence = result.value.lineEvidence.map((item) => ({
+      ...item,
+      citations: bindMemoryCitations(item.citations, evidenceBaseline.chapters),
+    }));
     const now = this.now().toISOString();
     const sourceHash = sha256(source);
     this.database.transaction(() => {
@@ -978,21 +1158,18 @@ export class AutomationWorkerSuite {
         snapshot.run.projectId,
         signal,
       );
+      if (
+        this.automation.getCompass(snapshot.run.projectId)?.version !==
+          baselineCompass?.version ||
+        storyLineReviewEvidence(this.database, snapshot.run.projectId, node.id)
+          .fingerprint !== evidenceBaseline.fingerprint
+      ) {
+        throw permanent(
+          "story_line_proposal.stale",
+          "The compass or evidence changed while reviewing",
+        );
+      }
       if (result.value.lineProposals.length && baselineCompass) {
-        if (
-          this.automation.getCompass(snapshot.run.projectId)?.version !==
-            baselineCompass.version ||
-          storyLineReviewEvidence(
-            this.database,
-            snapshot.run.projectId,
-            node.id,
-          ).fingerprint !== evidenceBaseline.fingerprint
-        ) {
-          throw permanent(
-            "story_line_proposal.stale",
-            "The compass or evidence changed while reviewing",
-          );
-        }
         new SqliteReviewRepository(this.database).insertCanonChangeSet({
           id: `${step.id}:story-lines`,
           projectId: snapshot.run.projectId,
@@ -1021,7 +1198,7 @@ export class AutomationWorkerSuite {
         runId: snapshot.run.id,
         scopeType,
         outlineNodeId: node.id,
-        summary: result.value.summary,
+        summary,
         scores: result.value.scores,
         recommendations: result.value.recommendations,
         sourceHash,
@@ -1032,10 +1209,12 @@ export class AutomationWorkerSuite {
         projectId: snapshot.run.projectId,
         scopeType,
         scopeId: node.id,
-        summary: result.value.summary,
+        summary,
         stateDelta: {
           recommendations: result.value.recommendations,
           compassAdjustments: result.value.compassAdjustments,
+          observations,
+          lineEvidence,
         },
         sourceHash,
         createdAt: now,
@@ -1045,6 +1224,9 @@ export class AutomationWorkerSuite {
       artifactKind: `${scopeType}-review`,
       output: {
         ...result.value,
+        summary,
+        observations,
+        lineEvidence,
         outlineNodeId: node.id,
         sourceHash,
         generation: { mode: result.mode, attempts: result.attempts },

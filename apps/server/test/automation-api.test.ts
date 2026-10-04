@@ -2616,6 +2616,7 @@ function scriptedValue(purpose: string, request?: unknown): unknown {
   }
   if (purpose === "rolling-outline") {
     return {
+      decisionAcknowledgements: [],
       entityProposals: [],
       volumeId: null,
       arcId: null,
@@ -2720,7 +2721,13 @@ function scriptedValue(purpose: string, request?: unknown): unknown {
   }
   if (purpose === "chapter-settlement") {
     return {
-      summary: "林昼发现灯塔熄灭会触发遗忘。",
+      summaryPoints: [
+        {
+          text: "林昼发现灯塔熄灭会触发遗忘。",
+          basis: "observed",
+          evidenceParagraphs: [2],
+        },
+      ],
       stateDelta: [
         {
           key: "ruleObserved",
@@ -2737,7 +2744,8 @@ function scriptedValue(purpose: string, request?: unknown): unknown {
   }
   if (purpose === "arc-review" || purpose === "volume-review") {
     return {
-      summary: "失灯规则与人物选择形成因果链。",
+      observations: [],
+      lineEvidence: [],
       scores: {
         promise: 90,
         causality: 88,

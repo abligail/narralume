@@ -34,11 +34,13 @@ const SCENE_PLAN: PromptTemplateDefinition = {
       "不得写正文，只输出场景计划。",
       "每个场景必须有目标、阻力、转折和不可逆结果；只使用上下文中存在的实体 ID。",
       "保持滚动规划：只规划当前章，不擅自锁死远期情节。",
+      "承接已提交正文，summaryPoints 的 reported/inferred/unresolved 保留为人物说法、推测和未解问题，不能升级为叙述事实。计划与历史正文不符时以正文为准；不从先前观察到的总人数猜测实际救出人数，也不重复首次揭示已经讲明的往事。",
     ].join("\n"),
     en: [
       "Do not write prose; output only the scene plan.",
       "Every scene must have a goal, resistance, a turn, and an irreversible outcome; only use entity IDs that exist in the context.",
       "Keep the rolling plan going: plan only the current chapter and never lock in distant plot on your own.",
+      "Continue committed prose. Keep reported, inferred, and unresolved summaryPoints as character accounts, speculation, and open questions. Prose wins over conflicting plans. Do not infer how many were rescued from how many were previously observed, or repeat the first disclosure of backstory already told.",
     ].join("\n"),
   },
   instructions: {
@@ -128,10 +130,12 @@ const CHAPTER_DRAFT: PromptTemplateDefinition = {
     "zh-CN": [
       "不得改写锁定事实，不得泄露 POV 角色未知的信息，不要输出标题、说明或 Markdown 围栏。",
       "若计划与锁定正典冲突，以锁定正典为准，并在不暴露流程的前提下自然化解。",
+      "承接已提交正文，summaryPoints 的 reported/inferred/unresolved 保留其说话者与知情范围。计划与历史正文不符时以正文为准；核对人数、物品持有者和伤情，未经写出的救援、转交或恢复不能当成已经发生。",
     ].join("\n"),
     en: [
       "Do not rewrite locked facts, do not reveal information unknown to the POV character, and output no titles, notes, or Markdown fences.",
       "If the plan conflicts with locked canon, locked canon wins; resolve it naturally without exposing the machinery.",
+      "Continue committed prose, preserving speakers and knowledge scope for reported, inferred, and unresolved summaryPoints. Prose wins over conflicting plans. Check group counts, possession, and injuries; rescues, transfers, and recoveries not written cannot be assumed completed.",
     ].join("\n"),
   },
   instructions: {
@@ -201,6 +205,8 @@ const CHAPTER_SETTLEMENT: PromptTemplateDefinition = {
   description: "从正文提取状态变化与正典候选。",
   invariants: {
     "zh-CN": [
+      "summaryPoints 是本章关键进展的完整摘要，每条 text 为自足陈述并引用 evidenceParagraphs。覆盖重要行动及结果、身份与往事揭示、关系变化、人物获知的信息和仍未解开的问题；不要遗漏已经写出的揭示，也不要把下一章计划写成已发生事件。系统直接由这些要点生成摘要，不另写无证据的概括。",
+      "summaryPoints.basis：observed 是叙述明确呈现的事件或事实；reported 是人物说法或回忆（text 写明是谁说的，不把说法当证实）；inferred 是人物推测（写明谁怀疑什么）；unresolved 是正文留下的疑问（写清具体不确定之处）。一个要点只用一个层级；怀疑涉案不等于认定真凶，含混归家碎片不等于确定归家机制。",
       "每一项都必须用 evidenceParagraphs 引用带 [P#] 标签的一个或多个正文段落。",
       "这些结果都是候选，不得声称已修改正典。实体只能使用给定 ID。",
       "事实操作规则：assert 用于增加一个正文已证实的命题，即使同一 subjectId/predicate 已有其他值也不需要覆盖；只有正文明确推翻或替换某条当前事实时才使用 supersede，并必须通过 factId 指定被替换事实；withdraw 也必须通过 factId 指定撤回目标。不得根据 subjectId/predicate 猜测替换目标。关系使用 start/update/end，伏笔仅在 plant 时不提供 foreshadowId。",
@@ -213,6 +219,8 @@ const CHAPTER_SETTLEMENT: PromptTemplateDefinition = {
       "不要把修辞、推测或人物谎言当作全知事实。",
     ].join("\n"),
     en: [
+      "summaryPoints is the complete synopsis of this chapter's key developments. Each text is self-contained and cites evidenceParagraphs. Cover consequential actions and outcomes, identity and backstory revelations, relationship changes, newly acquired knowledge, and remaining questions. Preserve revelations already written; future plans are not past events. The system builds the synopsis directly from these points without a separate unsupported summary.",
+      "summaryPoints.basis: observed means explicitly narrated events or facts; reported means a character's account or recollection (name the speaker; do not confirm the account); inferred means a character's speculation (name who suspects what); unresolved means a question left open by the prose (identify the precise uncertainty). Use one level per point. A suspect is not a confirmed culprit, and an ambiguous fragment is not an established mechanism.",
       "Cite one or more [P#]-tagged paragraphs through evidenceParagraphs for every item.",
       "These results are candidates; never claim canon has been modified. Entities may only use the given IDs.",
       "Fact operation rules: assert adds a proposition the prose has evidenced - even when another value exists for the same subjectId/predicate no overwrite is needed; use supersede only when the prose explicitly overturns or replaces a current fact, naming the replaced fact via factId; use withdraw only against a target named via factId. Never guess replacement targets from subjectId/predicate. Relationships use start/update/end; foreshadows omit foreshadowId only when planting.",

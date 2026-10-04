@@ -4,6 +4,10 @@ import {
   StoryLineProgressProposalSchema,
 } from "@narralume/contracts";
 import { z } from "zod";
+import {
+  MemoryCitationSchema,
+  MemoryObservationSchema,
+} from "./chapter-memory.js";
 
 const IntentProposalSchema = z.object({
   promise: z.string().min(1),
@@ -108,6 +112,17 @@ const PlannedChapterSchema = z.object({
 
 export const RollingOutlineProposalSchema = z.object({
   entityProposals: z.array(PlannedEntityProposalSchema).max(12),
+  decisionAcknowledgements: z
+    .array(
+      z
+        .object({
+          setId: z.string().min(1),
+          itemId: z.string().min(1),
+          action: z.enum(["apply", "reject", "pending"]),
+        })
+        .strict(),
+    )
+    .max(144),
   rationale: z.string().min(1),
   volumeId: z.string().min(1).nullable(),
   arcId: z.string().min(1).nullable(),
@@ -160,7 +175,7 @@ export type SteerClassificationResult = z.infer<
 >;
 
 export const PlanningReviewResultSchema = z.object({
-  summary: z.string().min(1),
+  observations: z.array(MemoryObservationSchema).max(20),
   scores: z.object({
     promise: z.number().min(0).max(100),
     causality: z.number().min(0).max(100),
@@ -171,6 +186,16 @@ export const PlanningReviewResultSchema = z.object({
   recommendations: z.array(z.string().min(1)).max(20),
   compassAdjustments: z.array(z.string()).max(12),
   lineProposals: z.array(StoryLineProgressProposalSchema).max(12),
+  lineEvidence: z
+    .array(
+      z
+        .object({
+          lineIndex: z.number().int().nonnegative(),
+          citations: z.array(MemoryCitationSchema).min(1).max(10),
+        })
+        .strict(),
+    )
+    .max(12),
 });
 export type PlanningReviewResult = z.infer<typeof PlanningReviewResultSchema>;
 
@@ -302,6 +327,7 @@ export const ROLLING_OUTLINE_CONTRACT: JsonSchemaContract = {
     additionalProperties: false,
     required: [
       "rationale",
+      "decisionAcknowledgements",
       "entityProposals",
       "volumeId",
       "arcId",
@@ -312,6 +338,9 @@ export const ROLLING_OUTLINE_CONTRACT: JsonSchemaContract = {
       "continuityRisks",
     ],
     properties: {
+      decisionAcknowledgements: z.toJSONSchema(
+        RollingOutlineProposalSchema.shape.decisionAcknowledgements,
+      ),
       entityProposals: {
         type: "array",
         maxItems: 12,
@@ -441,14 +470,20 @@ export const PLANNING_REVIEW_CONTRACT: JsonSchemaContract = {
     type: "object",
     additionalProperties: false,
     required: [
-      "summary",
+      "observations",
       "scores",
       "recommendations",
       "compassAdjustments",
       "lineProposals",
+      "lineEvidence",
     ],
     properties: {
-      summary: { type: "string" },
+      observations: z.toJSONSchema(
+        PlanningReviewResultSchema.shape.observations,
+      ),
+      lineEvidence: z.toJSONSchema(
+        PlanningReviewResultSchema.shape.lineEvidence,
+      ),
       scores: {
         type: "object",
         additionalProperties: false,

@@ -46,6 +46,7 @@ function openWorldPlan(): RollingOutlineProposal {
       conflict: "记录缺失",
       outcome: "找到另一份航图",
     },
+    decisionAcknowledgements: [],
     entityProposals: [
       {
         key: "pilot",

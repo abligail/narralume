@@ -661,6 +661,7 @@ function assistantModel(
 function scriptedAutomationValue(purpose: string): unknown {
   if (purpose === "rolling-outline") {
     return {
+      decisionAcknowledgements: [],
       entityProposals: [],
       rationale: "从熄灯异象逐步逼近代价。",
       volume: {

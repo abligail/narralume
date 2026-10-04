@@ -856,7 +856,13 @@ function scriptedModel(options?: {
                 issues: [],
               }
             : {
-                summary: "林昼发现灯塔熄灭会触发遗忘。",
+                summaryPoints: [
+                  {
+                    text: "林昼发现灯塔熄灭会触发遗忘。",
+                    basis: "observed",
+                    evidenceParagraphs: [1],
+                  },
+                ],
                 stateDelta: [
                   {
                     key: "ruleObserved",

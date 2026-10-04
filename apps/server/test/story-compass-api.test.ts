@@ -12,6 +12,7 @@ import {
 } from "@narralume/harness";
 import {
   AutomationWorkerSuite,
+  storyLineReviewEvidence,
   type NarrativeModelClient,
 } from "@narralume/narrative";
 import {
@@ -237,7 +238,11 @@ async function proposalSetup() {
     evidenceChapterIds: [t.chapter.id],
   }));
   let prompt = "";
-  const review = async (items: unknown = proposals, during?: () => void) => {
+  const review = async (
+    items: unknown = proposals,
+    during?: () => void,
+    extra: Record<string, unknown> = {},
+  ) => {
     const model: NarrativeModelClient = {
       async text() {
         throw new Error("Unexpected text generation");
@@ -245,7 +250,17 @@ async function proposalSetup() {
       async structured(_run, _step, _purpose, request, _contract, validate) {
         prompt = JSON.stringify(request);
         const checked = validate({
-          summary: "调查取得证据",
+          observations: [],
+          lineEvidence: (items as typeof proposals).map((item) => ({
+            lineIndex: item.lineIndex,
+            citations: [...new Set(item.evidenceChapterIds)].map(
+              (chapterId) => ({
+                chapterId,
+                paragraphOrdinal: 1,
+                quote: "见证者交出了旧信。",
+              }),
+            ),
+          })),
           scores: {
             promise: 80,
             causality: 80,
@@ -256,6 +271,7 @@ async function proposalSetup() {
           recommendations: [],
           compassAdjustments: [],
           lineProposals: items,
+          ...extra,
         });
         if (!checked.success) throw new Error(checked.issues.join("; "));
         during?.();
@@ -304,7 +320,363 @@ async function proposalSetup() {
   };
 }
 
+async function crossArcProposalSetup() {
+  const t = await proposalSetup();
+  const now = "2026-09-23T00:00:00.000Z";
+  t.story.updateOutlineOrdinal(t.projectId, t.arc.id, 1, now);
+  const chapterInArc = (ordinal: number, title: string, content: string) => {
+    const arc = t.story.insertOutlineNode(
+      createOutlineNode({
+        id: randomUUID(),
+        projectId: t.projectId,
+        parent: t.volume,
+        kind: "arc",
+        ordinal,
+        title,
+        now,
+      }),
+    );
+    const chapter = t.story.insertOutlineNode(
+      createOutlineNode({
+        id: randomUUID(),
+        projectId: t.projectId,
+        parent: arc,
+        kind: "chapter",
+        ordinal: 0,
+        title,
+        now,
+      }),
+    );
+    t.story.updateOutlineStatus(t.projectId, chapter.id, "committed", now);
+    const document = t.documents.insert(
+      createDocument({
+        id: randomUUID(),
+        projectId: t.projectId,
+        kind: "chapter",
+        outlineNodeId: chapter.id,
+        title,
+        now,
+      }),
+    );
+    const version = t.documents.appendVersion(t.projectId, document.id, {
+      id: randomUUID(),
+      content,
+      source: "test",
+      now,
+    });
+    return { arc, chapter, document, version };
+  };
+  const historical = chapterInArc(0, "前弧的交接", "阿苇已经交给泽伯。");
+  const later = chapterInArc(2, "后弧的安排", "泽伯后来把阿苇送到了教团。");
+  t.automation.upsertCompass({
+    ...(await t.get()),
+    longLines: [
+      {
+        ...t.line,
+        title: "阿苇的去向",
+        development: {
+          ...t.line.development!,
+          openPromises: ["阿苇去向未知"],
+        },
+      },
+    ],
+  });
+  return { ...t, historical, later };
+}
+
 describe("evidence-backed story line proposals", () => {
+  it("checks and binds previous-arc evidence without using later-arc facts to review an earlier stage", async () => {
+    const t = await crossArcProposalSetup();
+    await expect(
+      t.review([
+        { ...t.proposals[0]!, evidenceChapterIds: [t.later.chapter.id] },
+      ]),
+    ).rejects.toThrow("Evidence");
+    const citation = {
+      chapterId: t.historical.chapter.id,
+      paragraphOrdinal: 1,
+      quote: "阿苇已经交给泽伯。",
+    };
+    const result = await t.review(
+      [
+        {
+          ...t.proposals[0]!,
+          progress: "阿苇已交给泽伯，本阶段承接这一交接。",
+          openPromises: ["核实泽伯的后续安排"],
+          evidenceChapterIds: [t.historical.chapter.id],
+        },
+      ],
+      undefined,
+      {
+        observations: [
+          {
+            text: "此前阿苇已交给泽伯。",
+            basis: "observed",
+            citations: [citation],
+          },
+        ],
+        lineEvidence: [{ lineIndex: 0, citations: [citation] }],
+      },
+    );
+    const baseline = storyLineReviewEvidence(t.database, t.projectId, t.arc.id);
+    expect(
+      baseline.chapters.map(({ chapterId, inScope }) => ({
+        chapterId,
+        inScope,
+      })),
+    ).toEqual([
+      { chapterId: t.historical.chapter.id, inScope: false },
+      { chapterId: t.chapter.id, inScope: true },
+    ]);
+    const request = JSON.parse(t.prompt());
+    const prompt = request.messages[0].content as string;
+    expect(prompt).toContain("阿苇已经交给泽伯。");
+    expect(prompt).toContain('"inScope":false');
+    expect(prompt).toContain('"inScope":true');
+    expect(prompt).toContain(`"scopeChapterIds":["${t.chapter.id}"]`);
+    expect(request.instructions).toContain("历史事件记成目标阶段的新进展");
+    expect(request.instructions).toContain(
+      "recommendations 和 lineProposals 也必须保留",
+    );
+    expect(prompt).not.toContain(t.later.chapter.id);
+    expect(prompt).not.toContain(t.later.version.content);
+    const observations = result.output.observations as {
+      citations: {
+        start: number;
+        end: number;
+        documentVersionId: string;
+        contentHash: string;
+        quote: string;
+      }[];
+    }[];
+    const bound = observations[0]!.citations[0]!;
+    expect(bound).toMatchObject({
+      ...citation,
+      documentVersionId: t.historical.version.id,
+      contentHash: t.historical.version.contentHash,
+    });
+    expect(t.historical.version.content.slice(bound.start, bound.end)).toBe(
+      bound.quote,
+    );
+    const proposals = (
+      await t.app.inject({ method: "GET", url: t.url })
+    ).json();
+    expect(proposals[0].stale).toBe(false);
+    expect(proposals[0].evidence).toContainEqual(
+      expect.objectContaining({ chapterId: t.historical.chapter.id }),
+    );
+    expect((await t.decide("0", "apply")).statusCode).toBe(200);
+  });
+  it("invalidates an existing proposal when an earlier arc's manuscript changes", async () => {
+    const t = await crossArcProposalSetup();
+    await t.review([t.proposals[0]]);
+    t.documents.appendVersion(t.projectId, t.historical.document.id, {
+      id: randomUUID(),
+      content: "阿苇仍留在渡口，尚未交给泽伯。",
+      source: "test",
+      now: new Date().toISOString(),
+    });
+    const response = await t.decide("0", "apply");
+    expect(response.statusCode, response.body).toBe(409);
+    expect(response.json().error.code).toBe("story_line_proposal.stale");
+    expect((await t.decide("0", "reject")).statusCode).toBe(200);
+  });
+  it.each(["with proposals", "without proposals"])(
+    "rejects a review %s if its cross-arc historical manuscript changes during generation",
+    async (mode) => {
+      const t = await crossArcProposalSetup();
+      await expect(
+        t.review(mode === "with proposals" ? [t.proposals[0]] : [], () =>
+          t.documents.appendVersion(t.projectId, t.historical.document.id, {
+            id: randomUUID(),
+            content: "作者改变了此前阿苇的交接。",
+            source: "test",
+            now: new Date().toISOString(),
+          }),
+        ),
+      ).rejects.toMatchObject({ code: "story_line_proposal.stale" });
+      expect(t.automation.listPlanningReviews(t.session.id)).toEqual([]);
+    },
+  );
+  it("keeps empty and invalid review scopes empty despite earlier committed history", async () => {
+    const t = await crossArcProposalSetup();
+    const empty = t.story.insertOutlineNode(
+      createOutlineNode({
+        id: randomUUID(),
+        projectId: t.projectId,
+        parent: t.volume,
+        kind: "arc",
+        ordinal: 3,
+        title: "尚未开始的阶段",
+        now: new Date().toISOString(),
+      }),
+    );
+    for (const scopeId of [empty.id, t.chapter.id, "missing-scope", ""]) {
+      const baseline = storyLineReviewEvidence(
+        t.database,
+        t.projectId,
+        scopeId,
+      );
+      expect(baseline.chapters).toEqual([]);
+      expect(baseline.evidence).toEqual([]);
+    }
+  });
+  it("rejects a planner that omits, duplicates, fabricates or misreads actual author decisions", async () => {
+    const t = await proposalSetup();
+    await t.review();
+    await t.decide("0", "apply");
+    await t.decide("1", "reject");
+    const expected = [
+      { setId: t.setId, itemId: "0", action: "apply" },
+      { setId: t.setId, itemId: "1", action: "reject" },
+    ];
+    for (const acknowledgements of [
+      [],
+      expected.map((item) => ({ ...item, action: "reject" })),
+      [expected[0], expected[0]],
+      [...expected, { setId: t.setId, itemId: "made-up", action: "apply" }],
+    ]) {
+      await expect(generateMemoryPlan(t, acknowledgements)).rejects.toThrow(
+        "decisionAcknowledgements",
+      );
+    }
+    const result = await generateMemoryPlan(t, [...expected].reverse());
+    expect(result.output.authorDecisions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          action: "apply",
+          result: expect.objectContaining({
+            compassVersion: expect.any(Number),
+          }),
+        }),
+        expect.objectContaining({
+          action: "reject",
+          result: { rejected: true },
+        }),
+      ]),
+    );
+  });
+  it.each(["manuscript", "decision"])(
+    "invalidates a generated plan before staging when its %s changes",
+    async (change) => {
+      const t = await proposalSetup();
+      await t.review();
+      const result = await generateMemoryPlan(t, [
+        { setId: t.setId, itemId: "0", action: "pending" },
+        { setId: t.setId, itemId: "1", action: "pending" },
+      ]);
+      t.runs.succeedStep(
+        result.runId,
+        result.stepId,
+        result.output,
+        "rolling-outline-proposal",
+        new Date().toISOString(),
+      );
+      if (change === "manuscript")
+        t.documents.appendVersion(t.projectId, t.document.id, {
+          id: randomUUID(),
+          content: "作者已改写旧信的交接。",
+          source: "manual",
+          now: new Date().toISOString(),
+        });
+      else await t.decide("0", "reject");
+      const snapshot = t.runs.getSnapshot(result.runId);
+      const stage = snapshot.steps.find(
+        (step) => step.kind === "outline.entities",
+      )!;
+      const worker = new AutomationWorkerSuite(
+        t.database,
+        {} as NarrativeModelClient,
+      ).registry()["outline.entities"]!;
+      await expect(
+        worker.execute(snapshot, stage, new AbortController().signal),
+      ).rejects.toMatchObject({ code: "planning.memory.stale" });
+    },
+  );
+  it("reads the manuscript when a current summary falsely calls a completed event pending and binds the corrected observation", async () => {
+    const t = await proposalSetup();
+    t.state.upsertSummary({
+      ...t.state.latestSummary(t.projectId, "chapter", t.chapter.id)!,
+      summary: "旧信尚未交出。",
+    });
+    const result = await t.review(t.proposals, undefined, {
+      observations: [
+        {
+          text: "见证者交出了旧信。",
+          basis: "observed",
+          citations: [
+            {
+              chapterId: t.chapter.id,
+              paragraphOrdinal: 1,
+              quote: "见证者交出了旧信。",
+            },
+          ],
+        },
+      ],
+    });
+    expect(t.prompt()).toContain("已提交正文才是事件依据");
+    expect(t.prompt()).toContain("见证者交出了旧信。");
+    expect(result.output.summary).toBe("见证者交出了旧信。");
+    const citations = (
+      result.output.observations as {
+        citations: {
+          start: number;
+          end: number;
+          quote: string;
+          documentVersionId: string;
+        }[];
+      }[]
+    )[0]!.citations;
+    const current = t.documents.getVersion(
+      t.projectId,
+      t.document.id,
+      t.documents.get(t.projectId, t.document.id)!.currentVersionId!,
+    )!;
+    expect(citations[0]!.documentVersionId).toBe(current.id);
+    expect(current.content.slice(citations[0]!.start, citations[0]!.end)).toBe(
+      citations[0]!.quote,
+    );
+  });
+  it("rejects invented observation quotes and missing line evidence", async () => {
+    const t = await proposalSetup();
+    await expect(
+      t.review([], undefined, {
+        observations: [
+          {
+            text: "事故尚未揭示",
+            basis: "observed",
+            citations: [
+              {
+                chapterId: t.chapter.id,
+                paragraphOrdinal: 1,
+                quote: "事故尚未揭示",
+              },
+            ],
+          },
+        ],
+      }),
+    ).rejects.toThrow("Evidence");
+    await expect(
+      t.review(t.proposals, undefined, { lineEvidence: [] }),
+    ).rejects.toThrow("lineIndex");
+    expect((await t.app.inject({ method: "GET", url: t.url })).json()).toEqual(
+      [],
+    );
+  });
+  it("rejects changed manuscripts even when no story line update is proposed", async () => {
+    const t = await proposalSetup();
+    await expect(
+      t.review([], () =>
+        t.documents.appendVersion(t.projectId, t.document.id, {
+          id: randomUUID(),
+          content: "作者写了不同的事件。",
+          source: "manual",
+          now: new Date().toISOString(),
+        }),
+      ),
+    ).rejects.toMatchObject({ code: "story_line_proposal.stale" });
+    expect(t.automation.listPlanningReviews(t.session.id)).toEqual([]);
+  });
   it("keeps evidence valid when unrelated future plans are appended and blocks bulk decisions", async () => {
     const t = await proposalSetup();
     await t.review();
@@ -335,6 +707,16 @@ describe("evidence-backed story line proposals", () => {
     await t.review();
     await t.decide("0", "apply");
     await t.decide("1", "reject");
+    const stageReview = t.state.latestSummary(t.projectId, "arc", t.arc.id)!;
+    t.state.upsertSummary({
+      ...stageReview,
+      summary: "错误的双向信号断言",
+      stateDelta: {
+        recommendations: ["考虑一次信号压力测试"],
+        observations: [{ text: "错误的双向信号断言" }],
+        compassAdjustments: ["错误的双向信号断言"],
+      },
+    });
     const id = randomUUID();
     const recipe = buildRollingOutlineRecipe(id);
     t.runs.create({
@@ -373,6 +755,8 @@ describe("evidence-backed story line proposals", () => {
     expect(captured).toContain("已取得旧信");
     expect(captured).toContain('\\"action\\":\\"reject\\"');
     expect(captured).toContain("不得当成作者方向");
+    expect(captured).toContain("考虑一次信号压力测试");
+    expect(captured).not.toContain("错误的双向信号断言");
   });
   it("stages without applying, applies siblings atomically, replays decisions and rejects opposite decisions", async () => {
     const t = await proposalSetup();
@@ -497,6 +881,79 @@ describe("evidence-backed story line proposals", () => {
     expect(await t.get()).toEqual(before);
   });
 });
+
+async function generateMemoryPlan(
+  t: Awaited<ReturnType<typeof proposalSetup>>,
+  decisionAcknowledgements: unknown[],
+) {
+  const id = randomUUID();
+  const recipe = buildRollingOutlineRecipe(id);
+  const now = new Date().toISOString();
+  t.runs.create({
+    id,
+    projectId: t.projectId,
+    recipe: recipe.name,
+    recipeVersion: recipe.version,
+    mode: "autopilot",
+    targetOutlineNodeId: t.story.listOutline(t.projectId)[0]!.id,
+    policy: { sessionId: t.session.id },
+    steps: recipe.steps,
+    now,
+  });
+  t.runs.leaseRun(id, "memory-plan-test", now, 30_000);
+  const step = t.runs.startStep(id, recipe.steps[0]!.id, now);
+  const model: NarrativeModelClient = {
+    async text() {
+      throw Error("unexpected");
+    },
+    async structured(_run, _step, _purpose, _request, _contract, validate) {
+      const checked = validate({
+        entityProposals: [],
+        decisionAcknowledgements,
+        rationale: "核对旧信的来源与潮声。",
+        volumeId: t.volume.id,
+        arcId: t.arc.id,
+        volume: { title: "第一卷", summary: "旧信调查", goal: "找到来源" },
+        arc: {
+          title: "寻找见证者",
+          summary: "核对旧信",
+          goal: "查明来源",
+          conflict: "见证分歧",
+          outcome: "取得交叉证据",
+        },
+        chapters: [0, 1].map((index) => ({
+          title: `下一章${index}`,
+          summary: "查证旧信来源",
+          goal: "核验",
+          conflict: "证词差异",
+          outcome: "取得新线索",
+          pov: null,
+          entityRefs: [],
+          storyTime: null,
+          hook: "未解潮声",
+        })),
+        nextArc: null,
+        continuityRisks: [],
+      });
+      if (!checked.success) throw Error(checked.issues.join(";"));
+      return {
+        value: checked.data,
+        usage: ZERO_BUDGET_USAGE,
+        mode: "native",
+        attempts: 1,
+      };
+    },
+  };
+  const worker = new AutomationWorkerSuite(t.database, model).registry()[
+    "outline.generate"
+  ]!;
+  const output = await worker.execute(
+    t.runs.getSnapshot(id),
+    step,
+    new AbortController().signal,
+  );
+  return { ...output, runId: id, stepId: step.id };
+}
 
 describe("author-maintained long story lines", () => {
   it("persists stage records, rejects stale saves, and allows simple directions without a progress record", async () => {

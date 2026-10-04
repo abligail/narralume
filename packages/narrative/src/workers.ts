@@ -62,6 +62,8 @@ import {
   recordEmbeddingDegradation,
 } from "./embedding-support.js";
 import { outlineContextSources } from "./outline-context.js";
+import { storyLineReviewEvidence } from "./story-line-proposals.js";
+import { memorySummarySources } from "./chapter-memory.js";
 import {
   ParagraphLocator,
   ParagraphLocatorError,
@@ -452,14 +454,23 @@ export class ChapterWorkerSuite {
       }
     }
     const outline = this.story.listOutline(run.projectId);
+    const memoryBaseline = storyLineReviewEvidence(
+      this.database,
+      run.projectId,
+    );
     sources.push(
       ...outlineContextSources({
         projectId: run.projectId,
         outline,
-        chapterSummaries: this.state.listLatestSummaries(
-          run.projectId,
-          "chapter",
-        ),
+        chapterSummaries: this.state
+          .listLatestSummaries(run.projectId, "chapter")
+          .filter((summary) =>
+            memoryBaseline.chapters.some(
+              (chapter) =>
+                chapter.chapterId === summary.scopeId &&
+                chapter.sourceHash === summary.sourceHash,
+            ),
+          ),
         targetOutlineNodeId: target.id,
       }),
     );
@@ -500,21 +511,15 @@ export class ChapterWorkerSuite {
       if (!previousVersion?.content) continue;
       pinnedDocumentSourceIds.add(previousDocument!.id);
       pinnedDocumentSourceIds.add(previousVersion.id);
-      const previousSummary = this.state.latestSummary(
-        run.projectId,
-        "chapter",
-        previousChapter.id,
-      )?.summary;
       sources.push({
         id: `previous-chapter:${previousVersion.id}`,
         kind: "recent-text",
         label: `紧邻上一章最新正文 · ${previousChapter.title}`,
         content: previousVersion.content,
-        ...(previousSummary ? { summary: previousSummary } : {}),
         authority: "confirmed",
         priority: 97,
         required: true,
-        compressible: true,
+        compressible: false,
         sourceType: "document_version",
         sourceId: previousVersion.id,
         metadata: {
@@ -522,6 +527,14 @@ export class ChapterWorkerSuite {
           documentId: previousDocument!.id,
         },
       });
+      sources.push(
+        ...memorySummarySources(
+          memoryBaseline.chapters.filter(
+            (chapter) => chapter.chapterId === previousChapter.id,
+          ),
+          previousChapter.id,
+        ),
+      );
       break;
     }
 
@@ -540,17 +553,12 @@ export class ChapterWorkerSuite {
     if (baseVersion?.content) {
       pinnedDocumentSourceIds.add(chapterDocument!.id);
       pinnedDocumentSourceIds.add(baseVersion.id);
-      const existingSummary = this.state.latestSummary(
-        run.projectId,
-        "chapter",
-        target.id,
-      )?.summary;
       sources.push({
         id: `recent:${baseVersion.id}`,
         kind: "recent-text",
         label: "当前章节底稿",
         content: baseVersion.content,
-        ...(existingSummary ? { summary: existingSummary } : {}),
+        compressible: false,
         authority: "confirmed",
         priority: 75,
         sourceType: "document_version",
@@ -1739,7 +1747,10 @@ export class ChapterWorkerSuite {
         scopeType: "chapter",
         scopeId: target.id,
         summary: boundSettlement.summary,
-        stateDelta: { changes: boundSettlement.stateDelta },
+        stateDelta: {
+          changes: boundSettlement.stateDelta,
+          summaryPoints: boundSettlement.summaryPoints,
+        },
         sourceHash: version.contentHash,
         createdAt: now,
       });
@@ -2024,7 +2035,10 @@ export class ChapterWorkerSuite {
         scopeType: "chapter",
         scopeId: manual.outlineNode.id,
         summary: boundSettlement.summary,
-        stateDelta: { changes: boundSettlement.stateDelta },
+        stateDelta: {
+          changes: boundSettlement.stateDelta,
+          summaryPoints: boundSettlement.summaryPoints,
+        },
         sourceHash: manual.version.contentHash,
         createdAt: now,
       });
@@ -2356,6 +2370,14 @@ function settlementSemanticIssues(
       ),
     );
   });
+  settlement.summaryPoints.forEach((point, index) => {
+    issues.push(
+      ...locator.validate(
+        point.evidenceParagraphs,
+        `summaryPoints.${index}.evidenceParagraphs`,
+      ),
+    );
+  });
   settlement.stateDelta.forEach((change, index) => {
     issues.push(
       ...locator.validate(
@@ -2373,6 +2395,11 @@ function groundSettlementEvidence(
 ): GroundedSettlement {
   return {
     ...settlement,
+    summary: settlement.summaryPoints.map((point) => point.text).join("\n"),
+    summaryPoints: settlement.summaryPoints.map((point) => ({
+      ...point,
+      evidence: locateEvidence(locator, point.evidenceParagraphs),
+    })),
     stateDelta: settlement.stateDelta.map((change) => ({
       ...change,
       evidence: locateEvidence(locator, change.evidenceParagraphs),
@@ -2424,6 +2451,7 @@ function bindSettlementEvidence(
   });
   return {
     ...settlement,
+    summaryPoints: settlement.summaryPoints.map(bind),
     stateDelta: settlement.stateDelta.map(bind),
     factCandidates: settlement.factCandidates.map(bind),
     timelineCandidates: settlement.timelineCandidates.map(bind),

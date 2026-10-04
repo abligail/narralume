@@ -584,7 +584,13 @@ function chapterModel(
                 issues: [],
               }
             : {
-                summary: "The keeper entered the dark tower.",
+                summaryPoints: [
+                  {
+                    text: "The keeper entered the dark tower.",
+                    basis: "observed",
+                    evidenceParagraphs: [1],
+                  },
+                ],
                 stateDelta: [],
                 factCandidates: [],
                 timelineCandidates: [],

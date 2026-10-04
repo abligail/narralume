@@ -130,6 +130,114 @@ beforeEach(() => {
 afterEach(() => database.close());
 
 describe("ChapterWorkerSuite", () => {
+  it("persists attributed accounts, suspicions and unresolved questions with the committed source version", async () => {
+    const manuscript =
+      "林昼踏进灯塔。\n\n父亲说：“我一年前没能救起河坝边的孩子。”\n\n林昼怀疑护士拿过刀片，但归家的碎片还没有解释。";
+    const points = [
+      {
+        text: "父亲回忆一年前河坝救人失败。",
+        basis: "reported",
+        evidenceParagraphs: [2],
+      },
+      {
+        text: "林昼怀疑护士拿过刀片。",
+        basis: "inferred",
+        evidenceParagraphs: [3],
+      },
+      {
+        text: "归家碎片的含义仍然不明。",
+        basis: "unresolved",
+        evidenceParagraphs: [3],
+      },
+    ];
+    const model = scriptedModel(manuscript, { summaryPoints: points });
+    const recipe = buildChapterRecipe("memory-account", 0);
+    runs.create({
+      id: "memory-account",
+      projectId: "p1",
+      mode: "autopilot",
+      recipe: recipe.name,
+      recipeVersion: recipe.version,
+      targetOutlineNodeId: chapterId,
+      policy: { minChapterCharacters: 20 },
+      steps: recipe.steps,
+      now,
+    });
+    const supervisor = new HarnessSupervisor(
+      runs,
+      new ChapterWorkerSuite(database, model, () => new Date(now)).registry(),
+      { now: () => new Date(now) },
+    );
+    for (let attempt = 0; attempt < 15; attempt++)
+      if (!(await supervisor.processNext("memory-account-test"))) break;
+    expect(runs.getRun("memory-account")!.status).toBe("completed");
+    const state = new SqliteNarrativeStateRepository(
+      database,
+      new SqliteCanonRepository(database),
+      new SqliteStoryRepository(database),
+    );
+    const summary = state.latestSummary("p1", "chapter", chapterId)!;
+    expect(summary.summary).toBe(points.map((point) => point.text).join("\n"));
+    const stored = summary.stateDelta.summaryPoints as {
+      basis: string;
+      evidence: {
+        quote: string;
+        start: number;
+        end: number;
+        documentVersionId: string;
+      }[];
+    }[];
+    expect(stored.map((point) => point.basis)).toEqual([
+      "reported",
+      "inferred",
+      "unresolved",
+    ]);
+    const document = new SqliteDocumentRepository(database).list(
+      "p1",
+      "chapter",
+    )[0]!;
+    for (const point of stored)
+      for (const citation of point.evidence) {
+        expect(citation.documentVersionId).toBe(document.currentVersionId);
+        expect(manuscript.slice(citation.start, citation.end)).toBe(
+          citation.quote,
+        );
+      }
+  });
+  it("never commits a summary point referencing a nonexistent paragraph", async () => {
+    const model = scriptedModel("林昼走进灯塔。\n\n父亲望着空椅子。", {
+      summaryPoints: [
+        { text: "往事已经揭示", basis: "observed", evidenceParagraphs: [999] },
+      ],
+    });
+    const recipe = buildChapterRecipe("memory-invalid", 0);
+    runs.create({
+      id: "memory-invalid",
+      projectId: "p1",
+      mode: "autopilot",
+      recipe: recipe.name,
+      recipeVersion: recipe.version,
+      targetOutlineNodeId: chapterId,
+      policy: { minChapterCharacters: 20 },
+      steps: recipe.steps,
+      now,
+    });
+    const supervisor = new HarnessSupervisor(
+      runs,
+      new ChapterWorkerSuite(database, model, () => new Date(now)).registry(),
+      { now: () => new Date(now) },
+    );
+    for (let attempt = 0; attempt < 15; attempt++)
+      if (!(await supervisor.processNext("memory-invalid-test"))) break;
+    const snapshot = runs.getSnapshot("memory-invalid");
+    expect(
+      snapshot.steps.find((step) => step.kind === "chapter.settle")?.error
+        ?.message,
+    ).toContain("summaryPoints.0.evidenceParagraphs");
+    expect(
+      new SqliteDocumentRepository(database).list("p1", "chapter"),
+    ).toEqual([]);
+  });
   it("recompiles optional context around the actual manuscript while preserving required author constraints", async () => {
     const manuscript =
       "雾从海面推上石阶。林昼把手按在冰冷的门上。\n\n灯灭的一刻，父亲忽然问她为何对着空椅子说话。";
@@ -756,7 +864,13 @@ describe("ChapterWorkerSuite", () => {
         ],
       },
       {
-        summary: "林昼亲历灯塔熄灭，并发现父亲遗忘了空椅子的主人。",
+        summaryPoints: [
+          {
+            text: "林昼亲历灯塔熄灭，并发现父亲遗忘了空椅子的主人。",
+            basis: "observed",
+            evidenceParagraphs: [2],
+          },
+        ],
         stateDelta: [
           {
             key: "ruleObserved",
@@ -1162,87 +1276,119 @@ describe("ChapterWorkerSuite", () => {
     });
   });
 
-  it("pins the latest preceding chapter text into the next chapter context", async () => {
-    const story = new SqliteStoryRepository(database);
-    const previousDocument = new SqliteDocumentRepository(database).insert(
-      createDocument({
-        id: "chapter-1-document",
-        projectId: "p1",
-        kind: "chapter",
-        title: "雾港失灯",
-        outlineNodeId: chapterId,
-        now,
-      }),
-    );
-    const previousVersion = new SqliteDocumentRepository(
-      database,
-    ).appendVersion("p1", previousDocument.id, {
-      id: "chapter-1-version",
-      content: "上一章的最后一句仍然悬着：钟声之后，空椅子属于谁？",
-      source: "manual",
-      expectedCurrentVersionId: null,
-      now,
-    });
-    const nextChapter = story.insertOutlineNode(
-      createOutlineNode({
-        id: "chapter-2",
-        projectId: "p1",
-        parent: story.requireOutlineNode("p1", "book"),
-        kind: "chapter",
-        ordinal: 1,
-        title: "空椅来客",
-        summary: "林昼追查空椅子的主人。",
-        now,
-      }),
-    );
-    const model = scriptedModel("第二章正文足够长，可以通过机械检查。", {
-      nearEvidence: true,
-    });
-    const recipe = buildChapterRecipe("run-next-chapter", 0);
-    runs.create({
-      id: "run-next-chapter",
-      projectId: "p1",
-      recipe: recipe.name,
-      recipeVersion: recipe.version,
-      mode: "autopilot",
-      targetOutlineNodeId: nextChapter.id,
-      policy: { minChapterCharacters: 20, contextWindow: 8_000 },
-      budgetLimit: {
-        maxInputTokens: 100_000,
-        maxOutputTokens: 50_000,
-        maxCalls: 20,
-        maxCostUsd: null,
-        maxWallTimeMs: 60_000,
-      },
-      steps: recipe.steps,
-      now,
-    });
-    const supervisor = new HarnessSupervisor(
-      runs,
-      new ChapterWorkerSuite(database, model, () => new Date(now)).registry(),
-      { now: () => new Date(now) },
-    );
-
-    expect(await supervisor.processNext("worker-next-chapter")).toBe(true);
-
-    const draftReceipt = new SqliteContextReceiptRepository(database)
-      .list("p1", 10)
-      .find((receipt) => receipt.purpose === "chapter-draft");
-    expect(draftReceipt?.entries).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          label: "紧邻上一章最新正文 · 雾港失灯",
-          status: "included",
-          provenanceId: previousVersion.id,
+  it.each([1, 1_000])(
+    "pins preceding prose without replacing it with a misleading summary (%i repetitions)",
+    async (repetitions) => {
+      const story = new SqliteStoryRepository(database);
+      const previousDocument = new SqliteDocumentRepository(database).insert(
+        createDocument({
+          id: "chapter-1-document",
+          projectId: "p1",
+          kind: "chapter",
+          title: "雾港失灯",
+          outlineNodeId: chapterId,
+          now,
         }),
-      ]),
-    );
-  });
+      );
+      const previousVersion = new SqliteDocumentRepository(
+        database,
+      ).appendVersion("p1", previousDocument.id, {
+        id: "chapter-1-version",
+        content: "上一章的最后一句仍然悬着：钟声之后，空椅子属于谁？".repeat(
+          repetitions,
+        ),
+        source: "manual",
+        expectedCurrentVersionId: null,
+        now,
+      });
+      new SqliteNarrativeStateRepository(
+        database,
+        new SqliteCanonRepository(database),
+        story,
+      ).upsertSummary({
+        id: "misleading-summary",
+        projectId: "p1",
+        scopeType: "chapter",
+        scopeId: chapterId,
+        summary: "空椅子的主人已经找到。",
+        stateDelta: {},
+        sourceHash: previousVersion.contentHash,
+        createdAt: now,
+      });
+      const nextChapter = story.insertOutlineNode(
+        createOutlineNode({
+          id: "chapter-2",
+          projectId: "p1",
+          parent: story.requireOutlineNode("p1", "book"),
+          kind: "chapter",
+          ordinal: 1,
+          title: "空椅来客",
+          summary: "林昼追查空椅子的主人。",
+          now,
+        }),
+      );
+      const model = {
+        ...scriptedModel("第二章正文足够长，可以通过机械检查。", {
+          nearEvidence: true,
+        }),
+        effectiveContextWindow: () => 8_000,
+        effectiveOutputLimit: () => 2_000,
+      };
+      const recipe = buildChapterRecipe("run-next-chapter", 0);
+      runs.create({
+        id: "run-next-chapter",
+        projectId: "p1",
+        recipe: recipe.name,
+        recipeVersion: recipe.version,
+        mode: "autopilot",
+        targetOutlineNodeId: nextChapter.id,
+        policy: { minChapterCharacters: 20, contextWindow: 8_000 },
+        budgetLimit: {
+          maxInputTokens: 100_000,
+          maxOutputTokens: 50_000,
+          maxCalls: 20,
+          maxCostUsd: null,
+          maxWallTimeMs: 60_000,
+        },
+        steps: recipe.steps,
+        now,
+      });
+      const supervisor = new HarnessSupervisor(
+        runs,
+        new ChapterWorkerSuite(database, model, () => new Date(now)).registry(),
+        { now: () => new Date(now) },
+      );
+
+      expect(await supervisor.processNext("worker-next-chapter")).toBe(true);
+
+      if (repetitions > 1) {
+        expect(runs.getSnapshot("run-next-chapter").steps[0]).toMatchObject({
+          status: "failed",
+          error: { code: "context.budget.required_overflow" },
+        });
+        return;
+      }
+
+      const draftReceipt = new SqliteContextReceiptRepository(database)
+        .list("p1", 10)
+        .find((receipt) => receipt.purpose === "chapter-draft");
+      expect(draftReceipt?.entries).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            label: "紧邻上一章最新正文 · 雾港失灯",
+            status: "included",
+            provenanceId: previousVersion.id,
+          }),
+        ]),
+      );
+    },
+  );
 });
 
 function scriptedModel(
   manuscript: string,
   options: {
+    summaryPoints?: unknown[];
     hallucinateEvidence?: boolean;
     nearEvidence?: boolean;
     reviewVerdicts?: Array<"pass" | "revise" | "block">;
@@ -1365,7 +1511,13 @@ function scriptedModel(
                   };
                 })()
               : {
-                  summary: "林昼亲历灯塔熄灭，并发现父亲遗忘了空椅子的主人。",
+                  summaryPoints: options.summaryPoints ?? [
+                    {
+                      text: "林昼亲历灯塔熄灭，并发现父亲遗忘了空椅子的主人。",
+                      basis: "observed",
+                      evidenceParagraphs: [2],
+                    },
+                  ],
                   stateDelta: [
                     {
                       key: "ruleObserved",

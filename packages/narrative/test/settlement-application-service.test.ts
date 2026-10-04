@@ -178,6 +178,14 @@ describe("SettlementApplicationService", () => {
       "change-3",
       {
         summary: "Trust deepens while the key clue develops.",
+        summaryPoints: [
+          {
+            text: "Trust deepens while the key clue develops.",
+            basis: "observed",
+            evidenceParagraphs: [1],
+            evidence: [groundedEvidence("becomes alert")],
+          },
+        ],
         stateDelta: [
           {
             key: "hero.condition",
@@ -292,6 +300,14 @@ describe("SettlementApplicationService", () => {
       "change-5",
       {
         summary: "The broken key clue is resolved.",
+        summaryPoints: [
+          {
+            text: "The broken key clue is resolved.",
+            basis: "observed",
+            evidenceParagraphs: [1],
+            evidence: [groundedEvidence("the key opens the chart case")],
+          },
+        ],
         stateDelta: [],
         factCandidates: [],
         timelineCandidates: [],
@@ -462,6 +478,14 @@ function settlementPayload(
 ): Record<string, unknown> {
   return {
     summary: "The hero wakes and trusts the rival.",
+    summaryPoints: [
+      {
+        text: "The hero wakes and trusts the rival.",
+        basis: "observed",
+        evidenceParagraphs: [1],
+        evidence: [groundedEvidence("wakes")],
+      },
+    ],
     stateDelta: [
       {
         key: "hero.condition",
