@@ -33,7 +33,7 @@ export const errors = {
   },
   /* 主文案：键为后端错误码的 camelCase 形式；ApiError 命中即用本地化文案。 */
   message: {
-    planningMemoryStale: "正文或作者裁定已变化，请重新规划后再继续。",
+    planningMemoryStale: "正文、实体资料或作者裁定已变化，请重新规划后再继续。",
     modelCapacityUnknown: "模型容量尚未核实，请在模型设置中核实上下文与输出能力。",
     reviewSourceChanged: "核对期间作者约束或正文已更新，请重新审稿。",
     storyLineProposalIndividualRequired: "请到长期故事线逐项核对并裁定此建议。",

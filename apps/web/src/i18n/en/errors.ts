@@ -47,7 +47,7 @@ export const errors: typeof errorsZh = {
     routeNotFound: "The API endpoint does not exist.",
   },
   message: {
-    planningMemoryStale: "Manuscripts or author decisions changed. Generate a new plan before continuing.",
+    planningMemoryStale: "Manuscripts, entity details or author decisions changed. Generate a new plan before continuing.",
     modelCapacityUnknown: "Model capacity is unverified. Verify context and output capacity in model settings.",
     reviewSourceChanged: "Author commitments or manuscripts changed during verification. Run the review again.",
     storyLineProposalIndividualRequired: "Review and decide each proposal in Story lines.",

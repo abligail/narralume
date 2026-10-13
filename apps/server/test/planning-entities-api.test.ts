@@ -419,7 +419,7 @@ describe("rolling planning entity decisions", () => {
           cancel: "planning.entities.stale",
           outline: "outline.baseline.conflict",
           compass: "compass.baseline.conflict",
-          alias: "canon_candidate.item.conflict",
+          alias: "planning.memory.stale",
         }[change],
       );
       expect(t.canon.listEntities(t.projectId)).toEqual(before);
@@ -469,7 +469,7 @@ describe("rolling planning entity decisions", () => {
       t.runs
         .getSnapshot(t.runId)
         .steps.find((step) => step.kind === "outline.commit")?.error?.code,
-    ).toBe("planning.entities.conflict");
+    ).toBe("planning.memory.stale");
     expect(t.story.listOutline(t.projectId)).toHaveLength(1);
   });
 

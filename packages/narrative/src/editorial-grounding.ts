@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { JsonSchemaContract } from "@narralume/llm";
 import type { ReviewResult } from "./schemas.js";
+import { ParagraphLocator } from "./paragraph-locator.js";
 
 export interface EditorialSource {
   id: string;
@@ -181,7 +182,8 @@ export function selectEditorialSources(
   sources: readonly EditorialSource[],
   query: string,
   maxHistoryCharacters: number,
-): EditorialSource[] {
+  entityNames: readonly string[] = [],
+): Array<EditorialSource & { topicMatch?: boolean }> {
   const terms = [
     ...new Set(
       query.toLowerCase().match(/[a-z0-9_]{3,}|[\p{Script=Han}]{2,}/gu) ?? [],
@@ -194,32 +196,60 @@ export function selectEditorialSources(
         )
       : [term],
   );
+  // Explicit names may be shorter than general search words (e.g. 岚 or Al).
+  // Latin names must not match parts of unrelated words such as "also".
+  const names = [
+    ...new Set(entityNames.map((name) => name.trim().toLowerCase())),
+  ]
+    .filter(Boolean)
+    .map((name) => {
+      const escaped = name.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+      return new RegExp(
+        /\p{Script=Han}/u.test(name)
+          ? escaped
+          : `(?<![\\p{L}\\p{N}_])${escaped}(?![\\p{L}\\p{N}_])`,
+        "u",
+      );
+    });
   const fixed = sources.filter((s) => s.kind !== "manuscript");
   let remaining = maxHistoryCharacters;
   const passages = sources
     .filter((s) => s.kind === "manuscript")
     .flatMap((source) => {
-      const paragraphs = source.content.split(/\n\s*\n/u);
-      return paragraphs.map((paragraph, index) => ({
-        source,
-        index,
-        score: grams.reduce(
-          (n, term) => n + Number(paragraph.toLowerCase().includes(term)),
-          0,
-        ),
-        content: paragraphs
-          .slice(Math.max(0, index - 1), index + 2)
-          .join("\n\n"),
-      }));
+      const paragraphs = new ParagraphLocator(source.content).paragraphs.map(
+        (paragraph) => paragraph.quote,
+      );
+      return paragraphs.map((paragraph, index) => {
+        const text = paragraph.toLowerCase();
+        return {
+          source,
+          index,
+          topicScore: grams.reduce(
+            (n, term) => n + Number(text.includes(term)),
+            0,
+          ),
+          nameScore: names.reduce((n, name) => n + Number(name.test(text)), 0),
+          content: paragraphs
+            .slice(Math.max(0, index - 1), index + 2)
+            .join("\n\n"),
+        };
+      });
     })
-    .sort((a, b) => b.score - a.score);
-  const selected: EditorialSource[] = [...fixed];
+    .sort((a, b) => b.topicScore - a.topicScore || b.nameScore - a.nameScore);
+  const selected: Array<EditorialSource & { topicMatch?: boolean }> = [
+    ...fixed,
+  ];
   for (const passage of passages) {
-    if (passage.score === 0 || passage.content.length > remaining) continue;
+    if (
+      (passage.topicScore === 0 && passage.nameScore === 0) ||
+      passage.content.length > remaining
+    )
+      continue;
     selected.push({
       ...passage.source,
       id: `${passage.source.id}:passage:${passage.index}`,
       content: passage.content,
+      topicMatch: passage.topicScore > 0,
     });
     remaining -= passage.content.length;
   }

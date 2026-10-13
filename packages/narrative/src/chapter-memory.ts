@@ -108,7 +108,19 @@ export function memoryManuscriptSources(
   chapters: readonly MemoryChapter[],
   recentCount: number,
   query: string,
+  entityNames: readonly string[] = [],
 ): ContextSource[] {
+  const chapterSources = new Map(
+    chapters.map((chapter) => [
+      chapter.chapterId,
+      {
+        chapter,
+        locator: new ParagraphLocator(chapter.content, {
+          documentVersionId: chapter.versionId,
+        }),
+      },
+    ]),
+  );
   const recent = new Set(
     chapters.slice(-recentCount).map((chapter) => chapter.chapterId),
   );
@@ -120,19 +132,22 @@ export function memoryManuscriptSources(
         id: chapter.chapterId,
         kind: "manuscript" as const,
         version: chapter.versionId,
-        content: new ParagraphLocator(chapter.content).render(),
+        content: chapterSources.get(chapter.chapterId)!.locator.render(),
       })),
     query,
     Number.POSITIVE_INFINITY,
+    entityNames,
   );
   const ordinals = new Map<string, Set<number>>();
+  const topicChapters = new Set<string>();
   let remaining = 24_000;
   for (const passage of selected) {
     const match = /^(.*):passage:(\d+)$/u.exec(passage.id);
     if (!match) continue;
-    const chapter = chapters.find((c) => c.chapterId === match[1]);
-    if (!chapter) continue;
-    const paragraphs = new ParagraphLocator(chapter.content).paragraphs;
+    const source = chapterSources.get(match[1]!);
+    if (!source) continue;
+    const { chapter, locator } = source;
+    const paragraphs = locator.paragraphs;
     const index = Number(match[2]);
     const set = ordinals.get(chapter.chapterId) ?? new Set<number>();
     const added = [index, index + 1, index + 2].filter(
@@ -143,15 +158,16 @@ export function memoryManuscriptSources(
       (size, ordinal) => size + paragraphs[ordinal - 1]!.quote.length,
       0,
     );
-    if (cost > remaining) continue;
-    for (const ordinal of added) set.add(ordinal);
-    remaining -= cost;
-    ordinals.set(chapter.chapterId, set);
+    if (cost <= remaining) {
+      for (const ordinal of added) set.add(ordinal);
+      remaining -= cost;
+      ordinals.set(chapter.chapterId, set);
+    }
+    if (passage.topicMatch && set.has(index + 1))
+      topicChapters.add(chapter.chapterId);
   }
   return chapters.flatMap((chapter, index): ContextSource[] => {
-    const locator = new ParagraphLocator(chapter.content, {
-      documentVersionId: chapter.versionId,
-    });
+    const { locator } = chapterSources.get(chapter.chapterId)!;
     const included = recent.has(chapter.chapterId)
       ? locator.paragraphs.map((p) => p.ordinal)
       : [...(ordinals.get(chapter.chapterId) ?? [])].sort((a, b) => a - b);
@@ -162,7 +178,10 @@ export function memoryManuscriptSources(
         kind: "recent-text",
         label: "已提交正文原文（带段号）",
         authority: "confirmed",
-        priority: 94 + (index + 1) / chapters.length,
+        priority:
+          recent.has(chapter.chapterId) || topicChapters.has(chapter.chapterId)
+            ? 94 + (index + 1) / chapters.length
+            : 94,
         required:
           recent.has(chapter.chapterId) &&
           chapter.chapterId === chapters.at(-1)?.chapterId,

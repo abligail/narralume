@@ -1,0 +1,437 @@
+{
+  "version": "narrative-memory-synthetic-transfer-v1",
+  "description": "Two newly authored independent story worlds, Chinese and English. Synthetic transfer challenge, not a blind holdout or production-reliability evidence.",
+  "extraction": {
+    "date": "2026-10-13",
+    "mode": "synthetic-authored",
+    "paragraphProtocol": "ParagraphLocator UTF-16, one-based ordinals"
+  },
+  "cases": [
+    {
+      "id": "archive-night-zh",
+      "title": "雨夜档案馆",
+      "language": "zh-CN",
+      "scope": {
+        "title": "雨夜档案馆",
+        "kind": "arc"
+      },
+      "compass": {
+        "corePromise": "两名档案员在暴雨中保护旧港的公共记忆，并决定哪些秘密应当公开。",
+        "endingDirection": null,
+        "longLines": [
+          {
+            "title": "守护档案",
+            "promise": "两名档案员在暴雨中保护旧港的公共记忆，并决定哪些秘密应当公开。",
+            "status": "developing"
+          }
+        ],
+        "themeQuestions": [],
+        "constraints": [],
+        "target": {
+          "chapters": 12,
+          "volumes": 1,
+          "wordsPerChapter": 1500
+        }
+      },
+      "entities": [
+        {
+          "id": "archive-night-zh-person-1",
+          "type": "character",
+          "name": "沈遥",
+          "aliases": [],
+          "description": "档案馆值班员，负责保管原件。",
+          "status": "active"
+        },
+        {
+          "id": "archive-night-zh-person-2",
+          "type": "character",
+          "name": "陈束",
+          "aliases": [],
+          "description": "工程师，负责泵房维修。",
+          "status": "active"
+        },
+        {
+          "id": "archive-night-zh-person-3",
+          "type": "character",
+          "name": "程音",
+          "aliases": [],
+          "description": "外站联络员，暂时不在档案馆。",
+          "status": "active"
+        }
+      ],
+      "chapters": [
+        {
+          "id": "archive-night-zh-chapter-1",
+          "title": "夜班",
+          "content": "星期二傍晚，沈遥打开登记簿。柜里原有六只玻璃底片盒，其中两只空盒，四只装着底片。她把两只装片的盒子移到楼上，另两只仍留在柜内。陈束在场逐项记下，没有搬动剩下的盒子。\n\n沈遥把钥匙交给陈束，自己保留了登记簿。陈束在簿上签了收钥匙的字。程音已经乘车去了北站，没有听到这次交接。沈遥写了一封说明交接的信，封好后放进抽屉，打算等邮车来再寄。\n\n陈束在旧泵上更换垫圈，通电试转十分钟，漏水停止。新泵还没有拆开。他猜两台泵的毛病一样，沈遥说等拆开再看。",
+          "inScope": false,
+          "source": {
+            "database": "synthetic-authored-no-database",
+            "projectId": "archive-night-zh",
+            "documentId": "archive-night-zh-document-1",
+            "versionId": "archive-night-zh-version-1",
+            "contentHash": "00c1f79e427990ffcca71e297d2109a8aa4a144d8f713f3a730a8142f8aa9697",
+            "chapterNumber": 1
+          }
+        },
+        {
+          "id": "archive-night-zh-chapter-2",
+          "title": "桥下",
+          "content": "星期三早晨，邮车因桥被冲断没有来。沈遥从抽屉取出昨夜的信，连同登记簿装进自己的包里。信封上的火漆没有破。她把包放在桌旁，陈束看见了。\n\n陈束原本说修桥队中午能到；九点收到队长来电，说东侧塌方，修桥队改走山路，预计星期四上午到。这是修桥队的到达预估，与邮车什么时候恢复无关。沈遥记下改期，却没有给程音打电话。\n\n北站的程音另收到馆长的短报，内容只有“暂缓接收”。她不知道钥匙已交给陈束，也不知道底片移到了楼上。她向同事说，也许馆里连一只盒子也没搬出来。同事没有别的消息。",
+          "inScope": true,
+          "source": {
+            "database": "synthetic-authored-no-database",
+            "projectId": "archive-night-zh",
+            "documentId": "archive-night-zh-document-2",
+            "versionId": "archive-night-zh-version-2",
+            "contentHash": "913c9743535f279d460239f70c1909bf7f12458280f57a9cf83a6ed562ac26bf",
+            "chapterNumber": 2
+          }
+        },
+        {
+          "id": "archive-night-zh-chapter-3",
+          "title": "楼梯上的水",
+          "content": "星期三下午，水爬上楼梯。陈束用钥匙打开柜门，确认两只装片盒和两只空盒还在里面。他抱走两只装片盒，上楼交给沈遥。沈遥将它们与原先搬来的两盒并排放好，四盒底片都到了楼上，空盒留在原柜。\n\n陈束拿来新泵，把扳手放在旁边。水声压住他说话的声音，沈遥只能看见他指着接口。新泵没有接电，也没有拆开。楼下仍在工作的旧泵没有再漏水。\n\n沈遥在楼上摊开申请表，把笔尖放到签名栏上。楼梯传来响声，她抬头收起笔，表上的签名栏依旧空白。她的包仍靠着墙，登记簿和那封未寄的信都在包里。陈束说：“等雨停，我们去北站找程音。”窗外只有雨，没有人来报修桥队到了。",
+          "inScope": true,
+          "source": {
+            "database": "synthetic-authored-no-database",
+            "projectId": "archive-night-zh",
+            "documentId": "archive-night-zh-document-3",
+            "versionId": "archive-night-zh-version-3",
+            "contentHash": "db040914fe1f95048f7c0d038614d3bd5d2a5a3f55fbfc50a211ba907354c4aa",
+            "chapterNumber": 3
+          }
+        }
+      ],
+      "rubric": {
+        "expected": [
+          "四盒装片底片最终在楼上；两只空盒仍在原柜，不能将盒数当底片盒数。",
+          "陈束持钥匙且已签收；沈遥持登记簿及未寄信，申请表未签。",
+          "修桥队预估从星期三中午改为星期四上午；当前星期三下午尚无到达确认。",
+          "程音只收到暂缓接收短报，不知道交接或搬运；她的猜测不能覆盖实况。",
+          "旧泵已试转止漏；新泵尚未拆开或试转。"
+        ],
+        "forbidden": [
+          "申请已经签完，或者说明交接的信已经寄到程音。",
+          "陈束持登记簿，或者六盒均有底片。",
+          "修桥队已经到达，或者明早预估被写成今天上午。",
+          "旧泵从未试转，或者新泵已证实修好。",
+          "程音已知道钥匙交接或底片搬运。"
+        ],
+        "allowed": [
+          "未来可以寄信、签申请、试新泵或赴北站，需写成后续行动。",
+          "程音可能猜对或猜错；其说法是人物猜测。"
+        ],
+        "knowledgeBoundaries": [
+          "目录身份不证明人物获知；本阶段未提及不能抹去历史已知事实。"
+        ],
+        "notes": "Synthetic transfer challenge authored after observing v1 failure categories. Not blind, not a real manuscript, and not statistically independent of task design. Freeze before production changes and never put the rubric into model input.",
+        "sourceEvidence": [
+          {
+            "chapterId": "archive-night-zh-chapter-1",
+            "paragraphOrdinals": [1, 2, 3],
+            "paragraphs": [
+              {
+                "quote": "星期二傍晚，沈遥打开登记簿。柜里原有六只玻璃底片盒，其中两只空盒，四只装着底片。她把两只装片的盒子移到楼上，另两只仍留在柜内。陈束在场逐项记下，没有搬动剩下的盒子。",
+                "start": 0,
+                "end": 82,
+                "paragraphOrdinal": 1,
+                "documentVersionId": "archive-night-zh-version-1",
+                "contentHash": "00c1f79e427990ffcca71e297d2109a8aa4a144d8f713f3a730a8142f8aa9697"
+              },
+              {
+                "quote": "沈遥把钥匙交给陈束，自己保留了登记簿。陈束在簿上签了收钥匙的字。程音已经乘车去了北站，没有听到这次交接。沈遥写了一封说明交接的信，封好后放进抽屉，打算等邮车来再寄。",
+                "start": 84,
+                "end": 166,
+                "paragraphOrdinal": 2,
+                "documentVersionId": "archive-night-zh-version-1",
+                "contentHash": "00c1f79e427990ffcca71e297d2109a8aa4a144d8f713f3a730a8142f8aa9697"
+              },
+              {
+                "quote": "陈束在旧泵上更换垫圈，通电试转十分钟，漏水停止。新泵还没有拆开。他猜两台泵的毛病一样，沈遥说等拆开再看。",
+                "start": 168,
+                "end": 220,
+                "paragraphOrdinal": 3,
+                "documentVersionId": "archive-night-zh-version-1",
+                "contentHash": "00c1f79e427990ffcca71e297d2109a8aa4a144d8f713f3a730a8142f8aa9697"
+              }
+            ]
+          },
+          {
+            "chapterId": "archive-night-zh-chapter-2",
+            "paragraphOrdinals": [1, 2, 3],
+            "paragraphs": [
+              {
+                "quote": "星期三早晨，邮车因桥被冲断没有来。沈遥从抽屉取出昨夜的信，连同登记簿装进自己的包里。信封上的火漆没有破。她把包放在桌旁，陈束看见了。",
+                "start": 0,
+                "end": 66,
+                "paragraphOrdinal": 1,
+                "documentVersionId": "archive-night-zh-version-2",
+                "contentHash": "913c9743535f279d460239f70c1909bf7f12458280f57a9cf83a6ed562ac26bf"
+              },
+              {
+                "quote": "陈束原本说修桥队中午能到；九点收到队长来电，说东侧塌方，修桥队改走山路，预计星期四上午到。这是修桥队的到达预估，与邮车什么时候恢复无关。沈遥记下改期，却没有给程音打电话。",
+                "start": 68,
+                "end": 153,
+                "paragraphOrdinal": 2,
+                "documentVersionId": "archive-night-zh-version-2",
+                "contentHash": "913c9743535f279d460239f70c1909bf7f12458280f57a9cf83a6ed562ac26bf"
+              },
+              {
+                "quote": "北站的程音另收到馆长的短报，内容只有“暂缓接收”。她不知道钥匙已交给陈束，也不知道底片移到了楼上。她向同事说，也许馆里连一只盒子也没搬出来。同事没有别的消息。",
+                "start": 155,
+                "end": 234,
+                "paragraphOrdinal": 3,
+                "documentVersionId": "archive-night-zh-version-2",
+                "contentHash": "913c9743535f279d460239f70c1909bf7f12458280f57a9cf83a6ed562ac26bf"
+              }
+            ]
+          },
+          {
+            "chapterId": "archive-night-zh-chapter-3",
+            "paragraphOrdinals": [1, 2, 3],
+            "paragraphs": [
+              {
+                "quote": "星期三下午，水爬上楼梯。陈束用钥匙打开柜门，确认两只装片盒和两只空盒还在里面。他抱走两只装片盒，上楼交给沈遥。沈遥将它们与原先搬来的两盒并排放好，四盒底片都到了楼上，空盒留在原柜。",
+                "start": 0,
+                "end": 90,
+                "paragraphOrdinal": 1,
+                "documentVersionId": "archive-night-zh-version-3",
+                "contentHash": "db040914fe1f95048f7c0d038614d3bd5d2a5a3f55fbfc50a211ba907354c4aa"
+              },
+              {
+                "quote": "陈束拿来新泵，把扳手放在旁边。水声压住他说话的声音，沈遥只能看见他指着接口。新泵没有接电，也没有拆开。楼下仍在工作的旧泵没有再漏水。",
+                "start": 92,
+                "end": 158,
+                "paragraphOrdinal": 2,
+                "documentVersionId": "archive-night-zh-version-3",
+                "contentHash": "db040914fe1f95048f7c0d038614d3bd5d2a5a3f55fbfc50a211ba907354c4aa"
+              },
+              {
+                "quote": "沈遥在楼上摊开申请表，把笔尖放到签名栏上。楼梯传来响声，她抬头收起笔，表上的签名栏依旧空白。她的包仍靠着墙，登记簿和那封未寄的信都在包里。陈束说：“等雨停，我们去北站找程音。”窗外只有雨，没有人来报修桥队到了。",
+                "start": 160,
+                "end": 265,
+                "paragraphOrdinal": 3,
+                "documentVersionId": "archive-night-zh-version-3",
+                "contentHash": "db040914fe1f95048f7c0d038614d3bd5d2a5a3f55fbfc50a211ba907354c4aa"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "observatory-shift-en",
+      "title": "The Last Observatory Shift",
+      "language": "en",
+      "scope": {
+        "title": "The Last Observatory Shift",
+        "kind": "arc"
+      },
+      "compass": {
+        "corePromise": "An observatory crew must preserve a damaged survey without sacrificing one another's trust.",
+        "endingDirection": null,
+        "longLines": [
+          {
+            "title": "Preserve the archive",
+            "promise": "An observatory crew must preserve a damaged survey without sacrificing one another's trust.",
+            "status": "developing"
+          }
+        ],
+        "themeQuestions": [],
+        "constraints": [],
+        "target": {
+          "chapters": 12,
+          "volumes": 1,
+          "wordsPerChapter": 1500
+        }
+      },
+      "entities": [
+        {
+          "id": "observatory-shift-en-person-1",
+          "type": "character",
+          "name": "Mara",
+          "aliases": [],
+          "description": "Night operator, custodian of the survey log.",
+          "status": "active"
+        },
+        {
+          "id": "observatory-shift-en-person-2",
+          "type": "character",
+          "name": "Ivo",
+          "aliases": [],
+          "description": "Technician responsible for the telescope drives.",
+          "status": "active"
+        },
+        {
+          "id": "observatory-shift-en-person-3",
+          "type": "character",
+          "name": "Nell",
+          "aliases": [],
+          "description": "Remote analyst at the valley station.",
+          "status": "active"
+        }
+      ],
+      "chapters": [
+        {
+          "id": "observatory-shift-en-chapter-1",
+          "title": "The test",
+          "content": "On Monday, Mara tested drive A for twenty minutes. Its tracking error fell below the agreed limit. Drive B was disconnected; Ivo thought the same adjustment might work on it, but had not tried it.\n\nIvo handed Mara a red case containing the original survey card. He kept a blue case holding a blank replacement card. Nell, at the valley station, had a copy of the previous week's survey, not a copy of this card. Mara drafted a message about the new survey, then saved it without sending.\n\nThe roof crew expected to reach the observatory on Tuesday at noon. Ivo told Mara this estimate. Nobody had told Nell.",
+          "inScope": false,
+          "source": {
+            "database": "synthetic-authored-no-database",
+            "projectId": "observatory-shift-en",
+            "documentId": "observatory-shift-en-document-1",
+            "versionId": "observatory-shift-en-version-1",
+            "contentHash": "bafedfac28b8f6e7cf314219bf09d0fdd3525423e7b57482491363830d951828",
+            "chapterNumber": 1
+          }
+        },
+        {
+          "id": "observatory-shift-en-chapter-2",
+          "title": "The interruption",
+          "content": "At eleven on Tuesday, the roof foreman called. A fallen tree had blocked the road. The crew now expected to arrive on Wednesday evening. The call ended before Mara could ask whether the supply truck would be delayed too.\n\nMara moved the original survey card from its red case into a dry metal drawer. She left the empty red case on the desk. Ivo still had the blue case and its blank card. When water reached the desk, Ivo took the red case upstairs, believing he had rescued the survey. Mara was outside closing a shutter and did not see him move it.\n\nNell heard from a driver that the observatory roof was leaking. She guessed that the new survey had been lost. The driver had never entered the building. Nell's only survey file was still the old one.",
+          "inScope": true,
+          "source": {
+            "database": "synthetic-authored-no-database",
+            "projectId": "observatory-shift-en",
+            "documentId": "observatory-shift-en-document-2",
+            "versionId": "observatory-shift-en-version-2",
+            "contentHash": "8e7c5645cf6ca361d00488c8d70324150627e7b99425b636407824075cc2099a",
+            "chapterNumber": 2
+          }
+        },
+        {
+          "id": "observatory-shift-en-chapter-3",
+          "title": "The drawer",
+          "content": "Tuesday afternoon, Mara opened the dry metal drawer and found the original card undamaged. Ivo came down holding the red case. She showed him the card and explained why the case was empty. He nodded and put the case beside the drawer. Mara returned the card to the drawer and locked it.\n\nIvo plugged drive B into a test rig. Before he could start the rig, the mains supply failed. Drive B had not run. The recorded result for drive A remained on the log sheet; losing power did not erase the earlier test.\n\nMara reopened her saved message and changed its first line to say the survey was safe. The terminal displayed “offline”; she closed the editor without sending. Nell received nothing new. Outside, the service road was empty. Ivo proposed taking the survey to the valley station once the road reopened. Neither of them left the observatory that afternoon.",
+          "inScope": true,
+          "source": {
+            "database": "synthetic-authored-no-database",
+            "projectId": "observatory-shift-en",
+            "documentId": "observatory-shift-en-document-3",
+            "versionId": "observatory-shift-en-version-3",
+            "contentHash": "91eed276ef388b08fe012dd0d673aa53de0f1768325def0319ade853973e86a1",
+            "chapterNumber": 3
+          }
+        }
+      ],
+      "rubric": {
+        "expected": [
+          "Original new survey card is safe in the locked drawer; red case is empty and blue case contains a blank card.",
+          "Mara and Ivo know the original is safe; Nell has only last week's survey and an unconfirmed loss report.",
+          "Drive A passed its earlier tracking test; drive B was connected but never run.",
+          "Roof crew estimate changed from Tuesday noon to Wednesday evening; no arrival is shown by Tuesday afternoon.",
+          "The revised message remains unsent and the trip to the valley is only proposed."
+        ],
+        "forbidden": [
+          "Ivo rescued the original card in the red case, or the original is at the valley station.",
+          "Nell received the revised message or knows the original is safe.",
+          "Drive B passed its test, or no drive has ever been tested.",
+          "Roof crew already arrived, or its revised estimate is Tuesday evening.",
+          "Mara and Ivo already left for the valley."
+        ],
+        "allowed": [
+          "Future chapters may send a message, move the survey or run drive B; these are proposed new events.",
+          "Nell's belief may be mistaken; a report of leaking is not a witnessed loss."
+        ],
+        "knowledgeBoundaries": [
+          "Editorial identities do not prove character knowledge; absence of a new message does not erase earlier knowledge."
+        ],
+        "notes": "Synthetic transfer challenge authored after observing v1 failure categories. Not blind, not a real manuscript, and not statistically independent of task design. Freeze before production changes and never put the rubric into model input.",
+        "sourceEvidence": [
+          {
+            "chapterId": "observatory-shift-en-chapter-1",
+            "paragraphOrdinals": [1, 2, 3],
+            "paragraphs": [
+              {
+                "quote": "On Monday, Mara tested drive A for twenty minutes. Its tracking error fell below the agreed limit. Drive B was disconnected; Ivo thought the same adjustment might work on it, but had not tried it.",
+                "start": 0,
+                "end": 196,
+                "paragraphOrdinal": 1,
+                "documentVersionId": "observatory-shift-en-version-1",
+                "contentHash": "bafedfac28b8f6e7cf314219bf09d0fdd3525423e7b57482491363830d951828"
+              },
+              {
+                "quote": "Ivo handed Mara a red case containing the original survey card. He kept a blue case holding a blank replacement card. Nell, at the valley station, had a copy of the previous week's survey, not a copy of this card. Mara drafted a message about the new survey, then saved it without sending.",
+                "start": 198,
+                "end": 487,
+                "paragraphOrdinal": 2,
+                "documentVersionId": "observatory-shift-en-version-1",
+                "contentHash": "bafedfac28b8f6e7cf314219bf09d0fdd3525423e7b57482491363830d951828"
+              },
+              {
+                "quote": "The roof crew expected to reach the observatory on Tuesday at noon. Ivo told Mara this estimate. Nobody had told Nell.",
+                "start": 489,
+                "end": 607,
+                "paragraphOrdinal": 3,
+                "documentVersionId": "observatory-shift-en-version-1",
+                "contentHash": "bafedfac28b8f6e7cf314219bf09d0fdd3525423e7b57482491363830d951828"
+              }
+            ]
+          },
+          {
+            "chapterId": "observatory-shift-en-chapter-2",
+            "paragraphOrdinals": [1, 2, 3],
+            "paragraphs": [
+              {
+                "quote": "At eleven on Tuesday, the roof foreman called. A fallen tree had blocked the road. The crew now expected to arrive on Wednesday evening. The call ended before Mara could ask whether the supply truck would be delayed too.",
+                "start": 0,
+                "end": 220,
+                "paragraphOrdinal": 1,
+                "documentVersionId": "observatory-shift-en-version-2",
+                "contentHash": "8e7c5645cf6ca361d00488c8d70324150627e7b99425b636407824075cc2099a"
+              },
+              {
+                "quote": "Mara moved the original survey card from its red case into a dry metal drawer. She left the empty red case on the desk. Ivo still had the blue case and its blank card. When water reached the desk, Ivo took the red case upstairs, believing he had rescued the survey. Mara was outside closing a shutter and did not see him move it.",
+                "start": 222,
+                "end": 551,
+                "paragraphOrdinal": 2,
+                "documentVersionId": "observatory-shift-en-version-2",
+                "contentHash": "8e7c5645cf6ca361d00488c8d70324150627e7b99425b636407824075cc2099a"
+              },
+              {
+                "quote": "Nell heard from a driver that the observatory roof was leaking. She guessed that the new survey had been lost. The driver had never entered the building. Nell's only survey file was still the old one.",
+                "start": 553,
+                "end": 753,
+                "paragraphOrdinal": 3,
+                "documentVersionId": "observatory-shift-en-version-2",
+                "contentHash": "8e7c5645cf6ca361d00488c8d70324150627e7b99425b636407824075cc2099a"
+              }
+            ]
+          },
+          {
+            "chapterId": "observatory-shift-en-chapter-3",
+            "paragraphOrdinals": [1, 2, 3],
+            "paragraphs": [
+              {
+                "quote": "Tuesday afternoon, Mara opened the dry metal drawer and found the original card undamaged. Ivo came down holding the red case. She showed him the card and explained why the case was empty. He nodded and put the case beside the drawer. Mara returned the card to the drawer and locked it.",
+                "start": 0,
+                "end": 286,
+                "paragraphOrdinal": 1,
+                "documentVersionId": "observatory-shift-en-version-3",
+                "contentHash": "91eed276ef388b08fe012dd0d673aa53de0f1768325def0319ade853973e86a1"
+              },
+              {
+                "quote": "Ivo plugged drive B into a test rig. Before he could start the rig, the mains supply failed. Drive B had not run. The recorded result for drive A remained on the log sheet; losing power did not erase the earlier test.",
+                "start": 288,
+                "end": 505,
+                "paragraphOrdinal": 2,
+                "documentVersionId": "observatory-shift-en-version-3",
+                "contentHash": "91eed276ef388b08fe012dd0d673aa53de0f1768325def0319ade853973e86a1"
+              },
+              {
+                "quote": "Mara reopened her saved message and changed its first line to say the survey was safe. The terminal displayed “offline”; she closed the editor without sending. Nell received nothing new. Outside, the service road was empty. Ivo proposed taking the survey to the valley station once the road reopened. Neither of them left the observatory that afternoon.",
+                "start": 507,
+                "end": 860,
+                "paragraphOrdinal": 3,
+                "documentVersionId": "observatory-shift-en-version-3",
+                "contentHash": "91eed276ef388b08fe012dd0d673aa53de0f1768325def0319ade853973e86a1"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

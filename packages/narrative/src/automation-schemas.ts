@@ -111,6 +111,7 @@ const PlannedChapterSchema = z.object({
 });
 
 export const RollingOutlineProposalSchema = z.object({
+  continuityRisks: z.array(z.string()).max(20),
   entityProposals: z.array(PlannedEntityProposalSchema).max(12),
   decisionAcknowledgements: z
     .array(
@@ -146,7 +147,6 @@ export const RollingOutlineProposalSchema = z.object({
       goal: z.string().min(1),
     })
     .nullable(),
-  continuityRisks: z.array(z.string()).max(20),
 });
 export type RollingOutlineProposal = z.infer<
   typeof RollingOutlineProposalSchema
@@ -326,6 +326,7 @@ export const ROLLING_OUTLINE_CONTRACT: JsonSchemaContract = {
     type: "object",
     additionalProperties: false,
     required: [
+      "continuityRisks",
       "rationale",
       "decisionAcknowledgements",
       "entityProposals",
@@ -335,9 +336,9 @@ export const ROLLING_OUTLINE_CONTRACT: JsonSchemaContract = {
       "arc",
       "chapters",
       "nextArc",
-      "continuityRisks",
     ],
     properties: {
+      continuityRisks: { type: "array", items: { type: "string" } },
       decisionAcknowledgements: z.toJSONSchema(
         RollingOutlineProposalSchema.shape.decisionAcknowledgements,
       ),
@@ -429,7 +430,6 @@ export const ROLLING_OUTLINE_CONTRACT: JsonSchemaContract = {
           { type: "null" },
         ],
       },
-      continuityRisks: { type: "array", items: { type: "string" } },
     },
   },
 };

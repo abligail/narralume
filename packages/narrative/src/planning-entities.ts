@@ -1,6 +1,6 @@
 import {
+  createCanonEntity,
   entityNamesOverlap,
-  sha256Hex,
   type CanonEntity,
   type OutlineNode,
   type RunSnapshot,
@@ -20,6 +20,7 @@ import {
 } from "./automation-schemas.js";
 import {
   StoryLineProposalService,
+  storyLineDecisionFingerprint,
   storyLineReviewEvidence,
 } from "./story-line-proposals.js";
 import {
@@ -73,6 +74,9 @@ export function requirePlanningBaseline(
         outlineFingerprint: string;
         manuscriptFingerprint: string;
         decisionFingerprint: string;
+        entityCatalog: ReturnType<
+          typeof storyLineReviewEvidence
+        >["entityCatalog"];
       }
     | undefined;
   if (
@@ -98,21 +102,60 @@ export function requirePlanningBaseline(
       "The outline changed after planning; generate a new plan",
     );
   }
+  const memory = storyLineReviewEvidence(database, snapshot.run.projectId);
+  const plan = RollingOutlineProposalSchema.parse(generated);
+  const setId = `${snapshot.run.id}:planning-entities`;
+  const adopted = new Set(
+    new SqliteReviewRepository(database)
+      .listCanonItemDecisions(setId)
+      .filter((decision) => decision.action === "apply")
+      .map((decision) => decision.itemId),
+  );
+  // Only this plan's accepted creations may extend its supplied catalog. Their
+  // projected values must still match the proposal; later edits require a replan.
+  const expectedCatalog = Array.isArray(generation.entityCatalog)
+    ? [
+        ...generation.entityCatalog,
+        ...plan.entityProposals
+          .filter((proposal) => adopted.has(proposal.key))
+          .map((proposal) => {
+            const { id, type, name, aliases, description, status } =
+              createCanonEntity({
+                ...proposal,
+                id: `${setId}:${proposal.key}:entity`,
+                projectId: snapshot.run.projectId,
+                now: snapshot.run.createdAt,
+              });
+            return {
+              id,
+              type,
+              name,
+              aliases,
+              description: description?.slice(0, 240) ?? null,
+              status,
+            };
+          }),
+      ]
+    : null;
   if (
-    generation.manuscriptFingerprint !==
-      storyLineReviewEvidence(database, snapshot.run.projectId).fingerprint ||
+    !expectedCatalog ||
+    fingerprint(
+      expectedCatalog.toSorted((a, b) => a.id.localeCompare(b.id)),
+    ) !==
+      fingerprint(
+        memory.entityCatalog.toSorted((a, b) => a.id.localeCompare(b.id)),
+      ) ||
+    generation.manuscriptFingerprint !== memory.fingerprint ||
     generation.decisionFingerprint !==
-      sha256Hex(
-        JSON.stringify(
-          new StoryLineProposalService(database)
-            .list(snapshot.run.projectId)
-            .slice(0, 12),
-        ),
+      storyLineDecisionFingerprint(
+        new StoryLineProposalService(database)
+          .list(snapshot.run.projectId)
+          .slice(0, 12),
       )
   ) {
     throw new PlanningEntityError(
       "planning.memory.stale",
-      "Manuscripts or author decisions changed after planning; generate a new plan",
+      "Manuscripts, supplied entities or author decisions changed after planning; generate a new plan",
     );
   }
 }

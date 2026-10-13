@@ -171,8 +171,8 @@ describe("automation API", () => {
       );
       expect(requests[0]!.instructions).toContain(
         language === "en"
-          ? "unsupported progress notes are not established events"
-          : "不把计划目标或缺少证据的进展记录变成已经发生的事实",
+          ? "not proof that an event happened or a commitment remains unfulfilled"
+          : "不能证明事件已经发生或某项承诺仍未兑现",
       );
       const freshRun = createPlan();
       expect(await finishRun(app, projectId, freshRun)).toBe("completed");

@@ -5,6 +5,7 @@ import {
 } from "@narralume/contracts";
 import {
   StoryLineProposalService,
+  storyLineDecisionFingerprint,
   storyLineReviewEvidence,
   storyLineProposalIssues,
 } from "./story-line-proposals.js";
@@ -16,6 +17,7 @@ import {
   type OutlineNode,
   type RunBudgetUsage,
   type RunSnapshot,
+  type StoryCompass,
 } from "@narralume/domain";
 import type {
   StepExecutionResult,
@@ -285,6 +287,7 @@ export class AutomationWorkerSuite {
     const project = this.projects.get(session.projectId);
     if (!project) throw permanent("project.not_found", "Project not found");
     const compass = this.automation.getCompass(session.projectId);
+    const compassContext = compassContextProjection(compass);
     const intent = this.story.getAuthorIntent(session.projectId);
     const outline = this.story.listOutline(session.projectId);
     const entities = this.canon.listEntities(session.projectId, {
@@ -372,8 +375,9 @@ export class AutomationWorkerSuite {
         compressible: false,
         sourceType: "author_intent",
         sourceId: project.id,
-        content: JSON.stringify({ intent, compass }),
+        content: JSON.stringify({ intent, compass: compassContext.direction }),
       },
+      ...compassContext.sources,
       ...outlineContextSources({
         projectId: project.id,
         outline,
@@ -392,6 +396,10 @@ export class AutomationWorkerSuite {
         memoryBaseline.chapters,
         1,
         JSON.stringify(compass?.longLines ?? []),
+        memoryBaseline.entityCatalog.flatMap(({ name, aliases }) => [
+          name,
+          ...aliases,
+        ]),
       ),
       {
         id: "author-decision-receipt",
@@ -404,7 +412,14 @@ export class AutomationWorkerSuite {
         sourceType: "canon_item_decisions",
         sourceId: project.id,
         content: JSON.stringify({
-          authorDecisions,
+          authorDecisions: authorDecisions.map(
+            ({ setId, itemId, title, action }) => ({
+              setId,
+              itemId,
+              title,
+              action,
+            }),
+          ),
           counts: {
             applied: authorDecisions.filter((item) => item.action === "apply")
               .length,
@@ -414,7 +429,7 @@ export class AutomationWorkerSuite {
               .length,
           },
           decisionScope:
-            "Only the proposed update; rejection never cancels an existing line. Current compass is authoritative.",
+            "Only the proposed update; rejection never cancels an existing line. The current compass governs creative direction, not proof of past events.",
         }),
       },
       ...memorySummarySources(memoryBaseline.chapters, latestChapter?.id),
@@ -429,16 +444,7 @@ export class AutomationWorkerSuite {
         sourceType: "canon_entities",
         sourceId: project.id,
         content: JSON.stringify({
-          entities: entities.map(
-            ({ id, type, name, aliases, description, status }) => ({
-              id,
-              type,
-              name,
-              aliases,
-              description: description?.slice(0, 240) ?? null,
-              status,
-            }),
-          ),
+          entities: memoryBaseline.entityCatalog,
           rejectedProposals: planningRejections(this.database, project.id),
         }),
       },
@@ -523,10 +529,13 @@ export class AutomationWorkerSuite {
             "你是长篇小说滚动规划师。只详细规划当前可见窗口，不要一次冻结整部长篇。",
             "计划必须承接已提交章节，兑现指南针，尊重作者锁定意图与 steer。",
             "已提交正文是事件依据，摘要仅是检索索引；summaryPoints 的 observed/reported/inferred/unresolved 分别为叙述事实、人物说法、推测和未解问题。保留说话者与知情范围，不把计划 outcome、人物怀疑或复盘建议当成既成事实。",
+            "先填写 continuityRisks，为本窗口要承接的事实建立连续性边界，再写 rationale、entityProposals 和章节计划。只记录与本次推进相关的人物、对象与原文状态：区分目击总量和实际参与或交接的数量、当前持有与索要或承诺移交、出发方向与抵达、已获知与准备转达；时间预估保留行动者和对象，以及后来修正的预估。所有字段沿用这些边界，新增事件明确作为未来安排，不倒写成既有历史。",
+            "核对相关规则时，同时保留较早已经验证的效果与当前仍待验证的对象、条件或方法，不能把旧对象的验证推广到新对象，也不能把已有实证抹成一概未知。人物想起、猜测或希望某种机制，至多证明该想法出现，不能证明机制成立；缺少观察不能证明远处事件没有发生。",
+            "planning-entities 确认作者设定的身份和关系，不证明读者已知、某角色已获知或描述中的行动已经发生。已确认的身份不得重新列为作者层面的未知；是否已向读者或角色披露须以正文核对。",
             "原文已经讲明的身份或往事不得重新安排为首次揭示；继续写它的后果、人物回应或仍未知的具体问题。作者进展记录或旧复盘仍写着尚未揭示时，也必须先以原文核对。",
             "decisionAcknowledgements 必须逐项原样确认 author-decision-receipt 中的 setId、itemId 和 action，包含 pending；不要从复盘文字推断作者裁定。rationale 只说明本窗口的创作安排，不重新统计或概括采纳／拒绝情况，实际裁定由程序单独记录。",
             "故事线候选中的 pending 尚未采纳，reject 已被作者拒绝，均不得当成作者方向。apply 的 result 是当时实际写入记录，当前指南针优先；不要重复被拒绝的变化。reject 只否决该次更新，不取消既有故事线，也不表示只能推进 apply 过的线；指南针中保留的每条线仍然有效。",
-            "指南针 longLines 的 development 是作者维护的阶段记录：scopeNodeId 指定当前卷或弧，stageGoal 是阶段目标，progress 是作者对进展的记录，openPromises 是尚未兑现的承诺，nextDevelopment 是后续方向。结合当前阶段选择本窗口推进的线，不要求每条线每章出场，也不为完成窗口而全部解决。evidenceChapterIds 指向已定稿章节；核对摘要和事实，不把计划目标或缺少证据的进展记录变成已经发生的事实。",
+            "planning-intent 中的指南针是锁定的创作方向：longLines 的 promise、status 和 development 中的 scopeNodeId、stageGoal、nextDevelopment 指定承诺、作者维护的线状态与未来目标，不能证明事件已经发生或某项承诺仍未兑现。compass-stage-records 单独提供可回查的阶段记录：progress、openPromises 的未兑现判断和 evidenceChapterIds 只是参考，须核对已提交正文；已兑现部分应收窄，仍有效的作者承诺不得擅自取消。历史裁定中的 apply result 是当时写入记录，也不因此成为正文事件证据。结合当前阶段选择本窗口推进的线，不要求每条线每章出场，也不为完成窗口而全部解决。",
             "每章要有目标、阻力、转折、结果与结尾钩子；结果必须推动因果链。",
             "先判断既有角色、关系变化与场景能否承担剧情功能；新人物、地点或组织只在本窗口确有需要时提出，entityProposals 可以为空，不设新增数量指标，也不要因为初始名单有限就强迫每段剧情围绕同几个人。每项提案说明 narrativeRole 和 rationale，尊重拒绝记录，不换名重复被拒绝的功能。",
             "章节 pov 和 entityRefs 显式使用 {kind: existing, id: 实体ID} 或 {kind: proposed, id: 提案key}；POV 只能引用人物。复用目录里的稳定 ID，不按名字猜测，不重复已有名字或别名；退役条目不可引用。每项提案必须服务本窗口至少一章，角色描述和剧情功能不是已经发生的事件。",
@@ -538,10 +547,13 @@ export class AutomationWorkerSuite {
             "You are the rolling planner of a long-form novel. Plan only the currently visible window in detail; never freeze an entire long novel at once.",
             "The plan must continue from committed chapters, honor the compass, and respect the author's locked intent and steers.",
             "Committed manuscripts evidence events; summaries are retrieval indexes. summaryPoints distinguish observed narration, reported character accounts, inferred speculation, and unresolved questions. Preserve speakers and knowledge scope. Planned outcomes, suspicions, and retrospective suggestions are not established facts.",
+            "Fill continuityRisks first to establish continuity boundaries for facts this window depends on, then write rationale, entityProposals and chapter plans. Include only relevant people, objects and manuscript states: distinguish observed populations from actual participants or handoff counts, current possession from requests or promised transfers, departure destinations from arrival, and received knowledge from intended messages. Keep each time estimate's actor and target, including later revisions. Every field must preserve these boundaries; describe new events as future plans, never as existing history.",
+            "For relevant rules, preserve both earlier demonstrated effects and the current objects, conditions or methods still awaiting verification. Do not generalize evidence about one object to another, or erase established effects as universally unknown. A character remembering, guessing or hoping for a mechanism establishes that thought, not the mechanism. Missing observation does not establish that a distant event never happened.",
+            "planning-entities confirms author-defined identities and relationships, not reader disclosure, a character's knowledge or completed actions mentioned in descriptions. Do not make a confirmed identity unknown at the author level; check manuscripts for disclosure to readers or characters.",
             "Do not plan the first revelation of an identity or backstory already disclosed in prose. Develop its consequences, responses, or specific remaining unknowns. Check manuscripts even when author progress notes or older reviews still call it unrevealed.",
             "decisionAcknowledgements must repeat every setId, itemId and action from author-decision-receipt exactly, including pending. Never infer decisions from review prose. rationale explains creative choices only; do not recount acceptance or rejection. The program separately records actual author decisions.",
             "For story line proposals, pending is unaccepted and reject is an author rejection; neither is author direction. An apply result records the actual write at that time; the current compass takes precedence. Do not repeat rejected changes. Reject applies only to that proposed update: it does not cancel the existing story line or restrict development to lines with applied proposals. All lines still present in the current compass remain valid.",
-            "Each longLines.development entry is an author-maintained stage record: scopeNodeId identifies its volume or arc, stageGoal is the current objective, progress is the author's progress note, openPromises lists outstanding promises, and nextDevelopment gives future direction. Select lines relevant to this window; not every line must appear in every chapter or resolve by the window's end. evidenceChapterIds reference committed chapters. Check summaries and facts; planned goals and unsupported progress notes are not established events.",
+            "The compass in planning-intent locks creative direction: each line's promise, author-maintained status, and development.scopeNodeId/stageGoal/nextDevelopment express commitments and future objectives, not proof that an event happened or a commitment remains unfulfilled. compass-stage-records separately supplies reference progress notes, openPromises fulfillment judgments, and evidenceChapterIds. Check these against committed manuscripts, narrow fulfilled portions, and never cancel valid author commitments on your own. Historical apply results are records of writes, not manuscript event evidence. Select lines relevant to this window; not every line must appear in every chapter or resolve by the window's end.",
             "Each chapter needs a goal, resistance, a turn, an outcome, and a closing hook; outcomes must advance the causal chain.",
             "First consider whether existing characters, changing relationships, and settings can serve the story. Propose a new character, location, or organization only when this window needs one. entityProposals may be empty: there is no quota, and the initial cast need not carry every future conflict. Explain each narrativeRole and rationale, honor rejected proposals, and do not rename a rejected idea to repeat it.",
             "Chapter pov and entityRefs must use {kind: existing, id: entity ID} or {kind: proposed, id: proposal key}. POV must reference a character. Reuse stable catalog IDs, never infer identity from a name or duplicate an existing name or alias. Retired entries cannot be referenced. Every proposal must serve at least one chapter in this window. Descriptions and narrative roles are not events that have already occurred.",
@@ -589,18 +601,20 @@ export class AutomationWorkerSuite {
       ...result.value,
       chapters: result.value.chapters.slice(0, windowSize),
     };
+    const currentMemory = storyLineReviewEvidence(this.database, project.id);
     if (
-      storyLineReviewEvidence(this.database, project.id).fingerprint !==
-        memoryBaseline.fingerprint ||
-      JSON.stringify(
+      currentMemory.fingerprint !== memoryBaseline.fingerprint ||
+      JSON.stringify(currentMemory.entityCatalog) !==
+        JSON.stringify(memoryBaseline.entityCatalog) ||
+      storyLineDecisionFingerprint(
         new StoryLineProposalService(this.database)
           .list(project.id)
           .slice(0, 12),
-      ) !== JSON.stringify(decisionSets)
+      ) !== storyLineDecisionFingerprint(decisionSets)
     ) {
       throw permanent(
         "planning.memory.stale",
-        "Manuscripts or author decisions changed while planning; generate a new plan",
+        "Manuscripts, entity catalog or author decisions changed while planning; generate a new plan",
       );
     }
     return {
@@ -616,7 +630,8 @@ export class AutomationWorkerSuite {
           compassVersion: compass?.version ?? null,
           contextReceiptId: compiled.receipt.id,
           manuscriptFingerprint: memoryBaseline.fingerprint,
-          decisionFingerprint: sha256Hex(JSON.stringify(decisionSets)),
+          entityCatalog: memoryBaseline.entityCatalog,
+          decisionFingerprint: storyLineDecisionFingerprint(decisionSets),
         },
       },
       usage: result.usage,
@@ -958,6 +973,7 @@ export class AutomationWorkerSuite {
       );
     }
     const baselineCompass = this.automation.getCompass(snapshot.run.projectId);
+    const compassContext = compassContextProjection(baselineCompass);
     const evidenceBaseline = storyLineReviewEvidence(
       this.database,
       snapshot.run.projectId,
@@ -971,6 +987,10 @@ export class AutomationWorkerSuite {
       ],
       this.automation.requireSession(sessionId).windowSize * 2,
       JSON.stringify(baselineCompass?.longLines ?? []),
+      evidenceBaseline.entityCatalog.flatMap(({ name, aliases }) => [
+        name,
+        ...aliases,
+      ]),
     ).map((source) => ({
       ...source,
       content: JSON.stringify({
@@ -983,6 +1003,7 @@ export class AutomationWorkerSuite {
     const source = JSON.stringify({
       evidence,
       manuscripts: manuscriptSources.map((s) => s.content),
+      entityCatalog: evidenceBaseline.entityCatalog,
     });
     const contextWindow =
       this.model.effectiveContextWindow?.(
@@ -1019,9 +1040,22 @@ export class AutomationWorkerSuite {
             scopeChapterIds: evidence
               .filter((chapter) => chapter.inScope)
               .map((chapter) => chapter.chapterId),
-            compass: baselineCompass,
+            compass: compassContext.direction,
           }),
         },
+        {
+          id: "review-entities",
+          kind: "canon",
+          label: "作者设定的实体身份与关系",
+          authority: "confirmed",
+          priority: 98,
+          required: true,
+          compressible: false,
+          sourceType: "canon_entities",
+          sourceId: snapshot.run.projectId,
+          content: JSON.stringify({ entities: evidenceBaseline.entityCatalog }),
+        },
+        ...compassContext.sources,
         ...evidence.map((chapter, index): ContextSource => ({
           id: `review-chapter:${chapter.chapterId}`,
           kind: "summary",
@@ -1053,10 +1087,12 @@ export class AutomationWorkerSuite {
               "章节摘要只是检索索引，已提交正文才是事件依据。基于实际提供的带段号正文评估承诺兑现、因果、人物弧、节奏和连续性；摘要与原文不符时以原文为准。建议服务于下一滚动窗口，不改写已提交事实。",
               "只评价 review-task 的目标范围和 scopeChapterIds；inScope=false 的较早章节是历史核对依据，可引用来校正旧承诺和作者进展记录，不把历史事件记成目标阶段的新进展。所有正文均截止于目标范围最后已提交章，不借用后来故事弧的事实来判定本阶段已兑现。",
               "observations 是有原文证据的关键进展，每项 text 自足并明确说话者与知情范围；basis 区分 observed 叙述事实、reported 人物说法、inferred 推测、unresolved 未解问题。每项 citations 引用 chapterId、paragraphOrdinal 和该段连续的逐字原文 quote。系统直接据此生成复盘摘要，不另写无证据概括。核对人物、地点、时间和已经写出的身份／往事揭示；不要把修复完成写成待修复，把人物说法升级为确定机制。",
+              "先在 observations 摘录与本次建议相关的事实锚点，再形成 recommendations、compassAdjustments 和 lineProposals。相关时明确对象、数量组成、动作完成状态、消息的实际接收者、新旧时间预估及其行动者；将已经发生、正在进行、未来安排分别写清。既有实证与当前待验证的对象或方法必须同时保留，不能把已有验证一概抹成未知，也不能推广为新机制已证实。各建议字段必须一致承接这些锚点，不得补完未展示的动作、交接、抵达或知情。",
+              "review-entities 提供作者确认的身份与关系，可避免把已确认关系另列为作者层面的谜题；目录不是正文事件证据，不证明读者已经知道、某角色已经获知或描述中的行动发生于本阶段。披露和获知时间须回查正文。人物内在想法本身可以是 observed，但想法中的机制仍为 inferred；未观察到远处事件不等于事件未发生。",
               "recommendations 和 lineProposals 也必须保留原文证据的认知层级：reported、inferred、unresolved 不能写成已确定的事实，后续建议应写验证该判断；不要因本阶段没提到而断言角色不知道，尤其历史正文已写过获知或交接时。",
               "引用选该段中简短、能支持判断的连续原文，直接复制，保留标点与字词；不要改写、跨段拼接或加省略号。已披露的往事只列仍未知的具体问题，nextDevelopment 不重复要求首次披露，也不把推测当成已经确立的规则。",
               "这是当前已写部分的阶段复盘，不意味着故事弧、卷或全书已经结束。区分已兑现、仍在发展和需要后续处理的承诺；不要仅因本次运行结束而要求结局或回收所有伏笔。检索未命中或摘要没提到不证明某事未发生；complete=false 的正文片段不能证明整章不存在某事。章节序号使用 chapterNumber，从 1 开始；chapterId 是不透明标识，不能从其尾部数字推断序号。",
-              "对照长期故事线的阶段目标、作者进展记录与未兑现承诺，指出有正文支持的变化和下一阶段建议。作者记录本身不是正文证据，计划中的 nextDevelopment 尚未发生；调整仅作为 compassAdjustments 建议，不自动修改故事线。",
+              "review-task 中的指南针锁定创作方向：promise、status、stageGoal、nextDevelopment 是承诺、作者维护的线状态与未来目标，不证明已经发生或仍未兑现。compass-stage-records 中的 progress、openPromises 未兑现判断和 evidenceChapterIds 单独作为参考，必须回查正文。指出有正文支持的变化，收窄已兑现部分并保留仍有效的承诺；不得擅自取消作者承诺。调整仅作为 compassAdjustments 建议，不自动修改故事线。",
               "lineProposals 是供作者逐项接受或拒绝的建议。lineIndex 是 compass.longLines 的零基索引，每条线最多一项；仅引用本次实际提供的 chapterId 作为 evidenceChapterIds。progress 概括有正文支持的进展，openPromises 保留尚未兑现的承诺，nextDevelopment 仅为后续方向。不要仅因阶段结束建议 resolved；无有效证据则返回空数组。",
               "lineEvidence 对每条 lineProposals 恰好一项，lineIndex 相同，citations 必须逐字引用支持 progress、status 和 openPromises 的正文。evidenceChapterIds 与 citations 的章节集合完全一致。认定已兑现或尚未揭示时回查原文；明确区分角色知道、读者知道和作者秘密。证据不足不生成该项调整，合理嫌疑和省略不能自动当作矛盾。",
             ],
@@ -1065,10 +1101,12 @@ export class AutomationWorkerSuite {
               "Chapter summaries are retrieval indexes; committed manuscripts evidence events. Assess promise fulfillment, causality, character arcs, pacing, and continuity from the supplied numbered prose. Prefer prose when an index disagrees. Suggestions serve the next window and never rewrite committed facts.",
               "Evaluate only the target scope and scopeChapterIds in review-task. Earlier chapters marked inScope=false are historical references: cite them to correct stale promises or author progress notes, without counting their events as new developments of this stage. Manuscripts stop at the target scope's last committed chapter; never use later arcs to claim this stage fulfilled a promise.",
               "observations are self-contained developments grounded in prose, with explicit speakers and knowledge scope. basis distinguishes observed narration, reported accounts, inferred speculation, and unresolved questions. Every citations entry gives chapterId, paragraphOrdinal and a contiguous verbatim quote from that paragraph. The program builds the summary from these observations. Check people, places, times and revelations already written; a completed repair is not future work and a character's account is not an established mechanism.",
+              "First extract relevant factual anchors in observations, then form recommendations, compassAdjustments and lineProposals. When relevant, identify the object, counts and composition, action completion, actual message recipients, and earlier versus revised time estimates with their actors. Separate completed events, ongoing actions and future plans. Preserve both established effects and current objects or methods awaiting verification: neither erase prior evidence as universally unknown nor generalize it into a verified new mechanism. Every suggestion must consistently carry these anchors forward without completing unseen actions, handoffs, arrivals or knowledge transfers.",
+              "review-entities provides author-confirmed identities and relationships; do not make confirmed relationships new author-level mysteries. The catalog is not manuscript event evidence and does not establish reader disclosure, a character's knowledge or that a described action occurred in this stage. Check manuscripts for disclosure and knowledge timing. The occurrence of an internal thought may be observed while its proposed mechanism remains inferred; failing to observe a distant event does not establish its absence.",
               "recommendations and lineProposals must preserve the evidence's epistemic level too: reported, inferred and unresolved claims cannot become established facts; recommend verifying the judgment instead. Do not claim a character lacks knowledge merely because this stage does not mention it, especially when earlier prose already records their discovery or a handoff.",
               "Copy a short continuous excerpt that supports the judgment, preserving its words and punctuation. Never paraphrase, join paragraphs, or add ellipses. For disclosed backstory, list only specific remaining unknowns: nextDevelopment must not request its first disclosure again or treat speculation as an established rule.",
               "This reviews progress so far, not an assumed arc, volume, or book ending. Distinguish fulfilled promises, ongoing developments, and future work. Do not demand an ending or resolve every setup because this run is over. State evidence limitations when summaries are insufficient. Use the supplied chapterNumber (starting at 1), never infer numbers from opaque chapterId values.",
-              "Compare long-line stage goals, author progress notes, and open promises with the supplied manuscripts. Identify supported changes and possible next developments. Author notes are not manuscript evidence, and planned nextDevelopment has not happened. Return adjustments as compassAdjustments suggestions without updating story lines.",
+              "The compass in review-task locks creative direction: promise, author-maintained status, stageGoal and nextDevelopment express commitments and future objectives, not proof of past events or unfulfilled status. progress, openPromises fulfillment judgments and evidenceChapterIds in compass-stage-records are separate references that must be checked against manuscripts. Identify supported changes, narrow fulfilled portions and retain valid commitments; never cancel author commitments on your own. Return adjustments as compassAdjustments suggestions without updating story lines.",
               "Return lineProposals for individual author decisions. lineIndex is the zero-based compass.longLines index; at most one proposal per line. evidenceChapterIds may only reference chapterId values actually supplied. progress records supported developments, openPromises retains outstanding promises, and nextDevelopment is future direction. Never suggest resolved merely because this stage ends. Return an empty array without valid evidence.",
               "Return exactly one lineEvidence item per proposal with the same lineIndex. Its citations quote manuscript evidence for progress, status and openPromises. evidenceChapterIds must exactly equal the citation chapter set. Check original prose before claiming fulfilled or unrevealed; separate character knowledge, reader knowledge and author secrets. Omit unsupported adjustments. Missing retrieval or summary mentions do not establish absence, and complete=false excerpts cannot establish absence across a chapter. Preserve legitimate suspicion and narrative omission.",
             ],
@@ -1235,6 +1273,62 @@ export class AutomationWorkerSuite {
       usage: result.usage,
     };
   }
+}
+
+/** Author direction and derived stage judgments have distinct model authority. */
+function compassContextProjection(compass: StoryCompass | null) {
+  const direction = compass
+    ? {
+        ...compass,
+        longLines: compass.longLines.map(
+          ({ title, promise, status, development }) => ({
+            title,
+            promise,
+            status,
+            ...(development
+              ? {
+                  development: {
+                    scopeNodeId: development.scopeNodeId,
+                    stageGoal: development.stageGoal,
+                    nextDevelopment: development.nextDevelopment,
+                  },
+                }
+              : {}),
+          }),
+        ),
+      }
+    : null;
+  const longLines =
+    compass?.longLines.flatMap((line, lineIndex) =>
+      line.development
+        ? [
+            {
+              lineIndex,
+              title: line.title,
+              scopeNodeId: line.development.scopeNodeId,
+              progress: line.development.progress,
+              openPromises: line.development.openPromises,
+              evidenceChapterIds: line.development.evidenceChapterIds,
+            },
+          ]
+        : [],
+    ) ?? [];
+  const sources: ContextSource[] = longLines.length
+    ? [
+        {
+          id: "compass-stage-records",
+          kind: "summary",
+          label: "作者阶段记录（须以正文核实）",
+          content: JSON.stringify({ longLines }),
+          authority: "reference",
+          priority: 90,
+          compressible: false,
+          sourceType: "story_compass",
+          sourceId: compass!.projectId,
+        },
+      ]
+    : [];
+  return { direction, sources };
 }
 
 function requiredArtifact(

@@ -3,6 +3,7 @@ import {
   StoryLineProposalChangesSchema,
   StoryLineProposalSetSchema,
   type StoryLineProgressProposal,
+  type StoryLineProposalSetDto,
 } from "@narralume/contracts";
 import { sha256Hex } from "@narralume/domain";
 import {
@@ -17,6 +18,23 @@ import {
 import { requireActiveProject } from "./project-guard.js";
 import { currentSummaryPoints } from "./chapter-memory.js";
 import { ParagraphLocator } from "./paragraph-locator.js";
+
+/** Derived freshness is not an author decision and can change after entity adoption. */
+export function storyLineDecisionFingerprint(
+  sets: readonly StoryLineProposalSetDto[],
+): string {
+  return sha256Hex(
+    JSON.stringify(
+      sets.map(({ id, scopeNodeId, createdAt, evidence, items }) => ({
+        id,
+        scopeNodeId,
+        createdAt,
+        evidence,
+        items,
+      })),
+    ),
+  );
+}
 
 /** Review the target stage against manuscripts written through its last committed chapter. */
 export function storyLineReviewEvidence(
@@ -39,11 +57,18 @@ export function storyLineReviewEvidence(
     }
     return inside;
   };
-  const state = new SqliteNarrativeStateRepository(
-    database,
-    new SqliteCanonRepository(database),
-    story,
-  );
+  const canon = new SqliteCanonRepository(database);
+  const state = new SqliteNarrativeStateRepository(database, canon, story);
+  const entityCatalog = canon
+    .listEntities(projectId, { includeRetired: true })
+    .map(({ id, type, name, aliases, description, status }) => ({
+      id,
+      type,
+      name,
+      aliases,
+      description: description?.slice(0, 240) ?? null,
+      status,
+    }));
   const documents = new SqliteDocumentRepository(database);
   const manuscript = documents.list(projectId);
   const committedChapters = outline.filter(
@@ -119,6 +144,7 @@ export function storyLineReviewEvidence(
   return {
     chapters: evidence,
     evidence: indexes,
+    entityCatalog,
     fingerprint: sha256Hex(
       JSON.stringify({
         scopeId: scopeId ?? null,
@@ -131,6 +157,9 @@ export function storyLineReviewEvidence(
             status,
           })),
         evidence: indexes,
+        // Review proposals depend on supplied identities. Planning's manuscript
+        // baseline remains independent of entities it may legitimately create.
+        ...(scopeId !== undefined ? { entityCatalog } : {}),
       }),
     ),
   };

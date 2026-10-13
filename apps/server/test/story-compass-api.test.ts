@@ -3,6 +3,7 @@ import type { StoryCompassDto, StoryLongLineDto } from "@narralume/contracts";
 import {
   createOutlineNode,
   createDocument,
+  createCanonEntity,
   ZERO_BUDGET_USAGE,
   type OutlineNode,
 } from "@narralume/domain";
@@ -21,6 +22,7 @@ import {
   SqliteNarrativeStateRepository,
   SqliteStoryRepository,
   SqliteDocumentRepository,
+  SqliteContextReceiptRepository,
   SqliteRunRepository,
   SqliteReviewRepository,
 } from "@narralume/persistence";
@@ -40,7 +42,7 @@ afterEach(async () => {
   }
 });
 
-async function setup() {
+async function setup(language: "zh-CN" | "en" = "zh-CN") {
   const database = new NodeNarrativeDatabase();
   const app = await buildApp({
     database,
@@ -60,7 +62,7 @@ async function setup() {
     const response = await app.inject({
       method: "POST",
       url: "/api/projects",
-      payload: { requestId: randomUUID(), title: "长期故事线" },
+      payload: { requestId: randomUUID(), title: "长期故事线", language },
     });
     expect(response.statusCode).toBe(201);
     return response.json().id as string;
@@ -161,13 +163,22 @@ async function setup() {
   };
 }
 
-async function proposalSetup() {
-  const t = await setup();
-  await t.put({
-    ...t.input,
-    longLines: [t.line, { ...t.line, title: "潮声" }],
-    expectedVersion: null,
-  });
+type MemoryFixtureOptions = {
+  language?: "zh-CN" | "en";
+  reviewScope?: "arc" | "volume";
+  withCompass?: boolean;
+};
+
+type ModelLimits = { contextWindow: number; outputLimit: number };
+
+async function proposalSetup(options: MemoryFixtureOptions = {}) {
+  const t = await setup(options.language);
+  if (options.withCompass !== false)
+    await t.put({
+      ...t.input,
+      longLines: [t.line, { ...t.line, title: "潮声" }],
+      expectedVersion: null,
+    });
   const now = "2026-09-22T00:00:00.000Z";
   const documents = new SqliteDocumentRepository(t.database);
   const document = documents.insert(
@@ -213,7 +224,8 @@ async function proposalSetup() {
     now,
   });
   const runId = randomUUID();
-  const recipe = buildClosingReviewRecipe(runId, ["arc"]);
+  const scope = options.reviewScope ?? "arc";
+  const recipe = buildClosingReviewRecipe(runId, [scope]);
   const runs = new SqliteRunRepository(t.database);
   runs.create({
     id: runId,
@@ -221,8 +233,8 @@ async function proposalSetup() {
     mode: "autopilot",
     recipe: recipe.name,
     recipeVersion: recipe.version,
-    targetOutlineNodeId: t.arc.id,
-    policy: { sessionId: session.id, arcId: t.arc.id },
+    targetOutlineNodeId: scope === "arc" ? t.arc.id : t.volume.id,
+    policy: { sessionId: session.id, arcId: t.arc.id, volumeId: t.volume.id },
     steps: recipe.steps,
     now,
   });
@@ -242,8 +254,15 @@ async function proposalSetup() {
     items: unknown = proposals,
     during?: () => void,
     extra: Record<string, unknown> = {},
+    limits?: ModelLimits,
   ) => {
     const model: NarrativeModelClient = {
+      ...(limits
+        ? {
+            effectiveContextWindow: () => limits.contextWindow,
+            effectiveOutputLimit: () => limits.outputLimit,
+          }
+        : {}),
       async text() {
         throw new Error("Unexpected text generation");
       },
@@ -284,7 +303,7 @@ async function proposalSetup() {
       },
     };
     const worker = new AutomationWorkerSuite(t.database, model).registry()[
-      "arc.review"
+      `${scope}.review`
     ]!;
     return worker.execute(
       runs.getSnapshot(runId),
@@ -556,7 +575,7 @@ describe("evidence-backed story line proposals", () => {
       ]),
     );
   });
-  it.each(["manuscript", "decision"])(
+  it.each(["manuscript", "decision", "stage record"])(
     "invalidates a generated plan before staging when its %s changes",
     async (change) => {
       const t = await proposalSetup();
@@ -579,7 +598,24 @@ describe("evidence-backed story line proposals", () => {
           source: "manual",
           now: new Date().toISOString(),
         });
-      else await t.decide("0", "reject");
+      else if (change === "decision") await t.decide("0", "reject");
+      else {
+        const compass = t.automation.requireCompass(t.projectId);
+        t.automation.upsertCompass({
+          ...compass,
+          longLines: compass.longLines.map((line, index) =>
+            index === 0
+              ? {
+                  ...line,
+                  development: {
+                    ...line.development!,
+                    progress: "作者修正了旧信的交接记录。",
+                  },
+                }
+              : line,
+          ),
+        });
+      }
       const snapshot = t.runs.getSnapshot(result.runId);
       const stage = snapshot.steps.find(
         (step) => step.kind === "outline.entities",
@@ -590,7 +626,132 @@ describe("evidence-backed story line proposals", () => {
       ).registry()["outline.entities"]!;
       await expect(
         worker.execute(snapshot, stage, new AbortController().signal),
-      ).rejects.toMatchObject({ code: "planning.memory.stale" });
+      ).rejects.toMatchObject({
+        code:
+          change === "stage record"
+            ? "compass.baseline.conflict"
+            : "planning.memory.stale",
+      });
+    },
+  );
+  it.each([false, true])(
+    "commits adopted planning entities beside an existing story-line proposal unless its author decision changes: %s",
+    async (changeDecision) => {
+      const t = await proposalSetup();
+      await t.review([t.proposals[0]!]);
+      const proposals = async () =>
+        (await t.app.inject({ method: "GET", url: t.url })).json();
+      expect((await proposals())[0].stale).toBe(false);
+      const generated = await generateMemoryPlan(
+        t,
+        [{ setId: t.setId, itemId: "0", action: "pending" }],
+        undefined,
+        {
+          entityProposals: [
+            {
+              key: "nextWitness",
+              type: "character",
+              name: "港外的见证人",
+              aliases: [],
+              description: "保存着外港的寄信记录。",
+              narrativeRole: "提供旧信来源的另一份证据",
+              rationale: "当前调查需要旧信收信地的见证人",
+            },
+          ],
+          chapters: [0, 1].map((index) => ({
+            title: `新的见证${index}`,
+            summary: "核对外港的寄信记录",
+            goal: "寻找来源",
+            conflict: "两份记录不符",
+            outcome: "找到一项可查证的线索",
+            pov: { kind: "proposed", id: "nextWitness" },
+            entityRefs: [{ kind: "proposed", id: "nextWitness" }],
+            storyTime: null,
+            hook: "谁改动了记录",
+          })),
+        },
+      );
+      const now = new Date().toISOString();
+      t.runs.succeedStep(
+        generated.runId,
+        generated.stepId,
+        generated.output,
+        generated.artifactKind,
+        now,
+      );
+      const workers = new AutomationWorkerSuite(
+        t.database,
+        {} as NarrativeModelClient,
+      ).registry();
+      const stage = t.runs
+        .getSnapshot(generated.runId)
+        .steps.find((step) => step.kind === "outline.entities")!;
+      t.runs.startStep(generated.runId, stage.id, now);
+      const staged = await workers["outline.entities"]!.execute(
+        t.runs.getSnapshot(generated.runId),
+        stage,
+        new AbortController().signal,
+      );
+      t.runs.succeedStep(
+        generated.runId,
+        stage.id,
+        staged.output,
+        staged.artifactKind,
+        now,
+      );
+      const accepted = await t.app.inject({
+        method: "POST",
+        url: `/api/projects/${t.projectId}/canon-candidates/${generated.runId}:planning-entities/items/nextWitness/decisions`,
+        payload: { action: "apply" },
+      });
+      expect(accepted.statusCode, accepted.body).toBe(200);
+      const witness = new SqliteCanonRepository(t.database).listEntities(
+        t.projectId,
+      )[0]!;
+      // Catalog freshness changes, but the existing pending decision does not.
+      expect((await proposals())[0].stale).toBe(true);
+      if (changeDecision)
+        expect((await t.decide("0", "reject")).statusCode).toBe(200);
+      const commit = t.runs
+        .getSnapshot(generated.runId)
+        .steps.find((step) => step.kind === "outline.commit")!;
+      t.runs.startStep(generated.runId, commit.id, now);
+      const result = workers["outline.commit"]!.execute(
+        t.runs.getSnapshot(generated.runId),
+        commit,
+        new AbortController().signal,
+      );
+      if (changeDecision) {
+        await expect(result).rejects.toMatchObject({
+          code: "planning.memory.stale",
+        });
+        expect(
+          t.story
+            .listOutline(t.projectId)
+            .filter((node) => node.metadata.sourceRunId === generated.runId),
+        ).toEqual([]);
+      } else {
+        const committed = await result;
+        expect(committed.output.chapterIds).toHaveLength(2);
+        expect(
+          t.story
+            .listOutline(t.projectId)
+            .filter(
+              (node) =>
+                node.kind === "chapter" &&
+                node.metadata.sourceRunId === generated.runId,
+            ),
+        ).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              povEntityId: witness.id,
+              metadata: expect.objectContaining({
+                plannedEntityIds: [witness.id],
+              }),
+            }),
+          ]),
+        );
+      }
     },
   );
   it("reads the manuscript when a current summary falsely calls a completed event pending and binds the corrected observation", async () => {
@@ -885,6 +1046,8 @@ describe("evidence-backed story line proposals", () => {
 async function generateMemoryPlan(
   t: Awaited<ReturnType<typeof proposalSetup>>,
   decisionAcknowledgements: unknown[],
+  limits?: ModelLimits,
+  planFields: Record<string, unknown> = {},
 ) {
   const id = randomUUID();
   const recipe = buildRollingOutlineRecipe(id);
@@ -902,11 +1065,19 @@ async function generateMemoryPlan(
   });
   t.runs.leaseRun(id, "memory-plan-test", now, 30_000);
   const step = t.runs.startStep(id, recipe.steps[0]!.id, now);
+  let captured: Parameters<NarrativeModelClient["structured"]>[3] | undefined;
   const model: NarrativeModelClient = {
+    ...(limits
+      ? {
+          effectiveContextWindow: () => limits.contextWindow,
+          effectiveOutputLimit: () => limits.outputLimit,
+        }
+      : {}),
     async text() {
       throw Error("unexpected");
     },
-    async structured(_run, _step, _purpose, _request, _contract, validate) {
+    async structured(_run, _step, _purpose, request, _contract, validate) {
+      captured = request;
       const checked = validate({
         entityProposals: [],
         decisionAcknowledgements,
@@ -934,6 +1105,7 @@ async function generateMemoryPlan(
         })),
         nextArc: null,
         continuityRisks: [],
+        ...planFields,
       });
       if (!checked.success) throw Error(checked.issues.join(";"));
       return {
@@ -952,8 +1124,737 @@ async function generateMemoryPlan(
     step,
     new AbortController().signal,
   );
-  return { ...output, runId: id, stepId: step.id };
+  return { ...output, runId: id, stepId: step.id, request: captured! };
 }
+
+type CompiledSection = {
+  id: string;
+  kind: string;
+  authority: string;
+  content: string;
+};
+
+function contextSections(
+  request: Parameters<NarrativeModelClient["structured"]>[3],
+): CompiledSection[] {
+  const text = request.messages.map(({ content }) => content).join("\n");
+  return [
+    ...text.matchAll(
+      /<context-section\s+([^>]+)>\n([\s\S]*?)\n<\/context-section>/g,
+    ),
+  ].map((match) => {
+    const attribute = (name: string) =>
+      JSON.parse(
+        new RegExp(`\\b${name}=("(?:[^"\\\\]|\\\\.)*")`).exec(match[1]!)![1]!,
+      ) as string;
+    return {
+      id: attribute("id"),
+      kind: attribute("kind"),
+      authority: attribute("authority"),
+      content: match[2]!,
+    };
+  });
+}
+
+function contextSection(sections: CompiledSection[], id: string) {
+  const section = sections.find((item) => item.id === id);
+  expect(section, `Expected compiled context section ${id}`).toBeDefined();
+  return section!;
+}
+
+const memoryWorkers = ["planner", "arc", "volume"] as const;
+type MemoryWorker = (typeof memoryWorkers)[number];
+
+async function compiledMemoryContext(
+  t: Awaited<ReturnType<typeof proposalSetup>>,
+  worker: MemoryWorker,
+  acknowledgements: unknown[] = [],
+  limits?: ModelLimits,
+) {
+  const plan =
+    worker === "planner"
+      ? await generateMemoryPlan(t, acknowledgements, limits)
+      : undefined;
+  if (!plan) await t.review([], undefined, {}, limits);
+  const request =
+    plan?.request ??
+    (JSON.parse(t.prompt()) as Parameters<
+      NarrativeModelClient["structured"]
+    >[3]);
+  const receipt = new SqliteContextReceiptRepository(t.database)
+    .list(t.projectId)
+    .find(
+      (item) =>
+        item.purpose ===
+        (worker === "planner" ? "rolling-outline" : `${worker}-review`),
+    );
+  expect(receipt).toBeDefined();
+  return {
+    request,
+    sections: contextSections(request),
+    receipt: receipt!,
+    plan,
+  };
+}
+
+const dirtyProgress = "STALE_STAGE_PROGRESS: 旧信尚未交出。";
+const dirtyOpenPromise = "STALE_STAGE_OPEN_PROMISE: 首次取得旧信。";
+
+function expectNoStageRecordsInLocked(
+  sections: CompiledSection[],
+  markers: string[],
+) {
+  const locked = sections.filter((section) => section.authority === "locked");
+  expect(locked.length).toBeGreaterThan(0);
+  for (const section of locked) {
+    for (const marker of markers) expect(section.content).not.toContain(marker);
+    for (const field of ["progress", "openPromises", "evidenceChapterIds"])
+      expect(section.content).not.toContain(`"${field}":`);
+  }
+}
+
+function reviewCatalogFixture(t: Awaited<ReturnType<typeof proposalSetup>>) {
+  const canon = new SqliteCanonRepository(t.database);
+  const entity = canon.insertEntity(
+    createCanonEntity({
+      id: randomUUID(),
+      projectId: t.projectId,
+      type: "character",
+      name: "苇娘",
+      aliases: ["阿苇的母亲"],
+      description: "苇娘是阿苇的母亲。" + "作者维护的人物资料。".repeat(40),
+      attributes: { secret: "CATALOG_PRIVATE_ATTRIBUTE" },
+      now: "2026-09-22T00:00:00.000Z",
+    }),
+  );
+  return { canon, entity };
+}
+
+const catalogChanges = [
+  "name",
+  "aliases",
+  "description",
+  "type",
+  "status",
+  "addition",
+  "deletion",
+] as const;
+type CatalogChange = (typeof catalogChanges)[number];
+
+function changeReviewCatalog(
+  t: Awaited<ReturnType<typeof proposalSetup>>,
+  fixture: ReturnType<typeof reviewCatalogFixture>,
+  change: CatalogChange,
+) {
+  const { canon, entity } = fixture;
+  if (change === "addition") {
+    canon.insertEntity(
+      createCanonEntity({
+        id: randomUUID(),
+        projectId: t.projectId,
+        type: "location",
+        name: "渡口",
+        now: "2026-09-23T00:00:00.000Z",
+      }),
+    );
+  } else if (change === "deletion") canon.deleteEntity(t.projectId, entity.id);
+  else if (change === "type")
+    t.database.raw
+      .prepare(
+        "UPDATE canon_entities SET type = ? WHERE project_id = ? AND id = ?",
+      )
+      .run("organization", t.projectId, entity.id);
+  else
+    canon.updateEntity({
+      ...entity,
+      ...(change === "name" ? { name: "苇娘的新称呼" } : {}),
+      ...(change === "aliases" ? { aliases: ["阿苇的母亲", "新的别名"] } : {}),
+      ...(change === "description"
+        ? { description: "母女身份已被作者更正。" }
+        : {}),
+      ...(change === "status" ? { status: "retired" as const } : {}),
+      updatedAt: "2026-09-23T00:00:00.000Z",
+    });
+}
+
+describe("review entity catalog evidence", () => {
+  it.each(
+    (["zh-CN", "en"] as const).flatMap((language) =>
+      (["arc", "volume"] as const).map((reviewScope) => ({
+        language,
+        reviewScope,
+      })),
+    ),
+  )(
+    "supplies author identities through the actual $language $reviewScope context",
+    async ({ language, reviewScope }) => {
+      const t = await proposalSetup({ language, reviewScope });
+      const { canon, entity } = reviewCatalogFixture(t);
+      const retired = canon.insertEntity({
+        ...createCanonEntity({
+          id: randomUUID(),
+          projectId: t.projectId,
+          type: "location",
+          name: "废弃的旧港口",
+          now: "2026-09-22T00:00:00.000Z",
+        }),
+        status: "retired",
+      });
+      const { sections, receipt } = await compiledMemoryContext(t, reviewScope);
+      const section = contextSection(sections, "review-entities");
+      expect(section).toMatchObject({ kind: "canon", authority: "confirmed" });
+      const expected = [entity, retired].map(
+        ({ id, type, name, aliases, description, status }) => ({
+          id,
+          type,
+          name,
+          aliases,
+          description: description?.slice(0, 240) ?? null,
+          status,
+        }),
+      );
+      const entities = JSON.parse(section.content).entities as typeof expected;
+      expect(entities).toHaveLength(2);
+      expect(entities).toEqual(expect.arrayContaining(expected));
+      expect(
+        entities.find((item) => item.id === entity.id)!.description,
+      ).toHaveLength(240);
+      expect(section.content).toContain("苇娘是阿苇的母亲。");
+      expect(section.content).not.toContain("CATALOG_PRIVATE_ATTRIBUTE");
+      expect(section.content).not.toContain("updatedAt");
+      expect(section.content).not.toContain("projectId");
+      expect(
+        receipt.entries.find((entry) => entry.sourceId === "review-entities"),
+      ).toMatchObject({
+        status: "included",
+        authority: "confirmed",
+      });
+      expect(
+        storyLineReviewEvidence(
+          t.database,
+          t.projectId,
+          reviewScope === "arc" ? t.arc.id : t.volume.id,
+        ).entityCatalog,
+      ).toEqual(entities);
+      const planner = await compiledMemoryContext(t, "planner");
+      expect(
+        JSON.parse(
+          contextSection(planner.sections, "planning-entities").content,
+        ).entities,
+      ).toEqual(entities);
+    },
+  );
+
+  it.each(
+    catalogChanges.flatMap((change) =>
+      (["arc", "volume"] as const).flatMap((reviewScope) =>
+        [true, false].map((withProposals) => ({
+          change,
+          reviewScope,
+          withProposals,
+        })),
+      ),
+    ),
+  )(
+    "rejects $reviewScope generation after catalog $change withProposals=$withProposals",
+    async ({ change, reviewScope, withProposals }) => {
+      const t = await proposalSetup({ reviewScope });
+      const fixture = reviewCatalogFixture(t);
+      await expect(
+        t.review(withProposals ? [t.proposals[0]!] : [], () =>
+          changeReviewCatalog(t, fixture, change),
+        ),
+      ).rejects.toMatchObject({ code: "story_line_proposal.stale" });
+      expect(t.automation.listPlanningReviews(t.session.id)).toEqual([]);
+      expect(
+        t.state.latestSummary(
+          t.projectId,
+          reviewScope,
+          reviewScope === "arc" ? t.arc.id : t.volume.id,
+        ),
+      ).toBeNull();
+      expect(
+        new SqliteReviewRepository(t.database).listCanonChangeSets(t.projectId),
+      ).toEqual([]);
+    },
+  );
+
+  it.each(
+    catalogChanges.flatMap((change) =>
+      (["arc", "volume"] as const).map((reviewScope) => ({
+        change,
+        reviewScope,
+      })),
+    ),
+  )(
+    "rejects pending $reviewScope adoption after catalog $change",
+    async ({ change, reviewScope }) => {
+      const t = await proposalSetup({ reviewScope });
+      const fixture = reviewCatalogFixture(t);
+      const manuscript = storyLineReviewEvidence(
+        t.database,
+        t.projectId,
+      ).fingerprint;
+      await t.review([t.proposals[0]!]);
+      changeReviewCatalog(t, fixture, change);
+      expect(storyLineReviewEvidence(t.database, t.projectId).fingerprint).toBe(
+        manuscript,
+      );
+      const sets = (await t.app.inject({ method: "GET", url: t.url })).json();
+      expect(sets[0].stale).toBe(true);
+      const response = await t.decide("0", "apply");
+      expect(response.statusCode, response.body).toBe(409);
+      expect(response.json().error.code).toBe("story_line_proposal.stale");
+      expect((await t.decide("0", "reject")).statusCode).toBe(200);
+    },
+  );
+
+  it.each(
+    (["attributes", "updatedAt", "description suffix"] as const).flatMap(
+      (change) =>
+        (["arc", "volume"] as const).map((reviewScope) => ({
+          change,
+          reviewScope,
+        })),
+    ),
+  )(
+    "keeps $reviewScope generation and adoption current after unprovided $change changes",
+    async ({ change, reviewScope }) => {
+      const t = await proposalSetup({ reviewScope });
+      const { canon, entity } = reviewCatalogFixture(t);
+      const scopeId = reviewScope === "arc" ? t.arc.id : t.volume.id;
+      const fingerprint = storyLineReviewEvidence(
+        t.database,
+        t.projectId,
+        scopeId,
+      ).fingerprint;
+      const mutate = () => {
+        const current = canon.requireEntity(t.projectId, entity.id);
+        canon.updateEntity({
+          ...current,
+          ...(change === "attributes"
+            ? { attributes: { hidden: randomUUID() } }
+            : {}),
+          ...(change === "description suffix"
+            ? { description: current.description!.slice(0, 240) + randomUUID() }
+            : {}),
+          updatedAt: new Date().toISOString(),
+        });
+      };
+      await t.review([t.proposals[0]!], mutate);
+      mutate();
+      expect(
+        storyLineReviewEvidence(t.database, t.projectId, scopeId).fingerprint,
+      ).toBe(fingerprint);
+      expect(
+        (await t.app.inject({ method: "GET", url: t.url })).json()[0].stale,
+      ).toBe(false);
+      expect((await t.decide("0", "apply")).statusCode).toBe(200);
+    },
+  );
+});
+
+describe("story compass context authority", () => {
+  it.each(
+    (["zh-CN", "en"] as const).flatMap((language) =>
+      memoryWorkers.map((worker) => ({ language, worker })),
+    ),
+  )(
+    "separates stage records from locked directions in $language $worker",
+    async ({ language, worker }) => {
+      const t = await proposalSetup({
+        language,
+        reviewScope: worker === "volume" ? "volume" : "arc",
+      });
+      const current = await t.get();
+      expect(
+        (
+          await t.put({
+            ...current,
+            expectedVersion: current.version,
+            longLines: current.longLines.map((line) => ({
+              ...line,
+              development: {
+                ...line.development!,
+                progress: dirtyProgress,
+                openPromises: [dirtyOpenPromise],
+              },
+            })),
+          })
+        ).statusCode,
+      ).toBe(200);
+      const before = await t.get();
+      const { sections, receipt, request } = await compiledMemoryContext(
+        t,
+        worker,
+      );
+      const direction = JSON.parse(
+        contextSection(
+          sections,
+          worker === "planner" ? "planning-intent" : "review-task",
+        ).content,
+      ).compass;
+      expect(direction).toMatchObject({
+        corePromise: before.corePromise,
+        endingDirection: before.endingDirection,
+        themeQuestions: before.themeQuestions,
+        constraints: before.constraints,
+        target: before.target,
+      });
+      expect(direction.longLines).toEqual(
+        before.longLines.map((line) => ({
+          title: line.title,
+          promise: line.promise,
+          status: line.status,
+          development: {
+            scopeNodeId: line.development!.scopeNodeId,
+            stageGoal: line.development!.stageGoal,
+            nextDevelopment: line.development!.nextDevelopment,
+          },
+        })),
+      );
+      expectNoStageRecordsInLocked(sections, [dirtyProgress, dirtyOpenPromise]);
+      const records = contextSection(sections, "compass-stage-records");
+      expect(records).toMatchObject({
+        kind: "summary",
+        authority: "reference",
+      });
+      expect(JSON.parse(records.content)).toEqual({
+        longLines: before.longLines.map((line, lineIndex) => ({
+          lineIndex,
+          title: line.title,
+          scopeNodeId: line.development!.scopeNodeId,
+          progress: line.development!.progress,
+          openPromises: line.development!.openPromises,
+          evidenceChapterIds: line.development!.evidenceChapterIds,
+        })),
+      });
+      const entry = receipt.entries.find(
+        (item) => item.sourceId === records.id,
+      )!;
+      expect(entry).toMatchObject({
+        kind: "summary",
+        authority: "reference",
+        status: "included",
+        reason: "Included by authority and priority",
+      });
+      expect(entry.finalTokens).toBe(entry.originalTokens);
+      expect(request.instructions).toContain("compass-stage-records");
+      if (language === "en") {
+        expect(request.instructions).toMatch(/^You are/);
+        expect(request.instructions).not.toMatch(/[\u4e00-\u9fff]/);
+      } else expect(request.instructions).toMatch(/^你是/);
+      expect(await t.get()).toEqual(before);
+    },
+  );
+
+  it.each(["zh-CN", "en"] as const)(
+    "preserves complete apply/reject/pending results while locking only the %s decision receipt",
+    async (language) => {
+      const t = await proposalSetup({ language });
+      const compass = await t.get();
+      expect(
+        (
+          await t.put({
+            ...compass,
+            expectedVersion: compass.version,
+            longLines: [
+              ...compass.longLines,
+              { ...t.line, title: "未裁定的第三条线" },
+            ],
+          })
+        ).statusCode,
+      ).toBe(200);
+      const appliedProgress = "APPLIED_STAGE_PROGRESS: 已交出旧信。";
+      const appliedPromise = "APPLIED_STAGE_OPEN_PROMISE: 核对收信人。";
+      await t.review([
+        {
+          ...t.proposals[0]!,
+          progress: appliedProgress,
+          openPromises: [appliedPromise],
+          status: "resolved",
+        },
+        t.proposals[1]!,
+        { ...t.proposals[0]!, lineIndex: 2 },
+      ]);
+      expect((await t.decide("0", "apply")).statusCode).toBe(200);
+      expect((await t.decide("1", "reject")).statusCode).toBe(200);
+      const acknowledgements = [
+        { setId: t.setId, itemId: "0", action: "apply" },
+        { setId: t.setId, itemId: "1", action: "reject" },
+        { setId: t.setId, itemId: "2", action: "pending" },
+      ];
+      const { sections, plan } = await compiledMemoryContext(
+        t,
+        "planner",
+        acknowledgements,
+      );
+      const receipt = JSON.parse(
+        contextSection(sections, "author-decision-receipt").content,
+      );
+      const current = await t.get();
+      expect(receipt.authorDecisions).toEqual(
+        acknowledgements.map((item, index) => ({
+          ...item,
+          title: current.longLines[index]!.title,
+        })),
+      );
+      expect(receipt.counts).toEqual({ applied: 1, rejected: 1, pending: 1 });
+      expectNoStageRecordsInLocked(sections, [appliedProgress, appliedPromise]);
+      const direction = JSON.parse(
+        contextSection(sections, "planning-intent").content,
+      ).compass;
+      expect(
+        direction.longLines.map((line: StoryLongLineDto) => ({
+          title: line.title,
+          promise: line.promise,
+          status: line.status,
+        })),
+      ).toEqual(
+        current.longLines.map(({ title, promise, status }) => ({
+          title,
+          promise,
+          status,
+        })),
+      );
+      expect(direction.longLines).toHaveLength(3);
+      expect(direction.longLines[1].status).toBe("developing");
+      expect(direction.longLines[2].status).toBe("developing");
+      const historical = contextSection(
+        sections,
+        `story-line-decisions:${t.setId}`,
+      );
+      expect(historical.authority).toBe("reference");
+      const items = JSON.parse(historical.content).items;
+      expect(items[0].decision.result).toMatchObject({
+        lineIndex: 0,
+        compassVersion: current.version,
+        line: {
+          development: {
+            progress: appliedProgress,
+            openPromises: [appliedPromise],
+            evidenceChapterIds: [t.chapter.id],
+          },
+        },
+      });
+      const actualDecisions = (
+        await t.app.inject({ method: "GET", url: t.url })
+      ).json()[0].items;
+      expect(plan!.output.authorDecisions).toEqual(
+        actualDecisions.map(
+          (item: {
+            id: string;
+            before: StoryLongLineDto;
+            decision: { action: string; result: unknown } | null;
+          }) => ({
+            setId: t.setId,
+            itemId: item.id,
+            title: item.before.title,
+            action: item.decision?.action ?? "pending",
+            result: item.decision?.result ?? null,
+          }),
+        ),
+      );
+      expect(plan!.output.decisionAcknowledgements).toEqual(acknowledgements);
+      await expect(
+        generateMemoryPlan(t, acknowledgements.slice(0, 2)),
+      ).rejects.toThrow("decisionAcknowledgements");
+    },
+  );
+
+  it.each(memoryWorkers)(
+    "allows %s to exclude oversized stage records while retaining required inputs",
+    async (worker) => {
+      const t = await proposalSetup({
+        reviewScope: worker === "volume" ? "volume" : "arc",
+      });
+      const current = await t.get();
+      expect(
+        (
+          await t.put({
+            ...current,
+            expectedVersion: current.version,
+            longLines: current.longLines.map((line) => ({
+              ...line,
+              development: {
+                ...line.development!,
+                progress: "旧".repeat(4_000),
+                openPromises: [dirtyOpenPromise],
+              },
+            })),
+          })
+        ).statusCode,
+      ).toBe(200);
+      const before = await t.get();
+      const { sections, receipt } = await compiledMemoryContext(t, worker, [], {
+        contextWindow: 8_000,
+        outputLimit: 1_200,
+      });
+      expect(
+        sections.some((section) => section.id === "compass-stage-records"),
+      ).toBe(false);
+      expect(
+        receipt.entries.find(
+          (entry) => entry.sourceId === "compass-stage-records",
+        ),
+      ).toMatchObject({
+        authority: "reference",
+        status: "excluded",
+        finalTokens: 0,
+      });
+      for (const id of worker === "planner"
+        ? ["planning-task", "planning-intent", "author-decision-receipt"]
+        : ["review-task"]) {
+        expect(contextSection(sections, id).authority).toBe("locked");
+        expect(
+          receipt.entries.find((entry) => entry.sourceId === id)?.status,
+        ).toBe("included");
+      }
+      const manuscript = JSON.parse(
+        contextSection(sections, `memory-manuscript:${t.chapter.id}`).content,
+      );
+      expect(manuscript).toMatchObject({
+        complete: true,
+        chapterId: t.chapter.id,
+      });
+      expect(manuscript.paragraphs[0].text).toBe(
+        "见证者交出了旧信。潮声再次响起。",
+      );
+      expect(receipt.budget.used).toBeLessThanOrEqual(receipt.budget.available);
+      expectNoStageRecordsInLocked(sections, [
+        dirtyOpenPromise,
+        "旧".repeat(100),
+      ]);
+      expect(await t.get()).toEqual(before);
+    },
+  );
+
+  it.each(memoryWorkers)(
+    "preserves source indexes around simple lines in %s",
+    async (worker) => {
+      const t = await proposalSetup({
+        reviewScope: worker === "volume" ? "volume" : "arc",
+      });
+      const simple: StoryLongLineDto = {
+        title: "只有方向",
+        promise: "保留作者的长期承诺",
+        status: "open",
+      };
+      const current = await t.get();
+      const lines = [
+        simple,
+        t.line,
+        { ...simple, title: "另一条简单方向" },
+        { ...t.line, title: "第四条线" },
+      ];
+      expect(
+        (
+          await t.put({
+            ...current,
+            expectedVersion: current.version,
+            longLines: lines,
+          })
+        ).statusCode,
+      ).toBe(200);
+      const { sections } = await compiledMemoryContext(t, worker);
+      const direction = JSON.parse(
+        contextSection(
+          sections,
+          worker === "planner" ? "planning-intent" : "review-task",
+        ).content,
+      ).compass;
+      expect(direction.longLines[0]).toEqual(simple);
+      expect(direction.longLines[2]).toEqual(lines[2]);
+      expect(
+        JSON.parse(
+          contextSection(sections, "compass-stage-records").content,
+        ).longLines.map(
+          ({ lineIndex, title }: { lineIndex: number; title: string }) => ({
+            lineIndex,
+            title,
+          }),
+        ),
+      ).toEqual([
+        { lineIndex: 1, title: t.line.title },
+        { lineIndex: 3, title: "第四条线" },
+      ]);
+      const saved = await t.get();
+      expect(
+        (
+          await t.put({
+            ...saved,
+            expectedVersion: saved.version,
+            longLines: [simple],
+          })
+        ).statusCode,
+      ).toBe(200);
+      const onlySimple = await compiledMemoryContext(t, worker);
+      expect(
+        onlySimple.sections.some(
+          (section) => section.id === "compass-stage-records",
+        ),
+      ).toBe(false);
+      expect(
+        JSON.parse(
+          contextSection(
+            onlySimple.sections,
+            worker === "planner" ? "planning-intent" : "review-task",
+          ).content,
+        ).compass.longLines,
+      ).toEqual([simple]);
+    },
+  );
+
+  it.each(memoryWorkers)(
+    "accepts a null compass in %s without inventing stage records",
+    async (worker) => {
+      const t = await proposalSetup({
+        withCompass: false,
+        reviewScope: worker === "volume" ? "volume" : "arc",
+      });
+      const { sections } = await compiledMemoryContext(t, worker);
+      expect(
+        JSON.parse(
+          contextSection(
+            sections,
+            worker === "planner" ? "planning-intent" : "review-task",
+          ).content,
+        ).compass,
+      ).toBeNull();
+      expect(
+        sections.some((section) => section.id === "compass-stage-records"),
+      ).toBe(false);
+      expect(t.automation.getCompass(t.projectId)).toBeNull();
+    },
+  );
+
+  it.each(["arc", "volume"] as const)(
+    "invalidates %s review when only the reference stage record changes during generation",
+    async (scope) => {
+      const t = await proposalSetup({ reviewScope: scope });
+      const before = t.automation.requireCompass(t.projectId);
+      await expect(
+        t.review([], () =>
+          t.automation.upsertCompass({
+            ...before,
+            longLines: before.longLines.map((line, index) =>
+              index === 0
+                ? {
+                    ...line,
+                    development: {
+                      ...line.development!,
+                      progress: "作者修正了阶段进展事实。",
+                    },
+                  }
+                : line,
+            ),
+          }),
+        ),
+      ).rejects.toMatchObject({ code: "story_line_proposal.stale" });
+      expect(t.automation.listPlanningReviews(t.session.id)).toEqual([]);
+    },
+  );
+});
 
 describe("author-maintained long story lines", () => {
   it("persists stage records, rejects stale saves, and allows simple directions without a progress record", async () => {

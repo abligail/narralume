@@ -32,6 +32,7 @@
     "test:e2e": "playwright test",
     "test:golden": "vitest run packages/persistence/test/long-novel-golden.test.ts",
     "test:evidence": "tsx scripts/evidence-protocol-eval.ts",
+    "eval:memory:semantic": "tsx scripts/narrative-memory-semantic-eval.ts",
     "test:coverage": "vitest run --coverage",
     "test:real": "tsx scripts/llm-real-smoke.ts",
     "test:real:bridge": "tsx scripts/bridge-real-smoke.ts",
