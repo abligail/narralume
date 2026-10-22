@@ -35,6 +35,14 @@ jobs:
             playwright-report
           if-no-files-found: ignore
           retention-days: 7
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage
+          path: coverage/
+          if-no-files-found: ignore
+          retention-days: 7
 
   docker-smoke:
     runs-on: ubuntu-latest
