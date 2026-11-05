@@ -130,6 +130,10 @@ All three modes use the same manuscript versions and canon. Switching modes does
 
 After that path works, add model configuration, review, or continuous creation as needed. The detailed [user guide](docs/user-guide.en.md), [quick start](docs/quick-start.en.md), and the rest of the product documentation are available in both Chinese and English.
 
+## One-Click Deploy
+
+[![Deploy on RepoCloud](https://d16t0pc4846x52.cloudfront.net/deploylobe.svg)](https://repocloud.io/details/Narralume/)
+
 ## Import, export, and recovery
 
 | Object                     | Format or scope                                                                   | Intended use                                                                               |
